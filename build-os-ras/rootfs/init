@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# Mount proc filesystem for process information
+mount -t proc none /proc
+
+# Mount sysfs for kernel/device interface
+mount -t sysfs none /sys
+
+# Mount devtmpfs for device nodes (suppress errors if already mounted)
+mount -t devtmpfs none /dev 2>/dev/null
+
+# Redirect I/O to serial console if available
+[ -c /dev/ttyAMA0 ] && \
+    exec 0</dev/ttyAMA0 \
+         1>/dev/ttyAMA0 \
+         2>/dev/ttyAMA0
+
+# Execute main system initialization script
+exec /etc/init.d/rcS

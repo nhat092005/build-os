@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# Mount essential filesystems
+mount -t proc none /proc 2>/dev/null
+mount -t sysfs none /sys 2>/dev/null
+mount -t devtmpfs none /dev 2>/dev/null
+
+# Create runtime directories
+mkdir -p /var/run /var/log /tmp
+
+# Set system hostname
+hostname raspberrypi
+
+# Bring up loopback interface
+ip link set lo up 2>/dev/null
+
+# Execute init services in sequence
+for service in /etc/init.d/S*; do
+    [ -x "$service" ] && "$service" start
+done
+
+# Drop to interactive shell
+exec /bin/sh

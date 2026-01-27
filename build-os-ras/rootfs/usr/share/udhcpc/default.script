@@ -1,0 +1,21 @@
+#!/bin/sh
+# udhcpc script - called by udhcpc to configure interface
+
+[ -z "$1" ] && echo "Error: should be called from udhcpc" && exit 1
+
+case "$1" in
+    deconfig)
+        ip addr flush dev $interface
+        ;;
+    
+    bound|renew)
+        ip addr add $ip/$mask dev $interface
+        [ -n "$router" ] && ip route add default via $router dev $interface
+        [ -n "$domain" ] && echo "search $domain" > /etc/resolv.conf
+        for dns in $dns; do
+            echo "nameserver $dns" >> /etc/resolv.conf
+        done
+        ;;
+esac
+
+exit 0
