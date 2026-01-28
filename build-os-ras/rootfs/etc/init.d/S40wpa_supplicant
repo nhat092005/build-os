@@ -9,13 +9,15 @@ start() {
     [ -f "$CONF" ] || { echo "Config not found"; return 1; }
     ip link show wlan0 >/dev/null 2>&1 || { echo "wlan0 not found"; return 1; }
     
-    # Start WiFi authentication
+    # Start WiFi authentication in background
     ip link set wlan0 up
-    wpa_supplicant -B -i wlan0 -c "$CONF" -P "$PIDFILE" && echo "wpa_supplicant started"
+    wpa_supplicant -B -i wlan0 -c "$CONF" -P "$PIDFILE" && echo "wpa_supplicant started (background)"
     
-    # Acquire IP via DHCP
-    sleep 3
-    udhcpc -i wlan0 -q -n >/dev/null 2>&1 && echo "IP acquired"
+    # Acquire IP in background - don't block boot
+    (
+        sleep 3
+        udhcpc -i wlan0 -q -n >/dev/null 2>&1 && echo "IP acquired on wlan0"
+    ) &
 }
 
 stop() {
