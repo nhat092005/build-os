@@ -1,5 +1,4 @@
 #!/bin/sh
-
 # Create runtime directories
 mkdir -p /var/run /var/log /tmp
 
@@ -8,6 +7,12 @@ hostname raspberrypi
 
 # Bring up loopback interface
 ip link set lo up 2>/dev/null
+
+# Create and mount /dev/pts for pseudo-terminals
+mkdir -p /dev/pts
+
+# Mount essential filesystems for SSH
+mount -t devpts devpts /dev/pts 2>/dev/null
 
 # Execute init services in sequence
 for service in /etc/init.d/S*; do
