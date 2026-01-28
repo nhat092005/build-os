@@ -15,7 +15,7 @@ start() {
     
     # Configure IP via DHCP in background
     (
-        sleep 3  # Wait for WiFi to connect
+        sleep 0  # Wait for WiFi to connect
         udhcpc -i wlan0 -s /usr/share/udhcpc/default.script -q
     ) &
 }

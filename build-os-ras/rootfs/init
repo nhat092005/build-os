@@ -1,19 +1,18 @@
 #!/bin/sh
 
-# Mount proc filesystem for process information
-mount -t proc none /proc
+# Mount essential filesystems
+mount -t proc proc /proc
+mount -t sysfs sysfs /sys  
+mount -t devtmpfs devtmpfs /dev 2>/dev/null
 
-# Mount sysfs for kernel/device interface
-mount -t sysfs none /sys
+# Run initialization
+/etc/init.d/rcS
 
-# Mount devtmpfs for device nodes (suppress errors if already mounted)
-mount -t devtmpfs none /dev 2>/dev/null
+# Spawn shell directly on console
+echo "Starting shell on serial console..."
 
-# Redirect I/O to serial console if available
-[ -c /dev/ttyAMA0 ] && \
-    exec 0</dev/ttyAMA0 \
-         1>/dev/ttyAMA0 \
-         2>/dev/ttyAMA0
-
-# Execute main system initialization script
-exec /etc/init.d/rcS
+# Loop to respawn shell if it exits
+while true; do
+    setsid sh -c 'exec sh </dev/ttyAMA0 >/dev/ttyAMA0 2>&1' || true
+    sleep 1
+done

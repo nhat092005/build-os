@@ -1,7 +1,5 @@
 #!/bin/sh
 
-echo "Running rcS - system initialization"
-
 # Create runtime directories
 mkdir -p /var/run /var/log /tmp
 
@@ -16,5 +14,4 @@ for service in /etc/init.d/S*; do
     [ -x "$service" ] && "$service" start
 done
 
-# Drop to interactive shell
-exec /bin/sh
+echo "rcS initialization complete"
