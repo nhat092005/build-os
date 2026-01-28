@@ -8,5 +8,5 @@ mount -t devtmpfs devtmpfs /dev 2>/dev/null
 # Run initialization
 /etc/init.d/rcS
 
-# Spawn getty - it will handle login and respawn automatically
+# Spawn getty on serial console
 exec /sbin/getty -L ttyAMA0 115200 vt100
