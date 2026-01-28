@@ -14,4 +14,4 @@ for service in /etc/init.d/S*; do
     [ -x "$service" ] && "$service" start
 done
 
-echo "rcS initialization complete"
+echo "System initialization complete"
