@@ -2,11 +2,29 @@
 # Load kernel modules
 
 start() {
-    modprobe cfg80211 2>/dev/null
-    modprobe brcmutil 2>/dev/null
-    modprobe brcmfmac 2>/dev/null
-    sleep 1
-    [ -e /sys/class/net/wlan0 ] && echo "WiFi modules loaded"
+    # cfg80211 and rfkill are built-in (CONFIG_CFG80211=y, CONFIG_RFKILL=y) - already in kernel
+    # brcmfmac is module (CONFIG_BRCMFMAC=m) - must load with dependencies
+    
+    echo "Loading WiFi driver..."
+    
+    # Use insmod to avoid auto-loading built-in modules
+    # Load brcmutil first (dependency)
+    insmod /lib/modules/6.12.67-v8+/kernel/drivers/net/wireless/broadcom/brcm80211/brcmutil/brcmutil.ko.xz 2>/dev/null
+    
+    # Then load brcmfmac
+    insmod /lib/modules/6.12.67-v8+/kernel/drivers/net/wireless/broadcom/brcm80211/brcmfmac/brcmfmac.ko.xz 2>/dev/null
+    
+    # Wait for wlan0 to appear
+    for i in 1 2 3 4 5; do
+        if [ -e /sys/class/net/wlan0 ]; then
+            echo "WiFi modules loaded"
+            return 0
+        fi
+        sleep 1
+    done
+    
+    echo "WiFi interface not found"
+    return 1
 }
 
 stop() {
