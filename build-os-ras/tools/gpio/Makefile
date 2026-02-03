@@ -19,7 +19,7 @@ CFLAGS += -march=armv8-a
 SRC_DIR := .
 
 # Rootfs path (relative to gpio/ directory)
-ROOTFS := ../rootfs
+ROOTFS := ../../rootfs
 
 # Installation directory in rootfs
 INSTALL_DIR := $(ROOTFS)/usr/bin
@@ -79,7 +79,6 @@ check-arch: all
 clean:
 	rm -rf $(BUILD_DIR)
 	rm -f $(TARGETS)
-	@echo "Clean complete!"
 
 # Clean rootfs installations
 clean-rootfs:
@@ -118,6 +117,7 @@ help:
 	@echo "Examples:"
 	@echo "  make"
 	@echo "  make install-rootfs ROOTFS=../../rootfs"
+	@echo "  make clean-rootfs ROOTFS=../../rootfs"
 	@echo "  make CC=aarch64-linux-gnu-gcc"
 
 # Phony targets
