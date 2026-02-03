@@ -43,6 +43,15 @@ typedef enum
  */
 int gpio_export(int bcm_gpio);
 
+/** 
+ * @brief Check if GPIO is already exported
+ * 
+ * @param gpio BCM GPIO number
+ * 
+ * @return 1 if exported, 0 if not, -1 on error
+ */
+int gpio_is_exported(int gpio);
+
 /**
  * @brief Unexport GPIO pin (cleanup)
  * 
@@ -61,6 +70,15 @@ int gpio_unexport(int bcm_gpio);
  * @return 0 on success, -1 on error
  */
 int gpio_set_direction(int bcm_gpio, gpio_direction_t dir);
+
+/**
+ * @brief Get GPIO direction
+ * 
+ * @param gpio BCM GPIO number
+ * 
+ * @return GPIO_DIRECTION_IN or GPIO_DIRECTION_OUT on success, -1 on error
+ */
+gpio_direction_t gpio_get_direction(int gpio);
 
 /**
  * @brief Write value to GPIO (output mode)

@@ -62,6 +62,29 @@ int gpio_export(int bcm_gpio)
     return 0; // Always return success
 }
 
+int gpio_is_exported(int gpio)
+{
+    char path[BUFFER_MAX];
+    snprintf(path, sizeof(path), SYSFS_GPIO_DIR "/gpio%d/direction", BCM_TO_SYS(gpio));
+
+    int fd = open(path, O_RDONLY);
+    if (fd < 0)
+    {
+        if (errno == ENOENT)
+        {
+            return 0; // Not exported
+        }
+        else
+        {
+            perror("open");
+            return -1; // Error
+        }
+    }
+
+    close(fd);
+    return 1; // Exported
+}
+
 int gpio_unexport(int bcm_gpio)
 {
     char buffer[BUFFER_MAX];
@@ -85,6 +108,33 @@ int gpio_set_direction(int bcm_gpio, gpio_direction_t dir)
     else
     {
         return write_file(path, "in");
+    }
+}
+
+gpio_direction_t gpio_get_direction(int gpio)
+{
+    char path[BUFFER_MAX];
+    char buffer[16];
+    int sys_gpio = BCM_TO_SYS(gpio);
+
+    snprintf(path, sizeof(path), SYSFS_GPIO_DIR "/gpio%d/direction", sys_gpio);
+
+    if (read_file(path, buffer, sizeof(buffer)) < 0)
+    {
+        return -1;
+    }
+
+    if (strncmp(buffer, "out", 3) == 0)
+    {
+        return GPIO_DIRECTION_OUT;
+    }
+    else if (strncmp(buffer, "in", 2) == 0)
+    {
+        return GPIO_DIRECTION_IN;
+    }
+    else
+    {
+        return -1; // Unknown direction
     }
 }
 
