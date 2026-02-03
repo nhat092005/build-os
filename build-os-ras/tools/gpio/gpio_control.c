@@ -89,7 +89,55 @@ int main(int argc, char *argv[])
            gpio, BCM_TO_SYS(gpio));
 
     // Execute commands
-    if (strcmp(cmd, "init") == 0)
+    if (strcmp(cmd, "export") == 0)
+    {
+        if (gpio_export(gpio) != 0)
+        {
+            fprintf(stderr, "Error exporting GPIO %d\n", gpio);
+            return 1;
+        }
+        else
+        {
+            printf("GPIO %d exported\n", gpio);
+        }
+    }
+    else if (strcmp(cmd, "unexport") == 0)
+    {
+        if (gpio_unexport(gpio) != 0)
+        {
+            fprintf(stderr, "Error unexporting GPIO %d\n", gpio);
+            return 1;
+        }
+        else
+        {
+            printf("GPIO %d unexported\n", gpio);
+        }
+    }
+    else if (strcmp(cmd, "direction") == 0)
+    {
+        if (!gpio_is_exported(gpio))
+        {
+            fprintf(stderr, "GPIO %d not initialized. Run init first.\n", gpio);
+            return 1;
+        }
+
+        if (argc < 4)
+        {
+            fprintf(stderr, "Error: direction requires argument (in/out)\n");
+            return 1;
+        }
+
+        gpio_direction_t dir = (strcmp(argv[3], "out") == 0)
+                                   ? GPIO_DIRECTION_OUT
+                                   : GPIO_DIRECTION_IN;
+
+        if (gpio_set_direction(gpio, dir) == 0)
+        {
+            printf("GPIO %d direction set to %s\n",
+                   gpio, (dir == GPIO_DIRECTION_OUT) ? "output" : "input");
+        }
+    }
+    else if (strcmp(cmd, "init") == 0)
     {
         if (argc < 4)
         {
@@ -289,6 +337,9 @@ void print_usage(const char *prog)
     printf("GPIO Control Utility\n");
     printf("Usage: %s <bcm_gpio> <command> [options]\n\n", prog);
     printf("Commands:\n");
+    printf("  export                    Export GPIO pin\n");
+    printf("  unexport                  Unexport GPIO pin\n");
+    printf("  direction <in|out>        Set GPIO direction\n");
     printf("  init <in|out>             Initialize GPIO (export + direction)\n");
     printf("  set <0|1>                 Set GPIO value (output mode)\n");
     printf("  get                       Get GPIO value\n");
