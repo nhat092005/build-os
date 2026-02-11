@@ -64,4 +64,4 @@ BR2_ROOTFS_POST_IMAGE_SCRIPT="board/raspberrypi4-64/post-image.sh"
 BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_GPIO_LED_PATH)/board/raspberrypi/rootfs-overlay"
 
 # Custom Driver Package
-BR2_PACKAGE_GPIO_LED_DRIVER=y
+BR2_PACKAGE_GPIO_CHARDEV_DRIVER=y

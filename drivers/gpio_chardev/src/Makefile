@@ -1,7 +1,7 @@
-# Makefile for GPIO LED Kernel Driver
+# Makefile for GPIO Character Device Kernel Driver
 
 # Module name
-obj-m := gpio_led.o
+obj-m := gpio_chardev.o
 
 # Build output directory
 BUILD_DIR := $(CURDIR)/../build/module
@@ -23,7 +23,7 @@ all: build
 
 # Build
 build: 
-	@echo "Building GPIO LED kernel module"
+	@echo "Building GPIO Character Device kernel module"
 	@mkdir -p $(BUILD_DIR)
 	$(MAKE) -C $(KERNELDIR) M=$(CURDIR) \
 	        ARCH=$(ARCH) \

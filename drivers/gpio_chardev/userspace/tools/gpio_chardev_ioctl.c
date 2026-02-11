@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
- * GPIO LED IOCTL Test Tool
+ * GPIO GPIO IOCTL Test Tool
  *
  * Author: nhat092005
  *
@@ -18,9 +18,9 @@
 #include <errno.h>
 
 /* Include UAPI header - same header used by kernel */
-#include "../../include/uapi/gpio_led.h"
+#include "../../include/uapi/gpio_chardev.h"
 
-#define DEVICE_PATH "/dev/gpio_led"
+#define DEVICE_PATH "/dev/gpio_chardev"
 
 /* Function prototypes */
 static void print_usage(const char *prog);
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 	fd = open(DEVICE_PATH, O_RDWR);
 	if (fd < 0) {
 		perror("Failed to open device");
-		fprintf(stderr, "Make sure driver is loaded: insmod gpio_led.ko\n");
+		fprintf(stderr, "Make sure driver is loaded: insmod gpio_chardev.ko\n");
 		return 1;
 	}
 
@@ -53,24 +53,24 @@ int main(int argc, char *argv[])
 	const char *cmd = argv[1];
 
 	if (strcmp(cmd, "on") == 0) {
-		ret = set_led_state(fd, GPIO_LED_ON);
+		ret = set_led_state(fd, GPIO_CHARDEV_ON);
 		if (ret == 0) {
-			printf("LED turned ON\n");
+			printf("GPIO turned ON\n");
 		}
 	} else if (strcmp(cmd, "off") == 0) {
-		ret = set_led_state(fd, GPIO_LED_OFF);
+		ret = set_led_state(fd, GPIO_CHARDEV_OFF);
 		if (ret == 0) {
-			printf("LED turned OFF\n");
+			printf("GPIO turned OFF\n");
 		}
 	} else if (strcmp(cmd, "toggle") == 0) {
 		ret = toggle_led(fd);
 		if (ret == 0) {
-			printf("LED toggled\n");
+			printf("GPIO toggled\n");
 		}
 	} else if (strcmp(cmd, "get") == 0) {
 		ret = get_led_state(fd);
 		if (ret >= 0) {
-			printf("LED state: %s\n", ret ? "ON" : "OFF");
+			printf("GPIO state: %s\n", ret ? "ON" : "OFF");
 			ret = 0;
 		}
 	} else if (strcmp(cmd, "gpio") == 0) {
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 
 		ret = blink_led(fd, count, on_ms, off_ms);
 		if (ret == 0) {
-			printf("Blinking LED %u times (%ums on, %ums off)\n",
+			printf("Blinking GPIO %u times (%ums on, %ums off)\n",
 			       count, on_ms, off_ms);
 		}
 	} else {
@@ -101,22 +101,22 @@ int main(int argc, char *argv[])
 
 static void print_usage(const char *prog)
 {
-	printf("GPIO LED IOCTL Test Tool\n");
+	printf("GPIO GPIO IOCTL Test Tool\n");
 	printf("Usage: %s <command> [options]\n\n", prog);
 	printf("Commands:\n");
-	printf("  on                Turn LED on\n");
-	printf("  off               Turn LED off\n");
-	printf("  toggle            Toggle LED state\n");
-	printf("  get               Get LED state\n");
+	printf("  on                Turn GPIO on\n");
+	printf("  off               Turn GPIO off\n");
+	printf("  toggle            Toggle GPIO state\n");
+	printf("  get               Get GPIO state\n");
 	printf("  gpio              Get GPIO pin number\n");
 	printf("  blink [count] [on_ms] [off_ms]\n");
-	printf("                    Blink LED (default: 10 times, 500ms)\n");
+	printf("                    Blink GPIO (default: 10 times, 500ms)\n");
 	printf("\n");
 	printf("Examples:\n");
-	printf("  %s on                        # Turn LED on\n", prog);
-	printf("  %s off                       # Turn LED off\n", prog);
-	printf("  %s toggle                    # Toggle LED\n", prog);
-	printf("  %s get                       # Get LED state\n", prog);
+	printf("  %s on                        # Turn GPIO on\n", prog);
+	printf("  %s off                       # Turn GPIO off\n", prog);
+	printf("  %s toggle                    # Toggle GPIO\n", prog);
+	printf("  %s get                       # Get GPIO state\n", prog);
 	printf("  %s gpio                      # Get GPIO pin\n", prog);
 	printf("  %s blink 20 300 300          # Blink 20 times, 300ms on/off\n",
 	       prog);
@@ -126,8 +126,8 @@ static void print_usage(const char *prog)
 
 static int set_led_state(int fd, unsigned int state)
 {
-	if (ioctl(fd, GPIO_LED_IOC_SET_STATE, &state) < 0) {
-		perror("ioctl GPIO_LED_IOC_SET_STATE failed");
+	if (ioctl(fd, GPIO_CHARDEV_IOC_SET_STATE, &state) < 0) {
+		perror("ioctl GPIO_CHARDEV_IOC_SET_STATE failed");
 		return -1;
 	}
 	return 0;
@@ -137,8 +137,8 @@ static int get_led_state(int fd)
 {
 	unsigned int state;
 
-	if (ioctl(fd, GPIO_LED_IOC_GET_STATE, &state) < 0) {
-		perror("ioctl GPIO_LED_IOC_GET_STATE failed");
+	if (ioctl(fd, GPIO_CHARDEV_IOC_GET_STATE, &state) < 0) {
+		perror("ioctl GPIO_CHARDEV_IOC_GET_STATE failed");
 		return -1;
 	}
 	return state;
@@ -146,8 +146,8 @@ static int get_led_state(int fd)
 
 static int toggle_led(int fd)
 {
-	if (ioctl(fd, GPIO_LED_IOC_TOGGLE) < 0) {
-		perror("ioctl GPIO_LED_IOC_TOGGLE failed");
+	if (ioctl(fd, GPIO_CHARDEV_IOC_TOGGLE) < 0) {
+		perror("ioctl GPIO_CHARDEV_IOC_TOGGLE failed");
 		return -1;
 	}
 	return 0;
@@ -157,8 +157,8 @@ static int get_gpio_pin(int fd)
 {
 	unsigned int gpio;
 
-	if (ioctl(fd, GPIO_LED_IOC_GET_GPIO, &gpio) < 0) {
-		perror("ioctl GPIO_LED_IOC_GET_GPIO failed");
+	if (ioctl(fd, GPIO_CHARDEV_IOC_GET_GPIO, &gpio) < 0) {
+		perror("ioctl GPIO_CHARDEV_IOC_GET_GPIO failed");
 		return -1;
 	}
 	return gpio;
@@ -167,14 +167,14 @@ static int get_gpio_pin(int fd)
 static int blink_led(int fd, unsigned int count, unsigned int on_ms,
 		     unsigned int off_ms)
 {
-	struct gpio_led_blink blink = {
+	struct gpio_chardev_blink blink = {
 		.count = count,
 		.delay_on = on_ms,
 		.delay_off = off_ms,
 	};
 
-	if (ioctl(fd, GPIO_LED_IOC_BLINK, &blink) < 0) {
-		perror("ioctl GPIO_LED_IOC_BLINK failed");
+	if (ioctl(fd, GPIO_CHARDEV_IOC_BLINK, &blink) < 0) {
+		perror("ioctl GPIO_CHARDEV_IOC_BLINK failed");
 		return -1;
 	}
 	return 0;

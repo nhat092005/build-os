@@ -20,14 +20,14 @@
 #include <linux/delay.h>
 #include <linux/kthread.h>
 
-#include "../include/gpio_led.h"
+#include "../include/gpio_chardev.h"
 
 /* Module parameters */
-static int gpio_pin = GPIO_LED_DEFAULT_PIN;
+static int gpio_pin = GPIO_CHARDEV_DEFAULT_PIN;
 module_param(gpio_pin, int, 0444);
 MODULE_PARM_DESC(gpio_pin, "GPIO pin number");
 
-static struct gpio_led_dev *gpio_led_device;
+static struct gpio_chardev_dev *gpio_chardev_device;
 static struct task_struct *blink_thread;
 static atomic_t blink_stop;
 
@@ -36,18 +36,18 @@ static struct platform_device *gpio_pdev;
 static struct gpiod_lookup_table *gpio_lookup_table;
 
 /**
- * gpio_led_parse_value - Parse input string to get LED value
+ * gpio_chardev_parse_value - Parse input string to get LED value
  * @buf: Input buffer
  * @len: Length of input buffer
  * @value: Pointer to store parsed value (0 or 1)
  * Return 0 on success, -EINVAL on failure
  */
-static int gpio_led_parse_value(const char *buf, size_t len, int *value)
+static int gpio_chardev_parse_value(const char *buf, size_t len, int *value)
 {
-	char tmp[GPIO_LED_MAX_BUFFER];
+	char tmp[GPIO_CHARDEV_MAX_BUFFER];
 	int ret;
 
-	if (len >= GPIO_LED_MAX_BUFFER)
+	if (len >= GPIO_CHARDEV_MAX_BUFFER)
 		return -EINVAL;
 
 	memcpy(tmp, buf, len);
@@ -76,14 +76,14 @@ static int gpio_led_parse_value(const char *buf, size_t len, int *value)
 }
 
 /**
- * gpio_led_blink_fn - Kernel thread function for blinking LED
- * @data: Pointer to gpio_led_blink structure
+ * gpio_chardev_blink_fn - Kernel thread function for blinking LED
+ * @data: Pointer to gpio_chardev_blink structure
  * Return: 0 on thread exit
  */
-static int gpio_led_blink_fn(void *data)
+static int gpio_chardev_blink_fn(void *data)
 {
-	struct gpio_led_blink *blink = data;
-	struct gpio_led_dev *dev = gpio_led_device;
+	struct gpio_chardev_blink *blink = data;
+	struct gpio_chardev_dev *dev = gpio_chardev_device;
 	__u32 count = 0;
 
 	while (!kthread_should_stop() && !atomic_read(&blink_stop))
@@ -119,44 +119,44 @@ static int gpio_led_blink_fn(void *data)
 }
 
 /**
- * gpio_led_open - Open function for GPIO LED device
+ * gpio_chardev_open - Open function for GPIO LED device
  * @inode: Pointer to inode structure
  * @filp: Pointer to file structure
  * Return: 0 on success
  */
-static int gpio_led_open(struct inode *inode, struct file *filp)
+static int gpio_chardev_open(struct inode *inode, struct file *filp)
 {
-	struct gpio_led_dev *dev;
+	struct gpio_chardev_dev *dev;
 
-	dev = container_of(inode->i_cdev, struct gpio_led_dev, cdev);
+	dev = container_of(inode->i_cdev, struct gpio_chardev_dev, cdev);
 	filp->private_data = dev;
 	return 0;
 }
 
 /**
- * gpio_led_release - Release function for GPIO LED device
+ * gpio_chardev_release - Release function for GPIO LED device
  * @inode: Pointer to inode structure
  * @filp: Pointer to file structure
  * Return: 0 on success
  */
-static int gpio_led_release(struct inode *inode, struct file *filp)
+static int gpio_chardev_release(struct inode *inode, struct file *filp)
 {
 	return 0;
 }
 
 /**
- * gpio_led_read - Read function for GPIO LED device
+ * gpio_chardev_read - Read function for GPIO LED device
  * @filp: Pointer to file structure
  * @buf: User buffer to store read data
  * @count: Number of bytes to read
  * @f_pos: File position pointer
  * Return: Number of bytes read on success, negative error code on failure
  */
-static ssize_t gpio_led_read(struct file *filp, char __user *buf,
+static ssize_t gpio_chardev_read(struct file *filp, char __user *buf,
 							 size_t count, loff_t *f_pos)
 {
-	struct gpio_led_dev *dev = filp->private_data;
-	char kbuf[GPIO_LED_MAX_BUFFER];
+	struct gpio_chardev_dev *dev = filp->private_data;
+	char kbuf[GPIO_CHARDEV_MAX_BUFFER];
 	int len, ret;
 
 	if (*f_pos > 0)
@@ -177,18 +177,18 @@ static ssize_t gpio_led_read(struct file *filp, char __user *buf,
 }
 
 /**
- * gpio_led_write - Write function for GPIO LED device
+ * gpio_chardev_write - Write function for GPIO LED device
  * @filp: Pointer to file structure
  * @buf: User buffer containing data to write
  * @count: Number of bytes to write
  * @f_pos: File position pointer
  * Return: Number of bytes written on success, negative error code on failure
  */
-static ssize_t gpio_led_write(struct file *filp, const char __user *buf,
+static ssize_t gpio_chardev_write(struct file *filp, const char __user *buf,
 							  size_t count, loff_t *f_pos)
 {
-	struct gpio_led_dev *dev = filp->private_data;
-	char kbuf[GPIO_LED_MAX_BUFFER];
+	struct gpio_chardev_dev *dev = filp->private_data;
+	char kbuf[GPIO_CHARDEV_MAX_BUFFER];
 	ssize_t len;
 	int value, ret;
 
@@ -200,7 +200,7 @@ static ssize_t gpio_led_write(struct file *filp, const char __user *buf,
 
 	kbuf[len] = '\0';
 
-	ret = gpio_led_parse_value(kbuf, len, &value);
+	ret = gpio_chardev_parse_value(kbuf, len, &value);
 
 	mutex_lock(&dev->lock);
 	gpiod_set_value(dev->gpio_desc, value);
@@ -211,26 +211,26 @@ static ssize_t gpio_led_write(struct file *filp, const char __user *buf,
 }
 
 /**
- * gpio_led_ioctl - IOCTL function for GPIO LED device
+ * gpio_chardev_ioctl - IOCTL function for GPIO LED device
  * @filp: Pointer to file structure
  * @cmd: IOCTL command
  * @arg: Argument for IOCTL command
  * Return: 0 on success, negative error code on failure
  */
-static long gpio_led_ioctl(struct file *filp, unsigned int cmd,
+static long gpio_chardev_ioctl(struct file *filp, unsigned int cmd,
 						   unsigned long arg)
 {
-	struct gpio_led_dev *dev = filp->private_data;
-	struct gpio_led_blink *blink;
+	struct gpio_chardev_dev *dev = filp->private_data;
+	struct gpio_chardev_blink *blink;
 	__u32 value;
 	int ret = 0;
 
 	switch (cmd)
 	{
-	case GPIO_LED_IOC_SET_STATE:
+	case GPIO_CHARDEV_IOC_SET_STATE:
 		if (copy_from_user(&value, (__u32 __user *)arg, sizeof(value)))
 			return -EFAULT;
-		if (value != GPIO_LED_OFF && value != GPIO_LED_ON)
+		if (value != GPIO_CHARDEV_OFF && value != GPIO_CHARDEV_ON)
 			return -EINVAL;
 		mutex_lock(&dev->lock);
 		gpiod_set_value(dev->gpio_desc, value);
@@ -238,7 +238,7 @@ static long gpio_led_ioctl(struct file *filp, unsigned int cmd,
 		mutex_unlock(&dev->lock);
 		break;
 
-	case GPIO_LED_IOC_GET_STATE:
+	case GPIO_CHARDEV_IOC_GET_STATE:
 		mutex_lock(&dev->lock);
 		value = gpiod_get_value(dev->gpio_desc);
 		dev->state = value;
@@ -247,20 +247,20 @@ static long gpio_led_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 		break;
 
-	case GPIO_LED_IOC_TOGGLE:
+	case GPIO_CHARDEV_IOC_TOGGLE:
 		mutex_lock(&dev->lock);
 		dev->state = !gpiod_get_value(dev->gpio_desc);
 		gpiod_set_value(dev->gpio_desc, dev->state);
 		mutex_unlock(&dev->lock);
 		break;
 
-	case GPIO_LED_IOC_GET_GPIO:
+	case GPIO_CHARDEV_IOC_GET_GPIO:
 		value = dev->gpio_pin;
 		if (copy_to_user((__u32 __user *)arg, &value, sizeof(value)))
 			return -EFAULT;
 		break;
 
-	case GPIO_LED_IOC_BLINK:
+	case GPIO_CHARDEV_IOC_BLINK:
 		if (blink_thread)
 		{
 			atomic_set(&blink_stop, 1);
@@ -270,7 +270,7 @@ static long gpio_led_ioctl(struct file *filp, unsigned int cmd,
 		blink = kmalloc(sizeof(*blink), GFP_KERNEL);
 		if (!blink)
 			return -ENOMEM;
-		if (copy_from_user(blink, (struct gpio_led_blink __user *)arg,
+		if (copy_from_user(blink, (struct gpio_chardev_blink __user *)arg,
 						   sizeof(*blink)))
 		{
 			kfree(blink);
@@ -282,8 +282,8 @@ static long gpio_led_ioctl(struct file *filp, unsigned int cmd,
 			return -EINVAL;
 		}
 		atomic_set(&blink_stop, 0);
-		blink_thread = kthread_run(gpio_led_blink_fn, blink,
-								   "gpio_led_blink");
+		blink_thread = kthread_run(gpio_chardev_blink_fn, blink,
+								   "gpio_chardev_blink");
 		if (IS_ERR(blink_thread))
 		{
 			ret = PTR_ERR(blink_thread);
@@ -301,20 +301,20 @@ static long gpio_led_ioctl(struct file *filp, unsigned int cmd,
 }
 
 /* File operations structure */
-static const struct file_operations gpio_led_fops = {
+static const struct file_operations gpio_chardev_fops = {
 	.owner = THIS_MODULE,
-	.open = gpio_led_open,
-	.release = gpio_led_release,
-	.read = gpio_led_read,
-	.write = gpio_led_write,
-	.unlocked_ioctl = gpio_led_ioctl,
+	.open = gpio_chardev_open,
+	.release = gpio_chardev_release,
+	.read = gpio_chardev_read,
+	.write = gpio_chardev_write,
+	.unlocked_ioctl = gpio_chardev_ioctl,
 };
 
 /**
- * gpio_led_cleanup - Cleanup function for GPIO LED device
- * @dev: Pointer to gpio_led_dev structure
+ * gpio_chardev_cleanup - Cleanup function for GPIO LED device
+ * @dev: Pointer to gpio_chardev_dev structure
  */
-static void gpio_led_cleanup(struct gpio_led_dev *dev)
+static void gpio_chardev_cleanup(struct gpio_chardev_dev *dev)
 {
 	if (!dev)
 		return;
@@ -351,22 +351,22 @@ static void gpio_led_cleanup(struct gpio_led_dev *dev)
 }
 
 /**
- * gpio_led_init - Module initialization function
+ * gpio_chardev_init - Module initialization function
  * Return: 0 on success, negative error code on failure
  */
-static int __init gpio_led_init(void)
+static int __init gpio_chardev_init(void)
 {
-	struct gpio_led_dev *dev;
+	struct gpio_chardev_dev *dev;
 	int ret;
 
 	pr_info("%s: Initializing driver v%s\n",
-			GPIO_LED_DRIVER_NAME, GPIO_LED_DRIVER_VERSION);
+			GPIO_CHARDEV_DRIVER_NAME, GPIO_CHARDEV_DRIVER_VERSION);
 
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
 
-	gpio_led_device = dev;
+	gpio_chardev_device = dev;
 	dev->gpio_pin = gpio_pin;
 	mutex_init(&dev->lock);
 	atomic_set(&blink_stop, 0);
@@ -399,7 +399,7 @@ static int __init gpio_led_init(void)
 	{
 		ret = PTR_ERR(gpio_pdev);
 		pr_err("%s: Failed to register platform device: %d\n",
-			   GPIO_LED_DRIVER_NAME, ret);
+			   GPIO_CHARDEV_DRIVER_NAME, ret);
 		gpiod_remove_lookup_table(gpio_lookup_table);
 		gpio_pdev = NULL;
 		goto err_cleanup;
@@ -411,27 +411,27 @@ static int __init gpio_led_init(void)
 	{
 		ret = PTR_ERR(dev->gpio_desc);
 		pr_err("%s: Failed to get GPIO%d: %d\n",
-			   GPIO_LED_DRIVER_NAME, dev->gpio_pin, ret);
+			   GPIO_CHARDEV_DRIVER_NAME, dev->gpio_pin, ret);
 		dev->gpio_desc = NULL;
 		goto err_cleanup;
 	}
 	dev->gpio_requested = true;
 
 	pr_info("%s: Successfully configured GPIO%d (using platform device)\n",
-			GPIO_LED_DRIVER_NAME, dev->gpio_pin);
+			GPIO_CHARDEV_DRIVER_NAME, dev->gpio_pin);
 
-	ret = alloc_chrdev_region(&dev->dev_num, 0, 1, GPIO_LED_DRIVER_NAME);
+	ret = alloc_chrdev_region(&dev->dev_num, 0, 1, GPIO_CHARDEV_DRIVER_NAME);
 	if (ret < 0)
 		goto err_cleanup;
 
-	cdev_init(&dev->cdev, &gpio_led_fops);
+	cdev_init(&dev->cdev, &gpio_chardev_fops);
 	dev->cdev.owner = THIS_MODULE;
 
 	ret = cdev_add(&dev->cdev, dev->dev_num, 1);
 	if (ret < 0)
 		goto err_cleanup;
 
-	dev->class = class_create(GPIO_LED_CLASS_NAME);
+	dev->class = class_create(GPIO_CHARDEV_CLASS_NAME);
 	if (IS_ERR(dev->class))
 	{
 		ret = PTR_ERR(dev->class);
@@ -439,7 +439,7 @@ static int __init gpio_led_init(void)
 	}
 
 	dev->device = device_create(dev->class, NULL, dev->dev_num,
-								NULL, GPIO_LED_DRIVER_NAME);
+								NULL, GPIO_CHARDEV_DRIVER_NAME);
 	if (IS_ERR(dev->device))
 	{
 		ret = PTR_ERR(dev->device);
@@ -447,20 +447,20 @@ static int __init gpio_led_init(void)
 	}
 
 	pr_info("%s: Device /dev/%s created (GPIO%d)\n",
-			GPIO_LED_DRIVER_NAME, GPIO_LED_DRIVER_NAME, dev->gpio_pin);
+			GPIO_CHARDEV_DRIVER_NAME, GPIO_CHARDEV_DRIVER_NAME, dev->gpio_pin);
 
 	return 0;
 
 err_cleanup:
-	gpio_led_cleanup(dev);
-	gpio_led_device = NULL;
+	gpio_chardev_cleanup(dev);
+	gpio_chardev_device = NULL;
 	return ret;
 }
 
 /**
- * gpio_led_exit - Module exit function
+ * gpio_chardev_exit - Module exit function
  */
-static void __exit gpio_led_exit(void)
+static void __exit gpio_chardev_exit(void)
 {
 	/* Unregister platform device */
 	if (gpio_pdev)
@@ -477,15 +477,15 @@ static void __exit gpio_led_exit(void)
 		gpio_lookup_table = NULL;
 	}
 
-	gpio_led_cleanup(gpio_led_device);
-	gpio_led_device = NULL;
-	pr_info("%s: Driver removed\n", GPIO_LED_DRIVER_NAME);
+	gpio_chardev_cleanup(gpio_chardev_device);
+	gpio_chardev_device = NULL;
+	pr_info("%s: Driver removed\n", GPIO_CHARDEV_DRIVER_NAME);
 }
 
-module_init(gpio_led_init);
-module_exit(gpio_led_exit);
+module_init(gpio_chardev_init);
+module_exit(gpio_chardev_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("nhat092005");
 MODULE_DESCRIPTION("GPIO LED Character Device Driver");
-MODULE_VERSION(GPIO_LED_DRIVER_VERSION);
+MODULE_VERSION(GPIO_CHARDEV_DRIVER_VERSION);

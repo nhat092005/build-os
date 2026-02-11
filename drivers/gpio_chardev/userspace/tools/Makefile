@@ -1,4 +1,4 @@
-# Makefile for GPIO LED userspace tools
+# Makefile for GPIO Character Device userspace tools
 
 # Toolchain Configuration
 CC              ?= gcc
@@ -10,7 +10,7 @@ UAPI_DIR        := ../../include/uapi
 INCLUDES        := -I$(UAPI_DIR)
 
 # Target Binaries
-TARGETS         := led_ioctl
+TARGETS         := gpio_chardev_ioctl
 
 # PHONY Targets
 .PHONY: all clean install help
@@ -23,8 +23,8 @@ $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
 
 # Target Builds
-led_ioctl: led_ioctl.c
-	@echo "Building led_ioctl tool"
+gpio_chardev_ioctl: gpio_chardev_ioctl.c
+	@echo "Building gpio_chardev_ioctl tool"
 	@$(CC) $(CFLAGS) $(INCLUDES) -o $(BUILD_DIR)/$@ $<
 
 # Clean Targets
@@ -36,16 +36,16 @@ clean:
 help:
 	@echo "Targets:"
 	@echo "  all            Build LED control tool (default)"
-	@echo "  led_ioctl      Build GPIO LED control tool"
+	@echo "  gpio_chardev_ioctl      Build GPIO Character Device control tool"
 	@echo "  clean          Remove build artifacts"
 	@echo ""
 	@echo "Tool Description:"
-	@echo "  led_ioctl      Controls /dev/gpio_led via ioctl (requires driver)"
+	@echo "  gpio_chardev_ioctl      Controls /dev/gpio_led via ioctl (requires driver)"
 	@echo ""
 	@echo "Usage:"
-	@echo "  led_ioctl on               # Turn LED on"
-	@echo "  led_ioctl off              # Turn LED off"
-	@echo "  led_ioctl toggle           # Toggle LED"
-	@echo "  led_ioctl get              # Get LED state"
-	@echo "  led_ioctl gpio             # Get GPIO pin number"
-	@echo "  led_ioctl blink 20 300 300 # Blink 20 times (300ms on/off)"
+	@echo "  gpio_chardev_ioctl on               # Turn LED on"
+	@echo "  gpio_chardev_ioctl off              # Turn LED off"
+	@echo "  gpio_chardev_ioctl toggle           # Toggle LED"
+	@echo "  gpio_chardev_ioctl get              # Get LED state"
+	@echo "  gpio_chardev_ioctl gpio             # Get GPIO pin number"
+	@echo "  gpio_chardev_ioctl blink 20 300 300 # Blink 20 times (300ms on/off)"
