@@ -1,7 +1,0 @@
-# Raspberry Pi 4 Configuration
-arm_64bit=1
-kernel=kernel8.img
-enable_uart=1
-dtoverlay=miniuart-bt
-
-arm_boost=1
