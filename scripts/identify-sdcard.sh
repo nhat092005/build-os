@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 echo "All block devices:"
 lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,MODEL
 

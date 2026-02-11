@@ -37,7 +37,7 @@ export ARCH CROSS_COMPILE KERNELDIR CC AR
 .PHONY: all clean help
 .PHONY: driver driver-clean
 .PHONY: buildroot buildroot-clean menuconfig
-.PHONY: deploy identify-sdcard
+.PHONY: deploy identify-sdcard install-tools
 
 # Main Targets
 all: buildroot driver
@@ -156,6 +156,15 @@ deploy:
 	@echo "Deploying image to $(DEVICE)"
 	@bash $(SCRIPTS_DIR)/deploy-to-sdcard.sh $(DEVICE) $(METHOD)
 
+# Install userspace tools to root filesystem
+install-tools:
+	@if [ ! -f "$(SCRIPTS_DIR)/install-tools.sh" ]; then \
+		echo "Error: install-tools.sh not found"; \
+		exit 1; \
+	fi
+	@echo "Installing userspace tools to root filesystem"
+	@bash $(SCRIPTS_DIR)/install-tools.sh
+
 # Clean 
 clean: driver-clean buildroot-clean
 	@echo "Clean complete"
@@ -170,6 +179,7 @@ help:
 	@echo "Deployment:"
 	@echo "  identify-sdcard          Identify SD card device"
 	@echo "  deploy                   Flash image to SD card"
+	@echo "  install-tools            Install userspace tools to root filesystem"
 	@echo ""
 	@echo "Configuration:"
 	@echo "  menuconfig               Configure Buildroot (interactive)"
@@ -204,6 +214,7 @@ help:
 	@echo "  make driver DRIVER=gpio-led"
 	@echo "  sudo make deploy DEVICE=/dev/sda METHOD=auto"
 	@echo "  sudo make deploy DEVICE=/dev/sda METHOD=manual"
+	@echo "  sudo make install-tools"
 	@echo ""
 	@echo "Available Drivers:"
 	@for drv in $(AVAILABLE_DRIVERS); do \

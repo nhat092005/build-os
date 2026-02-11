@@ -171,7 +171,6 @@ main() {
             ;;
         *)
             echo "Error: Unknown method '$method'"
-            usage
             ;;
     esac
 }
