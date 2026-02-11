@@ -43,8 +43,8 @@
  */
 struct gpio_chardev_blink
 {
-	__u32 count;     /* Number of blinks, 0 = infinite */
-	__u32 delay_on;  /* ON duration in milliseconds */
+	__u32 count;	 /* Number of blinks, 0 = infinite */
+	__u32 delay_on;	 /* ON duration in milliseconds */
 	__u32 delay_off; /* OFF duration in milliseconds */
 };
 

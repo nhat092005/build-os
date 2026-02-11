@@ -10,7 +10,7 @@ UAPI_DIR        := ../../include/uapi
 INCLUDES        := -I$(UAPI_DIR)
 
 # Target Binaries
-TARGETS         := gpio_chardev_ioctl
+TARGETS         := gpio-chardev-ioctl
 
 # PHONY Targets
 .PHONY: all clean install help

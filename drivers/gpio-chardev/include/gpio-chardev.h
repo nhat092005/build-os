@@ -16,12 +16,12 @@
 #include <linux/mutex.h>
 #include <linux/types.h>
 #include <linux/gpio/consumer.h>
-#include "uapi/gpio_chardev.h"
+#include "uapi/gpio-chardev.h"
 
 /* Driver information */
-#define GPIO_CHARDEV_DRIVER_NAME "gpio_chardev"
+#define GPIO_CHARDEV_DRIVER_NAME "gpio-chardev"
 #define GPIO_CHARDEV_DRIVER_VERSION "1.0.0"
-#define GPIO_CHARDEV_CLASS_NAME "gpio_chardev_class"
+#define GPIO_CHARDEV_CLASS_NAME "gpio-chardev-class"
 
 /* Default configuration */
 #define GPIO_CHARDEV_DEFAULT_PIN 17

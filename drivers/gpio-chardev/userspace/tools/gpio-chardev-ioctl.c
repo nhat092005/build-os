@@ -18,9 +18,9 @@
 #include <errno.h>
 
 /* Include UAPI header - same header used by kernel */
-#include "../../include/uapi/gpio_chardev.h"
+#include "../../include/uapi/gpio-chardev.h"
 
-#define DEVICE_PATH "/dev/gpio_chardev"
+#define DEVICE_PATH "/dev/gpio-chardev"
 
 /* Function prototypes */
 static void print_usage(const char *prog);

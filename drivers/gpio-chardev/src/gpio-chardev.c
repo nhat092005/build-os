@@ -20,13 +20,14 @@
 #include <linux/delay.h>
 #include <linux/kthread.h>
 
-#include "../include/gpio_chardev.h"
+#include "../include/gpio-chardev.h"
 
 /* Module parameters */
 static int gpio_pin = GPIO_CHARDEV_DEFAULT_PIN;
 module_param(gpio_pin, int, 0444);
 MODULE_PARM_DESC(gpio_pin, "GPIO pin number");
 
+/* Device structure */
 static struct gpio_chardev_dev *gpio_chardev_device;
 static struct task_struct *blink_thread;
 static atomic_t blink_stop;
@@ -34,46 +35,6 @@ static atomic_t blink_stop;
 /* Platform device for GPIO access */
 static struct platform_device *gpio_pdev;
 static struct gpiod_lookup_table *gpio_lookup_table;
-
-/**
- * gpio_chardev_parse_value - Parse input string to get LED value
- * @buf: Input buffer
- * @len: Length of input buffer
- * @value: Pointer to store parsed value (0 or 1)
- * Return 0 on success, -EINVAL on failure
- */
-static int gpio_chardev_parse_value(const char *buf, size_t len, int *value)
-{
-	char tmp[GPIO_CHARDEV_MAX_BUFFER];
-	int ret;
-
-	if (len >= GPIO_CHARDEV_MAX_BUFFER)
-		return -EINVAL;
-
-	memcpy(tmp, buf, len);
-	tmp[len] = '\0';
-
-	ret = kstrtoint(tmp, 10, value);
-	if (ret == 0)
-	{
-		if (*value != 0 && *value != 1)
-			return -EINVAL;
-		return 0;
-	}
-
-	if (strncasecmp(tmp, "on", 2) == 0)
-	{
-		*value = 1;
-		return 0;
-	}
-	else if (strncasecmp(tmp, "off", 3) == 0)
-	{
-		*value = 0;
-		return 0;
-	}
-
-	return -EINVAL;
-}
 
 /**
  * gpio_chardev_blink_fn - Kernel thread function for blinking LED
@@ -150,14 +111,14 @@ static int gpio_chardev_release(struct inode *inode, struct file *filp)
  * @buf: User buffer to store read data
  * @count: Number of bytes to read
  * @f_pos: File position pointer
- * Return: Number of bytes read on success, negative error code on failure
+ * Return: Number of bytes read or negative error code
  */
 static ssize_t gpio_chardev_read(struct file *filp, char __user *buf,
-							 size_t count, loff_t *f_pos)
+								 size_t count, loff_t *f_pos)
 {
 	struct gpio_chardev_dev *dev = filp->private_data;
 	char kbuf[GPIO_CHARDEV_MAX_BUFFER];
-	int len, ret;
+	int len;
 
 	if (*f_pos > 0)
 		return 0;
@@ -170,7 +131,8 @@ static ssize_t gpio_chardev_read(struct file *filp, char __user *buf,
 	if (len > count)
 		len = count;
 
-	ret = copy_to_user(buf, kbuf, len);
+	if (copy_to_user(buf, kbuf, len))
+		return -EFAULT;
 
 	*f_pos += len;
 	return len;
@@ -182,25 +144,31 @@ static ssize_t gpio_chardev_read(struct file *filp, char __user *buf,
  * @buf: User buffer containing data to write
  * @count: Number of bytes to write
  * @f_pos: File position pointer
- * Return: Number of bytes written on success, negative error code on failure
+ * Return: Number of bytes written or negative error code
  */
 static ssize_t gpio_chardev_write(struct file *filp, const char __user *buf,
-							  size_t count, loff_t *f_pos)
+								  size_t count, loff_t *f_pos)
 {
 	struct gpio_chardev_dev *dev = filp->private_data;
 	char kbuf[GPIO_CHARDEV_MAX_BUFFER];
-	ssize_t len;
-	int value, ret;
+	int value;
+	size_t len;
 
 	if (count == 0)
 		return 0;
 
 	len = min(count, sizeof(kbuf) - 1);
-	ret = copy_from_user(kbuf, buf, len);
+	if (copy_from_user(kbuf, buf, len))
+		return -EFAULT;
 
 	kbuf[len] = '\0';
 
-	ret = gpio_chardev_parse_value(kbuf, len, &value);
+	/* Parse input accept 0 or 1 */
+	if (kstrtoint(kbuf, 10, &value))
+		return -EINVAL;
+
+	if (value != 0 && value != 1)
+		return -EINVAL;
 
 	mutex_lock(&dev->lock);
 	gpiod_set_value(dev->gpio_desc, value);
@@ -214,11 +182,11 @@ static ssize_t gpio_chardev_write(struct file *filp, const char __user *buf,
  * gpio_chardev_ioctl - IOCTL function for GPIO LED device
  * @filp: Pointer to file structure
  * @cmd: IOCTL command
- * @arg: Argument for IOCTL command
- * Return: 0 on success, negative error code on failure
+ * @arg: IOCTL argument
+ * Return: 0 on success or negative error code
  */
 static long gpio_chardev_ioctl(struct file *filp, unsigned int cmd,
-						   unsigned long arg)
+							   unsigned long arg)
 {
 	struct gpio_chardev_dev *dev = filp->private_data;
 	struct gpio_chardev_blink *blink;
@@ -261,26 +229,31 @@ static long gpio_chardev_ioctl(struct file *filp, unsigned int cmd,
 		break;
 
 	case GPIO_CHARDEV_IOC_BLINK:
+		/* Stop existing blink thread if any */
 		if (blink_thread)
 		{
 			atomic_set(&blink_stop, 1);
 			kthread_stop(blink_thread);
 			blink_thread = NULL;
 		}
+
 		blink = kmalloc(sizeof(*blink), GFP_KERNEL);
 		if (!blink)
 			return -ENOMEM;
+
 		if (copy_from_user(blink, (struct gpio_chardev_blink __user *)arg,
 						   sizeof(*blink)))
 		{
 			kfree(blink);
 			return -EFAULT;
 		}
+
 		if (blink->delay_on == 0 || blink->delay_off == 0)
 		{
 			kfree(blink);
 			return -EINVAL;
 		}
+
 		atomic_set(&blink_stop, 0);
 		blink_thread = kthread_run(gpio_chardev_blink_fn, blink,
 								   "gpio_chardev_blink");
@@ -311,48 +284,7 @@ static const struct file_operations gpio_chardev_fops = {
 };
 
 /**
- * gpio_chardev_cleanup - Cleanup function for GPIO LED device
- * @dev: Pointer to gpio_chardev_dev structure
- */
-static void gpio_chardev_cleanup(struct gpio_chardev_dev *dev)
-{
-	if (!dev)
-		return;
-
-	if (blink_thread)
-	{
-		atomic_set(&blink_stop, 1);
-		kthread_stop(blink_thread);
-		blink_thread = NULL;
-	}
-
-	if (dev->gpio_requested)
-		gpiod_set_value(dev->gpio_desc, 0);
-
-	if (dev->device && !IS_ERR(dev->device))
-		device_destroy(dev->class, dev->dev_num);
-
-	if (dev->class && !IS_ERR(dev->class))
-		class_destroy(dev->class);
-
-	if (dev->dev_num)
-		cdev_del(&dev->cdev);
-
-	if (dev->dev_num)
-		unregister_chrdev_region(dev->dev_num, 1);
-
-	if (dev->gpio_requested && dev->gpio_desc)
-	{
-		gpiod_put(dev->gpio_desc);
-		dev->gpio_desc = NULL;
-	}
-
-	kfree(dev);
-}
-
-/**
  * gpio_chardev_init - Module initialization function
- * Return: 0 on success, negative error code on failure
  */
 static int __init gpio_chardev_init(void)
 {
@@ -372,11 +304,13 @@ static int __init gpio_chardev_init(void)
 	atomic_set(&blink_stop, 0);
 
 	/* Create GPIO lookup table dynamically */
-	gpio_lookup_table = kzalloc(sizeof(*gpio_lookup_table) + 2 * sizeof(struct gpiod_lookup), GFP_KERNEL);
+	gpio_lookup_table = kzalloc(sizeof(*gpio_lookup_table) +
+									2 * sizeof(struct gpiod_lookup),
+								GFP_KERNEL);
 	if (!gpio_lookup_table)
 	{
 		ret = -ENOMEM;
-		goto err_cleanup;
+		goto err_free_dev;
 	}
 
 	gpio_lookup_table->dev_id = "gpio-led-pdev";
@@ -384,11 +318,6 @@ static int __init gpio_chardev_init(void)
 	gpio_lookup_table->table[0].chip_hwnum = dev->gpio_pin;
 	gpio_lookup_table->table[0].con_id = "led";
 	gpio_lookup_table->table[0].flags = GPIO_ACTIVE_HIGH;
-	/* Try alternative chip name for older Pi models */
-	if (!gpio_lookup_table->table[0].key)
-	{
-		gpio_lookup_table->table[0].key = "pinctrl-bcm2835";
-	}
 
 	/* Register lookup table */
 	gpiod_add_lookup_table(gpio_lookup_table);
@@ -400,9 +329,8 @@ static int __init gpio_chardev_init(void)
 		ret = PTR_ERR(gpio_pdev);
 		pr_err("%s: Failed to register platform device: %d\n",
 			   GPIO_CHARDEV_DRIVER_NAME, ret);
-		gpiod_remove_lookup_table(gpio_lookup_table);
 		gpio_pdev = NULL;
-		goto err_cleanup;
+		goto err_remove_lookup;
 	}
 
 	/* Request GPIO through platform device */
@@ -413,37 +341,53 @@ static int __init gpio_chardev_init(void)
 		pr_err("%s: Failed to get GPIO%d: %d\n",
 			   GPIO_CHARDEV_DRIVER_NAME, dev->gpio_pin, ret);
 		dev->gpio_desc = NULL;
-		goto err_cleanup;
+		goto err_unregister_pdev;
 	}
 	dev->gpio_requested = true;
 
-	pr_info("%s: Successfully configured GPIO%d (using platform device)\n",
+	pr_info("%s: Successfully configured GPIO%d\n",
 			GPIO_CHARDEV_DRIVER_NAME, dev->gpio_pin);
 
+	/* Allocate character device region */
 	ret = alloc_chrdev_region(&dev->dev_num, 0, 1, GPIO_CHARDEV_DRIVER_NAME);
 	if (ret < 0)
-		goto err_cleanup;
+	{
+		pr_err("%s: Failed to allocate chrdev region: %d\n",
+			   GPIO_CHARDEV_DRIVER_NAME, ret);
+		goto err_unregister_pdev;
+	}
 
+	/* Initialize and add character device */
 	cdev_init(&dev->cdev, &gpio_chardev_fops);
 	dev->cdev.owner = THIS_MODULE;
 
 	ret = cdev_add(&dev->cdev, dev->dev_num, 1);
 	if (ret < 0)
-		goto err_cleanup;
+	{
+		pr_err("%s: Failed to add cdev: %d\n",
+			   GPIO_CHARDEV_DRIVER_NAME, ret);
+		goto err_unregister_chrdev;
+	}
 
+	/* Create device class */
 	dev->class = class_create(GPIO_CHARDEV_CLASS_NAME);
 	if (IS_ERR(dev->class))
 	{
 		ret = PTR_ERR(dev->class);
-		goto err_cleanup;
+		pr_err("%s: Failed to create class: %d\n",
+			   GPIO_CHARDEV_DRIVER_NAME, ret);
+		goto err_del_cdev;
 	}
 
+	/* Create device */
 	dev->device = device_create(dev->class, NULL, dev->dev_num,
 								NULL, GPIO_CHARDEV_DRIVER_NAME);
 	if (IS_ERR(dev->device))
 	{
 		ret = PTR_ERR(dev->device);
-		goto err_cleanup;
+		pr_err("%s: Failed to create device: %d\n",
+			   GPIO_CHARDEV_DRIVER_NAME, ret);
+		goto err_destroy_class;
 	}
 
 	pr_info("%s: Device /dev/%s created (GPIO%d)\n",
@@ -451,8 +395,23 @@ static int __init gpio_chardev_init(void)
 
 	return 0;
 
-err_cleanup:
-	gpio_chardev_cleanup(dev);
+err_destroy_class:
+	class_destroy(dev->class);
+err_del_cdev:
+	cdev_del(&dev->cdev);
+err_unregister_chrdev:
+	unregister_chrdev_region(dev->dev_num, 1);
+err_unregister_pdev:
+	if (gpio_pdev)
+		platform_device_unregister(gpio_pdev);
+err_remove_lookup:
+	if (gpio_lookup_table)
+	{
+		gpiod_remove_lookup_table(gpio_lookup_table);
+		kfree(gpio_lookup_table);
+	}
+err_free_dev:
+	kfree(dev);
 	gpio_chardev_device = NULL;
 	return ret;
 }
@@ -462,6 +421,37 @@ err_cleanup:
  */
 static void __exit gpio_chardev_exit(void)
 {
+	struct gpio_chardev_dev *dev = gpio_chardev_device;
+
+	if (!dev)
+		return;
+
+	/* Stop blink thread if running */
+	if (blink_thread)
+	{
+		atomic_set(&blink_stop, 1);
+		kthread_stop(blink_thread);
+		blink_thread = NULL;
+	}
+
+	/* Turn off LED */
+	if (dev->gpio_requested && dev->gpio_desc)
+		gpiod_set_value(dev->gpio_desc, 0);
+
+	/* Destroy device and class */
+	if (dev->device && !IS_ERR(dev->device))
+		device_destroy(dev->class, dev->dev_num);
+
+	if (dev->class && !IS_ERR(dev->class))
+		class_destroy(dev->class);
+
+	/* Remove character device */
+	if (dev->dev_num)
+	{
+		cdev_del(&dev->cdev);
+		unregister_chrdev_region(dev->dev_num, 1);
+	}
+
 	/* Unregister platform device */
 	if (gpio_pdev)
 	{
@@ -477,8 +467,10 @@ static void __exit gpio_chardev_exit(void)
 		gpio_lookup_table = NULL;
 	}
 
-	gpio_chardev_cleanup(gpio_chardev_device);
+	/* Free device structure */
+	kfree(dev);
 	gpio_chardev_device = NULL;
+
 	pr_info("%s: Driver removed\n", GPIO_CHARDEV_DRIVER_NAME);
 }
 
