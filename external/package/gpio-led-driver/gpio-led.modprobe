@@ -1,0 +1,11 @@
+# GPIO LED module parameters
+# This file is for reference only - not installed by default
+# To use, copy to /etc/modprobe.d/ and uncomment the option line
+
+# Set default GPIO pin (default: 17)
+#options gpio_led gpio_pin=17
+
+# Usage:
+#   1. Copy this file: cp gpio-led.modprobe /etc/modprobe.d/gpio-led.conf
+#   2. Uncomment and edit the options line above
+#   3. Reboot or: rmmod gpio_led && modprobe gpio_led

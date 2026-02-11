@@ -1,0 +1,8 @@
+config BR2_PACKAGE_GPIO_LED_DRIVER
+	bool "gpio-led-driver"
+	depends on BR2_LINUX_KERNEL
+	help
+	  GPIO LED kernel driver for controlling LEDs via character device interface.
+	  
+	  This is an out-of-tree kernel module that provides /dev/gpio_led interface
+	  for userspace LED control. Supports Device Tree integration.
