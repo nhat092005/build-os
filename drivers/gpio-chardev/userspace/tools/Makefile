@@ -23,8 +23,8 @@ $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
 
 # Target Builds
-gpio_chardev_ioctl: gpio_chardev_ioctl.c
-	@echo "Building gpio_chardev_ioctl tool"
+gpio-chardev-ioctl: gpio-chardev-ioctl.c
+	@echo "Building gpio-chardev-ioctl tool"
 	@$(CC) $(CFLAGS) $(INCLUDES) -o $(BUILD_DIR)/$@ $<
 
 # Clean Targets
@@ -35,17 +35,17 @@ clean:
 # Help
 help:
 	@echo "Targets:"
-	@echo "  all            Build LED control tool (default)"
-	@echo "  gpio_chardev_ioctl      Build GPIO Character Device control tool"
+	@echo "  all            Build GPIO Character Device control tool (default)"
+	@echo "  gpio-chardev-ioctl      Build GPIO Character Device control tool"
 	@echo "  clean          Remove build artifacts"
 	@echo ""
 	@echo "Tool Description:"
-	@echo "  gpio_chardev_ioctl      Controls /dev/gpio_led via ioctl (requires driver)"
+	@echo "  gpio-chardev-ioctl      Controls /dev/gpio-chardev via ioctl (requires driver)"
 	@echo ""
 	@echo "Usage:"
-	@echo "  gpio_chardev_ioctl on               # Turn LED on"
-	@echo "  gpio_chardev_ioctl off              # Turn LED off"
-	@echo "  gpio_chardev_ioctl toggle           # Toggle LED"
-	@echo "  gpio_chardev_ioctl get              # Get LED state"
-	@echo "  gpio_chardev_ioctl gpio             # Get GPIO pin number"
-	@echo "  gpio_chardev_ioctl blink 20 300 300 # Blink 20 times (300ms on/off)"
+	@echo "  gpio-chardev-ioctl on               # Turn GPIO on"
+	@echo "  gpio-chardev-ioctl off              # Turn GPIO off"
+	@echo "  gpio-chardev-ioctl toggle           # Toggle GPIO"
+	@echo "  gpio-chardev-ioctl get              # Get GPIO state"
+	@echo "  gpio-chardev-ioctl gpio             # Get GPIO pin number"
+	@echo "  gpio-chardev-ioctl blink 20 300 300 # Blink 20 times (300ms on/off)"
