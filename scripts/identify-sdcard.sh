@@ -2,7 +2,6 @@
 
 set -e
 
-echo "All block devices:"
 lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,MODEL
 
 # Try to detect removable devices
