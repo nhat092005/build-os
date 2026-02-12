@@ -8,7 +8,6 @@ TOOLS_DIR="$PROJECT_ROOT/drivers"
 MOUNT_POINT="/tmp/sdcard_rootfs"
 
 detect_rootfs_partition() {
-    echo "Detecting rootfs partition" >&2
     local partitions=()
     local count=0
     while IFS= read -r line; do
@@ -48,7 +47,6 @@ detect_rootfs_partition() {
 }
 
 check_tools() {
-    echo "Checking tools"
     local tools=()
     while IFS= read -r tool; do
         tools+=("$tool")
@@ -57,7 +55,6 @@ check_tools() {
     
     if [ ${#tools[@]} -eq 0 ]; then
         echo "Error: No tools found" >&2
-        echo "Run 'make driver' first" >&2
         exit 1
     fi
     
@@ -104,7 +101,6 @@ main() {
     
     read -p "Install to $ROOTFS_PARTITION? (y/n): " confirm
     if [ "$confirm" != "y" ]; then
-        echo "Cancelled"
         exit 0
     fi
 
