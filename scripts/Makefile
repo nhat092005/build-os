@@ -14,7 +14,8 @@ METHOD          ?= auto
 AVAILABLE_USERSPACE_TOOLS := $(notdir $(wildcard $(DRIVERS_DIR)/*/userspace))
 
 # PHONY Targets
-.PHONY: all identify-sdcard deploy install-tools help 
+.PHONY: all help
+.PHONY: identify-sdcard deploy install-tools
 
 # Main Targets
 all: identify-sdcard deploy install-tools
