@@ -46,7 +46,7 @@ build-all: buildroot driver userspace
 
 # Build Drivers
 driver:
-	@$(MAKE) -C $(DRIVERS_DIR) driver\
+	$(MAKE) -C $(DRIVERS_DIR) driver\
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
 		KERNELDIR=$(KERNELDIR) \
@@ -54,12 +54,12 @@ driver:
 
 # Clean Drivers
 driver-clean:
-	@$(MAKE) -C $(DRIVERS_DIR) driver-clean \
+	$(MAKE) -C $(DRIVERS_DIR) driver-clean \
 		DRIVER=$(DRIVER)
 
 # Build Userspace Tools
 userspace:
-	@$(MAKE) -C $(DRIVERS_DIR) userspace \
+	$(MAKE) -C $(DRIVERS_DIR) userspace \
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
 		KERNELDIR=$(KERNELDIR) \
@@ -67,7 +67,7 @@ userspace:
 
 # Clean Userspace Tools
 userspace-clean:
-	@$(MAKE) -C $(DRIVERS_DIR) userspace-clean \
+	$(MAKE) -C $(DRIVERS_DIR) userspace-clean \
 		USERSPACE=$(USERSPACE)
 
 # Build Buildroot
@@ -77,11 +77,11 @@ buildroot:
 		echo "Run: git submodule update --init buildroot"; \
 		exit 1; \
 	fi
-	@$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL)
+	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL)
 
 # Clean Buildroot
 buildroot-clean:
-	@$(MAKE) -C $(BUILDROOT_DIR) clean
+	$(MAKE) -C $(BUILDROOT_DIR) clean
 
 # Configure Buildroot
 menuconfig:
@@ -89,7 +89,7 @@ menuconfig:
 		echo "Error: Buildroot not found"; \
 		exit 1; \
 	fi
-	@$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) menuconfig
+	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) menuconfig
 
 # Load defconfig (supports both built-in and BR2_EXTERNAL defconfigs)
 %_defconfig:
@@ -98,26 +98,26 @@ menuconfig:
 		echo "Run: git submodule update --init buildroot"; \
 		exit 1; \
 	fi
-	@$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) $@
+	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) $@
 
 # Image deployment
 image: stage-output install-tools deploy-sdcard
 
 # Stage output files
 stage-output:
-	@$(MAKE) -C $(SCRIPTS_DIR) stage-output
+	$(MAKE) -C $(SCRIPTS_DIR) stage-output
 
 # Install userspace tools
 install-tools:
-	@bash $(SCRIPTS_DIR)/install-tools.sh
+	bash $(SCRIPTS_DIR)/install-tools.sh
 
 # Identify SD card device
 identify-sdcard:
-	@$(MAKE) -C $(SCRIPTS_DIR) identify-sdcard
+	$(MAKE) -C $(SCRIPTS_DIR) identify-sdcard
 
 # Deploy SD card
 deploy-sdcard:
-	@$(MAKE) -C $(SCRIPTS_DIR) deploy-sdcard
+	$(MAKE) -C $(SCRIPTS_DIR) deploy-sdcard
 
 output-clean:
 	@if [ "$$(id -u)" -ne 0 ]; then \

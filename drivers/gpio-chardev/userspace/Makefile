@@ -27,18 +27,18 @@ userspace: $(BUILD_DIR) $(TARGETS)
 
 # Directory Creation
 $(BUILD_DIR):
-	@mkdir -p $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)
 
 # Build Userspace Tool
 %: $(TOOLS_DIR)/%.c
-	@$(CC) $(CFLAGS) $(INCLUDES) -o $(BUILD_DIR)/$@ $<
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(BUILD_DIR)/$@ $<
 
 # Clean Targets
 clean: userspace-clean
 
 # Clean Userspace Tool
 userspace-clean:
-	@rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)
 
 # Help
 help:

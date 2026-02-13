@@ -30,20 +30,20 @@ all: driver
 
 # Build Driver
 driver: 
-	@mkdir -p $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)
 	$(MAKE) -C $(KERNELDIR) M=$(CURDIR) \
 	        ARCH=$(ARCH) \
 	        CROSS_COMPILE=$(CROSS_COMPILE) \
 	        modules
-	@mv -f *.ko $(BUILD_DIR)/ 2>/dev/null || true
-	@mv -f *.o $(BUILD_DIR)/ 2>/dev/null || true
-	@mv -f .*.o $(BUILD_DIR)/ 2>/dev/null || true
-	@mv -f *.mod $(BUILD_DIR)/ 2>/dev/null || true
-	@mv -f *.mod.c $(BUILD_DIR)/ 2>/dev/null || true
-	@mv -f Module.symvers $(BUILD_DIR)/ 2>/dev/null || true
-	@mv -f modules.order $(BUILD_DIR)/ 2>/dev/null || true
-	@mv -f .*.cmd $(BUILD_DIR)/ 2>/dev/null || true
-	@mv -f .tmp_versions $(BUILD_DIR)/ 2>/dev/null || true
+	mv -f *.ko $(BUILD_DIR)/ 2>/dev/null || true
+	mv -f *.o $(BUILD_DIR)/ 2>/dev/null || true
+	mv -f .*.o $(BUILD_DIR)/ 2>/dev/null || true
+	mv -f *.mod $(BUILD_DIR)/ 2>/dev/null || true
+	mv -f *.mod.c $(BUILD_DIR)/ 2>/dev/null || true
+	mv -f Module.symvers $(BUILD_DIR)/ 2>/dev/null || true
+	mv -f modules.order $(BUILD_DIR)/ 2>/dev/null || true
+	mv -f .*.cmd $(BUILD_DIR)/ 2>/dev/null || true
+	mv -f .tmp_versions $(BUILD_DIR)/ 2>/dev/null || true
 
 # Clean
 clean: driver-clean
@@ -51,10 +51,10 @@ clean: driver-clean
 # Clean Driver
 driver-clean:
 	$(MAKE) -C $(KERNELDIR) M=$(CURDIR) clean
-	@rm -f *.o *.ko *.mod *.mod.c *.symvers *.order .*.cmd
-	@rm -f .*.o
-	@rm -rf .tmp_versions
-	@rm -rf $(BUILD_DIR)
+	rm -f *.o *.ko *.mod *.mod.c *.symvers *.order .*.cmd
+	rm -f .*.o
+	rm -rf .tmp_versions
+	rm -rf $(BUILD_DIR)
 
 # Help
 help:

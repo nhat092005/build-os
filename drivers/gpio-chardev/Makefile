@@ -10,22 +10,22 @@ all: driver userspace
 
 # Driver Build
 driver:
-	@$(MAKE) -C src driver
+	$(MAKE) -C src driver
 
 # Userspace Build
 userspace:
-	@$(MAKE) -C userspace userspace
+	$(MAKE) -C userspace userspace
 
 # Clean Targets
 clean: driver-clean userspace-clean
 
 # Clean Kernel Module
 driver-clean:
-	@$(MAKE) -C src driver-clean
+	$(MAKE) -C src driver-clean
 
 # Clean Userspace Tool
 userspace-clean:
-	@$(MAKE) -C userspace userspace-clean
+	$(MAKE) -C userspace userspace-clean
 
 # Help
 help:

@@ -23,7 +23,7 @@ stage-output:
 		echo "Error: Staging output requires root privileges"; \
 		exit 1; \
 	fi
-	@bash $(SCRIPTS_DIR)/stage-output.sh $(DEVICE) $(METHOD)
+	bash $(SCRIPTS_DIR)/stage-output.sh $(DEVICE) $(METHOD)
 
 # Deploy SD card image
 deploy-sdcard:
@@ -35,7 +35,7 @@ deploy-sdcard:
 		echo "Error: Deployment requires root privileges"; \
 		exit 1; \
 	fi
-	@bash $(SCRIPTS_DIR)/deploy-sdcard.sh $(DEVICE)
+	bash $(SCRIPTS_DIR)/deploy-sdcard.sh $(DEVICE)
 
 # Install userspace tools to root filesystem
 install-tools:
@@ -47,7 +47,7 @@ install-tools:
 		echo "Error: Installing tools requires root privileges"; \
 		exit 1; \
 	fi
-	@bash $(SCRIPTS_DIR)/install-tools.sh
+	bash $(SCRIPTS_DIR)/install-tools.sh
 
 # Identify SD card device
 identify-sdcard:
@@ -55,7 +55,7 @@ identify-sdcard:
 		echo "Error: identify-sdcard.sh not found"; \
 		exit 1; \
 	fi
-	@bash $(SCRIPTS_DIR)/identify-sdcard.sh
+	bash $(SCRIPTS_DIR)/identify-sdcard.sh
 
 # Help
 help:
