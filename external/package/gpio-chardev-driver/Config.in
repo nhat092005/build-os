@@ -1,0 +1,8 @@
+config BR2_PACKAGE_GPIO_CHARDEV_DRIVER
+	bool "gpio-chardev-driver"
+	depends on BR2_LINUX_KERNEL
+	help
+	  GPIO Character Device kernel driver for controlling GPIO via character device interface.
+	  
+	  This is an out-of-tree kernel module that provides /dev/gpio_chardev interface
+	  for userspace GPIO control. Legacy driver for learning purposes.
