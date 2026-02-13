@@ -1,41 +1,31 @@
-# Makefile for GPIO LED Driver
-
-# Cross-compilation settings (inherited from root Makefile)
-ARCH            ?= arm64
-CROSS_COMPILE   ?= aarch64-linux-gnu-
-KERNELDIR       ?= /lib/modules/$(shell uname -r)/build
+# Makefile for GPIO Character Device Driver and Userspace Tool
 
 # PHONY Targets
-.PHONY: all driver userspace help
-.PHONY: clean clean-driver clean-userspace 
+.PHONY: all clean help
+.PHONY: driver driver-clean
+.PHONY: userspace userspace-clean
 
 # Main Targets
 all: driver userspace
-	@echo "Build complete"
 
 # Driver Build
 driver:
-	@echo "Building kernel module"
-	@$(MAKE) -C src
+	@$(MAKE) -C src driver
 
 # Userspace Build
 userspace:
-	@echo "Building userspace tool"
-	@$(MAKE) -C userspace/tools
+	@$(MAKE) -C userspace userspace
 
 # Clean Targets
-clean: clean-driver clean-userspace
-	@echo "Clean complete"
+clean: driver-clean userspace-clean
 
 # Clean Kernel Module
-clean-driver:
-	@echo "Cleaning kernel module"
-	@$(MAKE) -C src clean
+driver-clean:
+	@$(MAKE) -C src driver-clean
 
 # Clean Userspace Tool
-clean-userspace:
-	@echo "Cleaning userspace tool"
-	@$(MAKE) -C userspace/tools clean
+userspace-clean:
+	@$(MAKE) -C userspace userspace-clean
 
 # Help
 help:
@@ -46,5 +36,5 @@ help:
 	@echo ""
 	@echo "Clean:"
 	@echo "  clean      Clean all build artifacts"
-	@echo "  clean-driver     Clean kernel module artifacts"
-	@echo "  clean-userspace  Clean userspace tool artifacts"
+	@echo "  driver-clean     Clean kernel module artifacts"
+	@echo "  userspace-clean  Clean userspace tool artifacts"
