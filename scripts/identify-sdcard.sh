@@ -5,8 +5,6 @@ set -e
 lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,MODEL
 
 # Try to detect removable devices
-echo ""
-echo "Removable devices detected:"
 for dev in /sys/block/sd*; do
     if [ -f "$dev/removable" ] && [ "$(cat $dev/removable)" = "1" ]; then
         devname=$(basename $dev)
