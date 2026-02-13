@@ -2,115 +2,68 @@
 
 set -e
 
+# Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-TOOLS_DIR="$PROJECT_ROOT/drivers"
-MOUNT_POINT="/tmp/sdcard_rootfs"
+DRIVERS_DIR="$PROJECT_ROOT/drivers"
+OUTPUT_DIR="$PROJECT_ROOT/output"
+ROOTFS_DIR="$OUTPUT_DIR/rootfs"
 
-detect_rootfs_partition() {
-    local partitions=()
-    local count=0
-    while IFS= read -r line; do
-        local dev=$(echo "$line" | awk '{print $1}')
-        local label=$(echo "$line" | awk '{print $2}')
-        local fstype=$(echo "$line" | awk '{print $3}')
-        
-        if [[ "$label" == "rootfs" ]] || [[ "$fstype" == "ext4" ]]; then
-            local parent=$(lsblk -no PKNAME "/dev/$dev" 2>/dev/null || echo "$dev")
-            if [[ -f "/sys/block/$parent/removable" ]] && [[ "$(cat /sys/block/$parent/removable)" == "1" ]] || [[ "$parent" == mmcblk* ]]; then
-                partitions+=("/dev/$dev")
-                count=$((count + 1))
-                echo "  [$count] /dev/$dev - $label ($fstype)" >&2
-            fi
-        fi
-    done < <(lsblk -nlo NAME,LABEL,FSTYPE)
-    
-    if [ $count -eq 0 ]; then
-        echo "Error: No rootfs partition found" >&2
+# Check staged rootfs exists
+check_rootfs() {
+    if [ ! -d "$ROOTFS_DIR" ]; then
+        echo "Error: Staged rootfs not found."
         exit 1
     fi
     
-    if [ $count -eq 1 ]; then
-        echo "Selected: ${partitions[0]}" >&2
-        echo "${partitions[0]}"
-        return
-    fi
-    
-    read -p "Select partition [1-$count]: " selection
-    
-    if [ "$selection" -lt 1 ] || [ "$selection" -gt $count ]; then
-        echo "Error: Invalid selection" >&2
+    if [ ! -d "$ROOTFS_DIR/usr/bin" ]; then
+        echo "Error: Invalid rootfs structure."
         exit 1
     fi
-    
-    echo "${partitions[$((selection-1))]}"
 }
 
-check_tools() {
+# Find userspace tools
+find_tools() {
     local tools=()
+    
+    # Find all executable files in drivers/*/build/tools/
     while IFS= read -r tool; do
-        tools+=("$tool")
-        echo "  $(basename "$tool")"
-    done < <(find "$TOOLS_DIR" -path "*/build/tools/*" -type f -executable 2>/dev/null)
+        if [ -x "$tool" ]; then
+            tools+=("$tool")
+        fi
+    done < <(find "$DRIVERS_DIR" -path "*/build/tools/*" -type f 2>/dev/null)
     
-    if [ ${#tools[@]} -eq 0 ]; then
-        echo "Error: No tools found" >&2
-        exit 1
-    fi
-    
-    echo "Total: ${#tools[@]}"
+    # Only output the tools array (no messages)
+    echo "${tools[@]}"
 }
 
-mount_partition() {
-    local partition=$1
+# Install tools to rootfs
+install_tools() {
+    local tools=("$@")
+    local installed=0
+    local dest="$ROOTFS_DIR/usr/bin"
     
-    if mount | grep -q "$partition"; then
-        umount "$partition" 2>/dev/null || true
-    fi
-    
-    mkdir -p "$MOUNT_POINT"
-    mount "$partition" "$MOUNT_POINT"
-    
-    if [ ! -d "$MOUNT_POINT/usr/bin" ]; then
-        echo "Error: Invalid rootfs" >&2
-        umount "$MOUNT_POINT"
-        exit 1
-    fi
-}
-
-copy_tools() {
-    while IFS= read -r tool; do
+    for tool in "${tools[@]}"; do
         local name=$(basename "$tool")
-        cp "$tool" "$MOUNT_POINT/usr/bin/$name"
-        chmod +x "$MOUNT_POINT/usr/bin/$name"
-        echo "  $name"
-        copied=$((copied + 1))
-    done < <(find "$TOOLS_DIR" -path "*/build/tools/*" -type f -executable 2>/dev/null)
+        cp -v "$tool" "$dest/$name" || { echo "Error: Failed to copy $name"; exit 1; }
+        chmod +x "$dest/$name"
+        installed=$((installed + 1))
+    done
 }
 
-cleanup() {
-    sync
-    umount "$MOUNT_POINT" 2>/dev/null || true
-    rmdir "$MOUNT_POINT" 2>/dev/null || true
-}
-
-main() {
-    check_tools
+# Main
+main() {    
+    check_rootfs
     
-    ROOTFS_PARTITION=$(detect_rootfs_partition)
+    IFS=' ' read -r -a tools <<< "$(find_tools)"
     
-    read -p "Install to $ROOTFS_PARTITION? (y/n): " confirm
-    if [ "$confirm" != "y" ]; then
+    if [ ${#tools[@]} -eq 0 ] || [ -z "${tools[0]}" ]; then
+        echo "No userspace tools found to install."
         exit 0
     fi
-
-    mount_partition "$ROOTFS_PARTITION"
     
-    copy_tools
-    
-    cleanup
+    install_tools "${tools[@]}"
 }
 
-trap cleanup EXIT
-
+# Run main
 main "$@"
