@@ -1,8 +1,8 @@
 # Makefile for GPIO Character Device Userspace Tool
 
 # Toolchain Configuration
-CC              ?= gcc
-CFLAGS          ?= -Wall -Wextra -O2
+CC              := $(CROSS_COMPILE)gcc
+CFLAGS          := -Wall -Wextra -O2
 
 # Directory Configuration
 TOOLS_DIR       := tools

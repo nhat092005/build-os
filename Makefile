@@ -1,10 +1,5 @@
 # Makefile for build operation system
 
-# Toolchain Configuration
-CC              := $(CROSS_COMPILE)gcc
-CFLAGS          := -Wall -Wextra -O2
-AR              := $(CROSS_COMPILE)ar
-
 # Target platform configuration
 ARCH            := arm64
 
@@ -16,8 +11,13 @@ SCRIPTS_DIR     := $(shell pwd)/scripts
 IMAGE_DIR       := $(BUILDROOT_DIR)/output/images
 OUTPUT_DIR      := $(shell pwd)/output
 
-# Buildroot toolchain (must match kernel compiler)
+# Buildroot toolchain
 CROSS_COMPILE   := $(BUILDROOT_DIR)/output/host/bin/aarch64-linux-
+
+# Toolchain Configuration
+CC              := $(CROSS_COMPILE)gcc
+CFLAGS          := -Wall -Wextra -O2
+AR              := $(CROSS_COMPILE)ar
 
 # Kernel directory (Buildroot kernel only)
 KERNELDIR       := $(BUILDROOT_DIR)/output/build/linux-custom
@@ -28,7 +28,7 @@ USERSPACE       ?= all
 DEVICE          ?= /dev/sda
 
 # Export for sub-makefiles
-export ARCH CROSS_COMPILE KERNELDIR CC AR
+export ARCH CROSS_COMPILE KERNELDIR
 
 # PHONY Targets
 .PHONY: all clean help
