@@ -1,1 +1,1 @@
-source "$BR2_EXTERNAL_GPIO_LED_PATH/package/Config.in"
+source "$BR2_EXTERNAL_GPIO_DRIVERS_PATH/package/Config.in"

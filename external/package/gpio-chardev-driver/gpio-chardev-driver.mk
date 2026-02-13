@@ -1,6 +1,6 @@
 # GPIO Character Device Driver Makefile
 GPIO_CHARDEV_DRIVER_VERSION = 1.0.0
-GPIO_CHARDEV_DRIVER_SITE = $(BR2_EXTERNAL_GPIO_LED_PATH)/../drivers/gpio_chardev
+GPIO_CHARDEV_DRIVER_SITE = $(BR2_EXTERNAL_GPIO_DRIVERS_PATH)/../drivers/gpio-chardev
 GPIO_CHARDEV_DRIVER_SITE_METHOD = local
 GPIO_CHARDEV_DRIVER_LICENSE = GPL-2.0
 GPIO_CHARDEV_DRIVER_LICENSE_FILES = LICENSE
@@ -10,7 +10,7 @@ GPIO_CHARDEV_DRIVER_MODULE_SUBDIRS = src
 
 # Module configuration: auto-load at boot via modules-load.d
 define GPIO_CHARDEV_DRIVER_INSTALL_TARGET_CMDS
-	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_GPIO_LED_PATH)/package/gpio-chardev-driver/gpio-chardev.modules-load \
+	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_GPIO_DRIVERS_PATH)/package/gpio-chardev-driver/gpio-chardev.modules-load \
 		$(TARGET_DIR)/etc/modules-load.d/gpio-chardev.conf
 endef
 

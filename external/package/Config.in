@@ -1,1 +1,2 @@
-source "$BR2_EXTERNAL_GPIO_LED_PATH/package/gpio-chardev-driver/Config.in"
+source "$BR2_EXTERNAL_GPIO_DRIVERS_PATH/package/gpio-chardev-driver/Config.in"
+source "$BR2_EXTERNAL_GPIO_DRIVERS_PATH/package/leds-gpio-custom-driver/Config.in"

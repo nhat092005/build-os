@@ -1,2 +1,2 @@
-name: GPIO_LED
-desc: GPIO LED Driver
+name: GPIO_DRIVERS
+desc: GPIO Kernel Drivers (Character Device & LED Class)

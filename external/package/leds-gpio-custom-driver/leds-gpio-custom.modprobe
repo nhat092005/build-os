@@ -1,0 +1,14 @@
+# LED GPIO Custom module parameters
+# This file is for reference only - not installed by default
+# To use, copy to /etc/modprobe.d/ and uncomment the option line
+
+# Enable dynamic debug messages
+#options leds_gpio_custom dyndbg=+p
+
+# Note: This driver is primarily configured via Device Tree overlay
+# Example: dtoverlay=leds-gpio-custom,gpio=17,label="status:red:led",trigger="heartbeat"
+# 
+# Manual module loading (without Device Tree):
+#   Not recommended - use Device Tree overlay instead
+#
+# See documentation at: /usr/share/doc/leds-gpio-custom-driver/README.md
