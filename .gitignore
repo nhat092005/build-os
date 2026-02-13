@@ -1,0 +1,69 @@
+# Build outputs
+*.o
+*.ko
+*.mod
+*.mod.c
+*.order
+*.symvers
+*.cmd
+.tmp_versions/
+Module.markers
+modules.order
+
+# Buildroot output
+buildroot/output/
+buildroot/dl/
+buildroot/.config
+buildroot/.config.old
+
+# Staging output
+/output/
+
+# Generated files
+*.a
+*.so
+*.so.*
+*~
+*.swp
+*.swo
+.*.swp
+
+# Backup files
+*.backup
+*.bak
+*.orig
+
+# IDE files
+.vscode/
+.idea/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+dmesg*.txt
+
+# Distribution/packaging
+*.img
+*.zip
+*.tar.gz
+*.tgz
+
+# Keep defconfig
+!*defconfig
+!*.defconfig
+
+# Keep README and documentation
+!README.md
+!*.md
+
+# Documents
+docs/**
+
+# Driver build directories
+drivers/*/build/
+
+# Others
