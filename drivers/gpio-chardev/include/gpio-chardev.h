@@ -16,6 +16,7 @@
 #include <linux/mutex.h>
 #include <linux/types.h>
 #include <linux/gpio/consumer.h>
+
 #include "uapi/gpio-chardev.h"
 
 /* Driver information */
