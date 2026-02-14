@@ -1,13 +1,13 @@
 # Makefile for GPIO Character Device Userspace Tool
 
 # Toolchain Configuration
-CC              ?= gcc
-CFLAGS          ?= -Wall -Wextra -O2
+CC              := $(CROSS_COMPILE)gcc
+CFLAGS          := -Wall -Wextra -O2
 
 # Directory Configuration
 TOOLS_DIR       := tools
-BUILD_DIR       := ../build/tools
-UAPI_DIR        := ../include/uapi
+BUILD_DIR       := $(shell pwd)/../build/tools
+UAPI_DIR        := $(shell pwd)/../include/uapi
 INCLUDES        := -I$(UAPI_DIR)
 
 # Auto detect source files
@@ -27,18 +27,18 @@ userspace: $(BUILD_DIR) $(TARGETS)
 
 # Directory Creation
 $(BUILD_DIR):
-	@mkdir -p $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)
 
 # Build Userspace Tool
 %: $(TOOLS_DIR)/%.c
-	@$(CC) $(CFLAGS) $(INCLUDES) -o $(BUILD_DIR)/$@ $<
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(BUILD_DIR)/$@ $<
 
 # Clean Targets
 clean: userspace-clean
 
 # Clean Userspace Tool
 userspace-clean:
-	@rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)
 
 # Help
 help:

@@ -1,0 +1,69 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Device Tree Overlay for GPIO LED Driver (LED Class)
+ *
+ * This overlay creates a GPIO-based LED device that uses the standard
+ * Linux LED class subsystem. The LED will appear in /sys/class/leds/
+ * and can be controlled via sysfs or use LED triggers.
+ *
+ * Supported on: Raspberry Pi 4, Pi 3, Pi Zero 2 W
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2711", "brcm,bcm2835";
+
+	/* Configure GPIO pin for LED */
+	fragment@0 {
+		target = <&gpio>;
+		__overlay__ {
+			led_pins: led_pins {
+				brcm,pins = <17>;           /* GPIO 17 */
+				brcm,function = <1>;        /* Output */
+				brcm,pull = <0>;            /* No pull up/down */
+			};
+		};
+	};
+
+	/* Create LED device */
+	fragment@1 {
+		target-path = "/";
+		__overlay__ {
+			leds {
+				compatible = "gpio-leds";
+
+				gpio_led: gpio-led {
+					compatible = "custom,gpio-led";
+					pinctrl-names = "default";
+					pinctrl-0 = <&led_pins>;
+					gpios = <&gpio 17 0>;               /* GPIO17, Active High */
+					label = "custom-led";               /* Name in /sys/class/leds/ */
+					linux,default-trigger = "none";     /* No automatic trigger */
+					default-state = "off";              /* Start with LED off */
+					status = "okay";
+				};
+			};
+		};
+	};
+
+	/* Runtime parameters (can be overridden at boot) */
+	__overrides__ {
+		/* Change GPIO pin: dtoverlay=leds-gpio-custom,gpio=27 */
+		gpio = <&gpio_led>, "gpios:4",
+		       <&led_pins>, "brcm,pins:0";
+		
+		/* Change LED label: dtoverlay=leds-gpio-custom,label=status-led */
+		label = <&gpio_led>, "label";
+		
+		/* Change trigger: dtoverlay=leds-gpio-custom,trigger=heartbeat */
+		trigger = <&gpio_led>, "linux,default-trigger";
+		
+		/* Set active-low: dtoverlay=leds-gpio-custom,active_low */
+		active_low = <&gpio_led>, "active-low?";
+		
+		/* Retain state on suspend: dtoverlay=leds-gpio-custom,retain_state */
+		retain_state = <&gpio_led>, "retain-state-suspended?";
+	};
+};

@@ -1,0 +1,162 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/leds/custom,gpio-led.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Custom GPIO-controlled LED
+
+maintainers:
+  - nhat092005 <minhnhat092005@gmail.com>
+
+description: |
+  This binding describes a simple GPIO-controlled LED that uses the
+  standard Linux LED class subsystem. The LED can be controlled via
+  /sys/class/leds/ interface and supports all standard LED triggers.
+
+allOf:
+  - $ref: common.yaml#
+
+properties:
+  compatible:
+    const: custom,gpio-led
+
+  gpios:
+    description: |
+      GPIO pin controlling the LED. The GPIO should be configured as an output.
+      The second cell indicates GPIO flags (GPIO_ACTIVE_HIGH or GPIO_ACTIVE_LOW).
+    maxItems: 1
+
+  label:
+    description: |
+      The label for this LED. If omitted, the label is derived from the node name.
+      The label should follow the format: "devicename:color:function"
+    $ref: /schemas/types.yaml#/definitions/string
+
+  linux,default-trigger:
+    description: |
+      Default trigger for this LED. Can be any of the standard kernel LED triggers
+      such as "none", "heartbeat", "timer", "oneshot", "default-on", "cpu0", etc.
+    $ref: /schemas/types.yaml#/definitions/string
+
+  default-brightness:
+    description: |
+      Initial brightness value on probe. Valid range is 0-255.
+      If not specified, defaults to 0 (off).
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 0
+    maximum: 255
+
+  retain-state-suspended:
+    description: |
+      If present, the LED state (brightness) will be retained across
+      system suspend/resume cycles. If not present, LED will be turned
+      off during suspend.
+    type: boolean
+
+  pinctrl-names:
+    const: default
+
+  pinctrl-0:
+    description: |
+      Pinctrl state for the GPIO pin. Should configure the pin as an output
+      with appropriate pull resistor settings.
+
+required:
+  - compatible
+  - gpios
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/gpio/gpio.h>
+
+    // Example 1: Basic LED with active-high GPIO
+    leds_custom {
+        compatible = "custom,gpio-led";
+        gpios = <&gpio 17 GPIO_ACTIVE_HIGH>;
+        label = "custom:red:status";
+        linux,default-trigger = "heartbeat";
+        default-brightness = <255>;
+        retain-state-suspended;
+    };
+
+  - |
+    #include <dt-bindings/gpio/gpio.h>
+
+    // Example 2: LED with active-low GPIO and pinctrl
+    &gpio {
+        led_pins: led_pins {
+            brcm,pins = <23>;
+            brcm,function = <1>; /* Output */
+            brcm,pull = <0>;     /* No pull */
+        };
+    };
+
+    / {
+        leds_activity {
+            compatible = "custom,gpio-led";
+            pinctrl-names = "default";
+            pinctrl-0 = <&led_pins>;
+            gpios = <&gpio 23 GPIO_ACTIVE_LOW>;
+            label = "custom:green:activity";
+            linux,default-trigger = "mmc0";
+        };
+    };
+
+  - |
+    #include <dt-bindings/gpio/gpio.h>
+
+    // Example 3: Multiple LEDs
+    / {
+        leds_status {
+            compatible = "custom,gpio-led";
+            gpios = <&gpio 17 GPIO_ACTIVE_HIGH>;
+            label = "custom:red:power";
+            linux,default-trigger = "default-on";
+            default-brightness = <255>;
+        };
+        
+        leds_activity {
+            compatible = "custom,gpio-led";
+            gpios = <&gpio 27 GPIO_ACTIVE_HIGH>;
+            label = "custom:green:activity";
+            linux,default-trigger = "heartbeat";
+        };
+        
+        leds_error {
+            compatible = "custom,gpio-led";
+            gpios = <&gpio 22 GPIO_ACTIVE_HIGH>;
+            label = "custom:amber:error";
+            linux,default-trigger = "none";
+        };
+    };
+
+  - |
+    #include <dt-bindings/gpio/gpio.h>
+
+    // Example 4: LED with timer trigger
+    leds_blink {
+        compatible = "custom,gpio-led";
+        gpios = <&gpio 18 GPIO_ACTIVE_HIGH>;
+        label = "custom:blue:blink";
+        linux,default-trigger = "timer";
+        default-brightness = <128>;
+    };
+
+    /* To configure blink timing at runtime:
+     * echo 500 > /sys/class/leds/custom:blue:blink/delay_on
+     * echo 500 > /sys/class/leds/custom:blue:blink/delay_off
+     */
+
+  - |
+    #include <dt-bindings/gpio/gpio.h>
+
+    // Example 5: CPU activity LED
+    leds_cpu {
+        compatible = "custom,gpio-led";
+        gpios = <&gpio 24 GPIO_ACTIVE_HIGH>;
+        label = "custom:white:cpu";
+        linux,default-trigger = "cpu0";
+    };

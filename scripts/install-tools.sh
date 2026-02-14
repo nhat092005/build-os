@@ -45,7 +45,10 @@ install_tools() {
     
     for tool in "${tools[@]}"; do
         local name=$(basename "$tool")
-        cp -v "$tool" "$dest/$name" || { echo "Error: Failed to copy $name"; exit 1; }
+        if ! cp -v "$tool" "$dest/$name"; then
+            echo "Error: Failed to copy $name"
+            exit 1
+        fi
         chmod +x "$dest/$name"
         installed=$((installed + 1))
     done

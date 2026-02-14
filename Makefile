@@ -1,10 +1,5 @@
 # Makefile for build operation system
 
-# Toolchain Configuration
-CC              := $(CROSS_COMPILE)gcc
-CFLAGS          := -Wall -Wextra -O2
-AR              := $(CROSS_COMPILE)ar
-
 # Target platform configuration
 ARCH            := arm64
 
@@ -16,8 +11,13 @@ SCRIPTS_DIR     := $(shell pwd)/scripts
 IMAGE_DIR       := $(BUILDROOT_DIR)/output/images
 OUTPUT_DIR      := $(shell pwd)/output
 
-# Buildroot toolchain (must match kernel compiler)
+# Buildroot toolchain
 CROSS_COMPILE   := $(BUILDROOT_DIR)/output/host/bin/aarch64-linux-
+
+# Toolchain Configuration
+CC              := $(CROSS_COMPILE)gcc
+CFLAGS          := -Wall -Wextra -O2
+AR              := $(CROSS_COMPILE)ar
 
 # Kernel directory (Buildroot kernel only)
 KERNELDIR       := $(BUILDROOT_DIR)/output/build/linux-custom
@@ -28,25 +28,34 @@ USERSPACE       ?= all
 DEVICE          ?= /dev/sda
 
 # Export for sub-makefiles
-export ARCH CROSS_COMPILE KERNELDIR CC AR
+export ARCH CROSS_COMPILE KERNELDIR
 
 # PHONY Targets
 .PHONY: all clean help
-.PHONY: driver driver-clean 
-.PHONY: userspace userspace-clean
-.PHONY: buildroot buildroot-clean menuconfig
-.PHONY: stage-output install-tools identify-sdcard deploy-sdcard
-.PHONY: image output-clean build-all
+.PHONY: output-clean build-all
 
 # Main Targets
 all: help
+
+# Clean all build artifacts
+clean: buildroot-clean driver-clean userspace-clean output-clean
+
+# Clean staged output files
+output-clean:
+	@if [ "$$(id -u)" -ne 0 ]; then \
+		echo "Error: Staging output requires root privileges"; \
+		exit 1; \
+	fi
+	rm -rf $(OUTPUT_DIR)/*
+
+.PHONY: driver driver-clean 
 
 # Build all components
 build-all: buildroot driver userspace
 
 # Build Drivers
 driver:
-	@$(MAKE) -C $(DRIVERS_DIR) driver\
+	$(MAKE) -C $(DRIVERS_DIR) driver\
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
 		KERNELDIR=$(KERNELDIR) \
@@ -54,12 +63,14 @@ driver:
 
 # Clean Drivers
 driver-clean:
-	@$(MAKE) -C $(DRIVERS_DIR) driver-clean \
+	$(MAKE) -C $(DRIVERS_DIR) driver-clean \
 		DRIVER=$(DRIVER)
+
+.PHONY: userspace userspace-clean
 
 # Build Userspace Tools
 userspace:
-	@$(MAKE) -C $(DRIVERS_DIR) userspace \
+	$(MAKE) -C $(DRIVERS_DIR) userspace \
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
 		KERNELDIR=$(KERNELDIR) \
@@ -67,8 +78,10 @@ userspace:
 
 # Clean Userspace Tools
 userspace-clean:
-	@$(MAKE) -C $(DRIVERS_DIR) userspace-clean \
+	$(MAKE) -C $(DRIVERS_DIR) userspace-clean \
 		USERSPACE=$(USERSPACE)
+
+.PHONY: buildroot buildroot-clean menuconfig
 
 # Build Buildroot
 buildroot:
@@ -77,11 +90,11 @@ buildroot:
 		echo "Run: git submodule update --init buildroot"; \
 		exit 1; \
 	fi
-	@$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL)
+	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL)
 
 # Clean Buildroot
 buildroot-clean:
-	@$(MAKE) -C $(BUILDROOT_DIR) clean
+	$(MAKE) -C $(BUILDROOT_DIR) clean
 
 # Configure Buildroot
 menuconfig:
@@ -89,7 +102,7 @@ menuconfig:
 		echo "Error: Buildroot not found"; \
 		exit 1; \
 	fi
-	@$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) menuconfig
+	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) menuconfig
 
 # Load defconfig (supports both built-in and BR2_EXTERNAL defconfigs)
 %_defconfig:
@@ -98,35 +111,44 @@ menuconfig:
 		echo "Run: git submodule update --init buildroot"; \
 		exit 1; \
 	fi
-	@$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) $@
+	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) $@
+
+.PHONY: image stage-output identify-sdcard deploy-sdcard
 
 # Image deployment
 image: stage-output install-tools deploy-sdcard
 
 # Stage output files
 stage-output:
-	@$(MAKE) -C $(SCRIPTS_DIR) stage-output
-
-# Install userspace tools
-install-tools:
-	@bash $(SCRIPTS_DIR)/install-tools.sh
+	$(MAKE) -C $(SCRIPTS_DIR) stage-output
 
 # Identify SD card device
 identify-sdcard:
-	@$(MAKE) -C $(SCRIPTS_DIR) identify-sdcard
+	$(MAKE) -C $(SCRIPTS_DIR) identify-sdcard
 
 # Deploy SD card
 deploy-sdcard:
-	@$(MAKE) -C $(SCRIPTS_DIR) deploy-sdcard
+	$(MAKE) -C $(SCRIPTS_DIR) deploy-sdcard
 
-output-clean:
-	@if [ "$$(id -u)" -ne 0 ]; then \
-		echo "Error: Staging output requires root privileges"; \
-		exit 1; \
-	fi
-	rm -rf $(OUTPUT_DIR)/*
+.PHONY: install-tools remove-tools 
 
-clean: driver-clean buildroot-clean userspace-clean output-clean
+# Install userspace tools
+install-tools:
+	$(MAKE) -C $(SCRIPTS_DIR) install-tools
+
+# Remove userspace tools
+remove-tools:
+	$(MAKE) -C $(SCRIPTS_DIR) remove-tools
+
+.PHONY: install-overlays remove-overlays
+
+# Install Device Tree overlays
+install-overlay:
+	$(MAKE) -C $$(SCRIPTS_DIR) install-overlays
+
+# Remove Device Tree overlays
+remove-overlay:
+	$(MAKE) -C $(SCRIPTS_DIR) remove-overlays
 
 help:
 	@echo "Build:"

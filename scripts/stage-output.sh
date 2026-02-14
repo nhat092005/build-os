@@ -6,6 +6,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILDROOT_IMAGES="$PROJECT_ROOT/buildroot/output/images"
+BUILDROOT_TARGET="$PROJECT_ROOT/buildroot/output/target"
 OUTPUT_DIR="$PROJECT_ROOT/output"
 BOOT_DIR="$OUTPUT_DIR/BOOT"
 ROOTFS_DIR="$OUTPUT_DIR/rootfs"
@@ -18,8 +19,8 @@ check_images() {
         exit 1
     fi
     
-    if [ ! -f "$BUILDROOT_IMAGES/rootfs.ext4" ]; then
-        echo "Error: rootfs.ext4 not found."
+    if [ ! -d "$BUILDROOT_TARGET" ]; then
+        echo "Error: buildroot target directory not found."
         exit 1
     fi
 }
@@ -40,7 +41,7 @@ extract_boot() {
     }
 }
 
-# Extract rootfs partition
+# Copy rootfs from target directory
 extract_rootfs() {
     # Clean old rootfs directory
     if [ -d "$ROOTFS_DIR" ]; then
@@ -49,25 +50,11 @@ extract_rootfs() {
     
     mkdir -p "$ROOTFS_DIR"
     
-    # Mount rootfs image temporarily
-    local TEMP_MOUNT="/tmp/rootfs_extract_$$"
-    mkdir -p "$TEMP_MOUNT"
-    
-    mount -o loop,ro "$BUILDROOT_IMAGES/rootfs.ext4" "$TEMP_MOUNT" || {
-        echo "Error: Failed to mount rootfs.ext4"
+    # Copy directly from buildroot target directory
+    rsync -a --info=progress2 "$BUILDROOT_TARGET/" "$ROOTFS_DIR/" || {
+        echo "Error: Failed to copy rootfs from target"
         exit 1
     }
-    
-    # Copy files to rootfs directory
-    rsync -a --info=progress2 "$TEMP_MOUNT/" "$ROOTFS_DIR/" || {
-        umount "$TEMP_MOUNT"
-        echo "Error: Failed to copy rootfs"
-        exit 1
-    }
-    
-    # Cleanup
-    umount "$TEMP_MOUNT"
-    rmdir "$TEMP_MOUNT"
 }
 
 # Main
@@ -77,15 +64,7 @@ main() {
     extract_rootfs
 }
 
-# Cleanup on error
-cleanup_on_error() {
-    umount /tmp/rootfs_extract_* 2>/dev/null || true
-    rmdir /tmp/rootfs_extract_* 2>/dev/null || true
-}
-
-trap cleanup_on_error ERR
-
-# Check root privileges
+# Check root privileges (needed for cleaning some directories)
 if [ "$EUID" -ne 0 ]; then
     echo "Error: This script must be run as root."
     exit 1
