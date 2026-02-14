@@ -66,8 +66,8 @@ main() {
 
 # Check root privileges (needed for cleaning some directories)
 if [ "$EUID" -ne 0 ]; then
-    echo "Warning: Running without root privileges."
-    echo "Some operations may require sudo."
+    echo "Error: This script must be run as root."
+    exit 1
 fi
 
 main "$@"

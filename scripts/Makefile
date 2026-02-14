@@ -21,6 +21,10 @@ stage-output:
 		echo "Error: stage-output.sh not found"; \
 		exit 1; \
 	fi
+	@if [ "$$(id -u)" -ne 0 ]; then \
+		echo "Error: Staging output requires root privileges"; \
+		exit 1; \
+	fi
 	bash $(SCRIPTS_DIR)/stage-output.sh $(DEVICE) $(METHOD)
 
 # Deploy SD card image
@@ -79,7 +83,7 @@ identify-sdcard:
 help:
 	@echo "Targets:"
 	@echo "  all                     Build complete system and deploy (requires root)"
-	@echo "  stage-output            Stage build output to rootfs"
+	@echo "  stage-output            Stage build output to rootfs (requires root)"
 	@echo "  identify-sdcard         Identify SD card device"
 	@echo "  deploy-sdcard           Deploy to SD card (requires root)"
 	@echo "Install:"
