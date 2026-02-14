@@ -6,8 +6,8 @@ CFLAGS          := -Wall -Wextra -O2
 
 # Directory Configuration
 TOOLS_DIR       := tools
-BUILD_DIR       := ../build/tools
-UAPI_DIR        := ../include/uapi
+BUILD_DIR       := $(shell pwd)/../build/tools
+UAPI_DIR        := $(shell pwd)/../include/uapi
 INCLUDES        := -I$(UAPI_DIR)
 
 # Auto detect source files
