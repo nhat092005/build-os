@@ -35,7 +35,7 @@ export ARCH CROSS_COMPILE KERNELDIR
 .PHONY: driver driver-clean 
 .PHONY: userspace userspace-clean
 .PHONY: buildroot buildroot-clean menuconfig
-.PHONY: stage-output install-tools identify-sdcard deploy-sdcard
+.PHONY: stage-output install-tools identify-sdcard deploy-sdcard install-overlay
 .PHONY: image output-clean build-all
 
 # Main Targets
@@ -109,7 +109,10 @@ stage-output:
 
 # Install userspace tools
 install-tools:
-	bash $(SCRIPTS_DIR)/install-tools.sh
+	$(MAKE) -C $(SCRIPTS_DIR) install-tools
+
+install-overlay:
+	$(MAKE) -C $(DRIVERS_DIR)/leds-gpio-custom/dts install
 
 # Identify SD card device
 identify-sdcard:
