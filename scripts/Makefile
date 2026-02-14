@@ -8,7 +8,7 @@ DEVICE          ?= /dev/sda
 
 # PHONY Targets
 .PHONY: all help
-.PHONY: stage-output install-tools identify-sdcard deploy-sdcard 
+.PHONY: stage-output install-tools identify-sdcard deploy-sdcard install-overlays
 
 # Main Targets
 all: stage-output install-tools identify-sdcard deploy-sdcard 
@@ -49,6 +49,18 @@ install-tools:
 	fi
 	bash $(SCRIPTS_DIR)/install-tools.sh
 
+# Install Device Tree overlays to system
+install-overlays:
+	@if [ ! -f "$(SCRIPTS_DIR)/install-overlays.sh" ]; then \
+		echo "Error: install-overlays.sh not found"; \
+		exit 1; \
+	fi
+	@if [ "$$(id -u)" -ne 0 ]; then \
+		echo "Error: Installing overlays requires root privileges"; \
+		exit 1; \
+	fi
+	bash $(SCRIPTS_DIR)/install-overlays.sh
+
 # Identify SD card device
 identify-sdcard:
 	@if [ ! -f "$(SCRIPTS_DIR)/identify-sdcard.sh" ]; then \
@@ -62,6 +74,7 @@ help:
 	@echo "Targets:"
 	@echo "  all                     Build complete system and deploy (requires root)"
 	@echo "  stage-output            Stage build output to rootfs (requires root)"
+	@echo "  install-overlays        Install Device Tree overlays to system (requires root)"
 	@echo "  install-tools           Install userspace tools to rootfs (requires root)"
 	@echo "  identify-sdcard         Identify SD card device"
 	@echo "  deploy-sdcard           Deploy to SD card (requires root)"
