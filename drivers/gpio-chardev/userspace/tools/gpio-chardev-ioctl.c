@@ -31,6 +31,9 @@ static int get_gpio_pin(int fd);
 static int blink_led(int fd, unsigned int count, unsigned int on_ms,
 					 unsigned int off_ms);
 
+/**
+ * main - Entry point of the program
+ */
 int main(int argc, char *argv[])
 {
 	int fd;
@@ -129,6 +132,10 @@ int main(int argc, char *argv[])
 	return ret;
 }
 
+/**
+ * print_usage - Print usage information
+ * @prog: Program name
+ */
 static void print_usage(const char *prog)
 {
 	printf("Usage: %s <command> [options]\n", prog);
@@ -141,6 +148,12 @@ static void print_usage(const char *prog)
 	printf("Device: %s\n", DEVICE_PATH);
 }
 
+/**
+ * set_led_state - Set GPIO state (ON/OFF)
+ * @fd: File descriptor of the device
+ * @state: Desired state (GPIO_CHARDEV_ON or GPIO_CHARDEV_OFF)
+ * Returns 0 on success, -1 on failure
+ */
 static int set_led_state(int fd, unsigned int state)
 {
 	if (ioctl(fd, GPIO_CHARDEV_IOC_SET_STATE, &state) < 0)
@@ -151,6 +164,11 @@ static int set_led_state(int fd, unsigned int state)
 	return 0;
 }
 
+/**
+ * get_led_state - Get current GPIO state
+ * @fd: File descriptor of the device
+ * Returns 1 for ON, 0 for OFF, -1 on failure
+ */
 static int get_led_state(int fd)
 {
 	unsigned int state;
@@ -163,6 +181,11 @@ static int get_led_state(int fd)
 	return state;
 }
 
+/**
+ * toggle_led - Toggle GPIO state
+ * @fd: File descriptor of the device
+ * Returns 0 on success, -1 on failure
+ */
 static int toggle_led(int fd)
 {
 	if (ioctl(fd, GPIO_CHARDEV_IOC_TOGGLE) < 0)
@@ -173,6 +196,11 @@ static int toggle_led(int fd)
 	return 0;
 }
 
+/**
+ * get_gpio_pin - Get GPIO pin number associated with the device
+ * @fd: File descriptor of the device
+ * Returns GPIO pin number on success, -1 on failure
+ */
 static int get_gpio_pin(int fd)
 {
 	unsigned int gpio;
@@ -185,6 +213,14 @@ static int get_gpio_pin(int fd)
 	return gpio;
 }
 
+/**
+ * blink_led - Blink GPIO with specified parameters
+ * @fd: File descriptor of the device
+ * @count: Number of blinks (0 for infinite)
+ * @on_ms: ON duration in milliseconds
+ * @off_ms: OFF duration in milliseconds
+ * Returns 0 on success, -1 on failure
+ */
 static int blink_led(int fd, unsigned int count, unsigned int on_ms,
 					 unsigned int off_ms)
 {
