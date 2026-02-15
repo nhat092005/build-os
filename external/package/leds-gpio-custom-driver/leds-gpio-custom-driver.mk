@@ -21,6 +21,16 @@ define LEDS_GPIO_CUSTOM_DRIVER_BUILD_CMDS
 		ARCH=$(KERNEL_ARCH) \
 		CROSS_COMPILE=$(TARGET_CROSS) \
 		modules
+	
+	# Build userspace tools
+	if [ -d $(@D)/userspace ] && [ -f $(@D)/userspace/Makefile ]; then \
+		$(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/userspace \
+			CC=$(TARGET_CC) \
+			CFLAGS="$(TARGET_CFLAGS)" \
+			LDFLAGS="$(TARGET_LDFLAGS)" \
+			KERNELDIR=$(LINUX_DIR) \
+			all; \
+	fi
 endef
 
 # Install kernel module
@@ -37,10 +47,20 @@ define LEDS_GPIO_CUSTOM_DRIVER_INSTALL_TARGET_CMDS
 	$(INSTALL) -D -m 0644 $(@D)/include/uapi/leds-gpio-custom.h \
 		$(STAGING_DIR)/usr/include/linux/leds-gpio-custom.h
 	
-	# Install Device Tree overlay if available
-	if [ -f $(@D)/dts/leds-gpio-custom-overlay.dtbo ]; then \
-		$(INSTALL) -D -m 0644 $(@D)/dts/leds-gpio-custom-overlay.dtbo \
-			$(TARGET_DIR)/boot/overlays/leds-gpio-custom.dtbo; \
+	# Install userspace tools to /usr/bin
+	if [ -d $(@D)/build/tools ]; then \
+		for tool in $(@D)/build/tools/*; do \
+			if [ -f "$$tool" ] && [ -x "$$tool" ]; then \
+				$(INSTALL) -D -m 0755 "$$tool" $(TARGET_DIR)/usr/bin/$$(basename "$$tool"); \
+			fi; \
+		done; \
+	fi
+	
+	# Install Device Tree overlay to rpi-firmware directory
+	# This will be included in boot.vfat by post-image script
+	if [ -f $(@D)/build/dtbo/leds-gpio-custom.dtbo ]; then \
+		$(INSTALL) -D -m 0644 $(@D)/build/dtbo/leds-gpio-custom.dtbo \
+			$(BINARIES_DIR)/rpi-firmware/overlays/leds-gpio-custom.dtbo; \
 	fi
 	
 	# Install documentation if available
