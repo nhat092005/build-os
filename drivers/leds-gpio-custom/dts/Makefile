@@ -1,10 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0
 # Makefile for Device Tree Overlays
 
-BUILD_DIR := $(shell pwd)/../build/dtbo
-
-DTC := dtc
-DTC_FLAGS := -@ -I dts -O dtb -Wno-unit_address_vs_reg
+BUILD_DIR 	:= $(shell pwd)/../build/dtbo
+DTC         ?= dtc
+DTC_FLAGS   ?= -@ -I dts -O dtb -Wno-unit_address_vs_reg
 
 # Source file
 DTS := leds-gpio-custom-overlay.dts

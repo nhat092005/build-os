@@ -9,15 +9,31 @@ AVAILABLE_DRIVERS    := $(filter-out Makefile, $(AVAILABLE_DRIVERS))
 
 # Default configuration
 MODULE               ?= all
-USERSPACE            ?= all
+TOOLS                ?= all
+DTBO                 ?= all
 
 # PHONY Targets
 .PHONY: all clean list help
 .PHONY: modules modules-clean
-.PHONY: userspace userspace-clean
+.PHONY: tools tools-clean
+.PHONY: dtbo dtbo-clean
 
 # Main Targets
-all: modules userspace
+all: dtbo modules tools
+
+# Build Device Tree Blob Overlays
+dtbo:
+ifeq ($(DTBO),all)
+	@for drv in $(AVAILABLE_DRIVERS); do \
+		if [ -f "$(DRIVERS_DIR)/$$drv/Makefile" ]; then \
+			$(MAKE) -C $(DRIVERS_DIR)/$$drv dtbo 2>/dev/null || true; \
+		fi; \
+	done
+else
+	@if [ -f "$(DRIVERS_DIR)/$(DTBO)/Makefile" ]; then \
+		$(MAKE) -C $(DRIVERS_DIR)/$(DTBO) dtbo 2>/dev/null || true; \
+	fi
+endif
 
 # Build Modules
 modules:
@@ -36,22 +52,38 @@ else
 endif
 
 # Build Userspace Tools
-userspace:
-ifeq ($(USERSPACE),all)
+tools:
+ifeq ($(TOOLS),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ] && [ -f "$(DRIVERS_DIR)/$$drv/Makefile" ]; then \
-			$(MAKE) -C $(DRIVERS_DIR)/$$drv userspace || exit 1; \
+			$(MAKE) -C $(DRIVERS_DIR)/$$drv tools || exit 1; \
 		fi; \
 	done
 else
-	@if [ ! -d "$(DRIVERS_DIR)/$(USERSPACE)" ]; then \
-		echo "Error: Userspace tool '$(USERSPACE)' not found"; \
+	@if [ ! -d "$(DRIVERS_DIR)/$(TOOLS)" ]; then \
+		echo "Error: Tool '$(TOOLS)' not found"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(DRIVERS_DIR)/$(USERSPACE) userspace
+	$(MAKE) -C $(DRIVERS_DIR)/$(TOOLS) tools
 endif
 
-clean: modules-clean userspace-clean
+clean: modules-clean tools-clean dtbo-clean
+
+# Clean Device Tree Blob Overlays
+dtbo-clean:
+ifeq ($(DTBO),all)
+	@for drv in $(AVAILABLE_DRIVERS); do \
+		if [ -f "$(DRIVERS_DIR)/$$drv/Makefile" ]; then \
+			$(MAKE) -C $(DRIVERS_DIR)/$$drv dtbo-clean 2>/dev/null || true; \
+		fi; \
+	done
+else
+	@if [ -f "$(DRIVERS_DIR)/$(DTBO)/Makefile" ]; then \
+		$(MAKE) -C $(DRIVERS_DIR)/$(DTBO) dtbo-clean 2>/dev/null || true; \
+	else \
+		echo "Error: Driver '$(DTBO)' not found"; \
+	fi
+endif
 
 # Clean Modules
 modules-clean:
@@ -70,19 +102,19 @@ else
 endif
 
 # Clean Userspace Tools
-userspace-clean:
-ifeq ($(USERSPACE),all)
+tools-clean:
+ifeq ($(TOOLS),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ] && [ -f "$(DRIVERS_DIR)/$$drv/Makefile" ]; then \
-			$(MAKE) -C $(DRIVERS_DIR)/$$drv userspace-clean || exit 1; \
+			$(MAKE) -C $(DRIVERS_DIR)/$$drv tools-clean || exit 1; \
 		fi; \
 	done
 else
-	@if [ ! -d "$(DRIVERS_DIR)/$(USERSPACE)" ]; then \
-		echo "Error: Userspace tool '$(USERSPACE)' not found"; \
+	@if [ ! -d "$(DRIVERS_DIR)/$(TOOLS)" ]; then \
+		echo "Error: Tool '$(TOOLS)' not found"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(DRIVERS_DIR)/$(USERSPACE) userspace-clean
+	$(MAKE) -C $(DRIVERS_DIR)/$(TOOLS) tools-clean
 endif
 
 # List Available Drivers
@@ -96,12 +128,13 @@ list:
 # Help
 help:
 	@echo "Build:"
-	@echo "  all                     Build all drivers and userspace tools (default)"
+	@echo "  all                     Build all drivers and tools (default)"
+	@echo "  dtbo=DTBO               Build specific device tree blob overlay (e.g., dtbo=leds-gpio-custom)"
 	@echo "  modules=MODULE          Build specific kernel module (e.g., modules=gpio-chardev)"
-	@echo "  userspace=TOOL          Build specific userspace tool (e.g., userspace=gpio-chardev)"
+	@echo "  tools=TOOL              Build specific userspace tool (e.g., tools=gpio-chardev)"
 	@echo "Clean:"
 	@echo "  clean                   Clean all build artifacts"
 	@echo "  modules-clean           Clean kernel module build artifacts"
-	@echo "  userspace-clean         Clean userspace tool build artifacts"
+	@echo "  tools-clean             Clean userspace tool build artifacts"
 	@echo "Other:"
-	@echo "  list                    List available drivers and userspace tools"
+	@echo "  list                    List available drivers and tools"
