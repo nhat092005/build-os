@@ -132,7 +132,7 @@ menuconfig:
 .PHONY: image stage-output identify-sdcard deploy-sdcard
 
 # Image deployment
-image: stage-output install-tools deploy-sdcard
+image: stage-output deploy-sdcard
 
 # Stage output files
 stage-output:
