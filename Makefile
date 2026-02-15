@@ -60,8 +60,7 @@ build-all: buildroot dtbo modules tools
 dtbo:
 	$(MAKE) -C $(DRIVERS_DIR) dtbo \
 		DTC=$(DTC) \
-		DTC_FLAGS=$(DTC_FLAGS) \
-		DTBO=$(DTBO)
+		DTC_FLAGS="$(DTC_FLAGS)"
 
 # Clean Device Tree Blob Overlays
 dtbo-clean:
@@ -160,11 +159,11 @@ remove-tools:
 .PHONY: install-overlays remove-overlays
 
 # Install Device Tree overlays
-install-overlay:
+install-overlays:
 	$(MAKE) -C $$(SCRIPTS_DIR) install-overlays
 
 # Remove Device Tree overlays
-remove-overlay:
+remove-overlays:
 	$(MAKE) -C $(SCRIPTS_DIR) remove-overlays
 
 .PHONY: list
