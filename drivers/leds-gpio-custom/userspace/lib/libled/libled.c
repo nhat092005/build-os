@@ -79,42 +79,71 @@ static int read_sysfs(const char *path, char *buffer, size_t size)
 }
 
 /* Public API Implementation */
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-truncation"
-#pragma GCC diagnostic ignored "-Wstringop-truncation"
+
 int led_open(led_device_t *led, const char *name)
 {
 	struct stat st;
+	int ret;
+	size_t name_len;
 
 	if (!led || !name)
 		return -EINVAL;
 
+	/* Validate name length to prevent truncation */
+	name_len = strlen(name);
+	if (name_len == 0)
+		return -EINVAL;
+
+	/* Maximum safe LED name length calculation:
+	 * LED_BUFFER_SIZE - strlen("/sys/class/leds/") - strlen("/max_brightness") - 1
+	 * = 512 - 17 - 16 - 1 = 478 chars
+	 */
+	if (name_len > 478)
+		return -ENAMETOOLONG;
+
 	memset(led, 0, sizeof(*led));
 
+	/* Safe copy with explicit null termination */
 	strncpy(led->name, name, LED_BUFFER_SIZE - 1);
 	led->name[LED_BUFFER_SIZE - 1] = '\0';
 
-	snprintf(led->path, LED_BUFFER_SIZE, "%s/%s", LED_BASE_PATH, name);
+	/* Build base path with return value check */
+	ret = snprintf(led->path, LED_BUFFER_SIZE, "%s/%s", LED_BASE_PATH, name);
+	if (ret < 0 || ret >= LED_BUFFER_SIZE)
+		return -ENAMETOOLONG;
 
 	/* Check if LED device exists */
 	if (stat(led->path, &st) < 0)
 		return -ENOENT;
 
-	/* Build all sysfs paths */
-	snprintf(led->brightness_path, LED_BUFFER_SIZE,
-			 "%s/brightness", led->path);
-	snprintf(led->trigger_path, LED_BUFFER_SIZE,
-			 "%s/trigger", led->path);
-	snprintf(led->max_brightness_path, LED_BUFFER_SIZE,
-			 "%s/max_brightness", led->path);
-	snprintf(led->delay_on_path, LED_BUFFER_SIZE,
-			 "%s/delay_on", led->path);
-	snprintf(led->delay_off_path, LED_BUFFER_SIZE,
-			 "%s/delay_off", led->path);
+	/* Build all sysfs paths with return value checks */
+	ret = snprintf(led->brightness_path, LED_BUFFER_SIZE,
+				   "%s/brightness", led->path);
+	if (ret < 0 || ret >= LED_BUFFER_SIZE)
+		return -ENAMETOOLONG;
+
+	ret = snprintf(led->trigger_path, LED_BUFFER_SIZE,
+				   "%s/trigger", led->path);
+	if (ret < 0 || ret >= LED_BUFFER_SIZE)
+		return -ENAMETOOLONG;
+
+	ret = snprintf(led->max_brightness_path, LED_BUFFER_SIZE,
+				   "%s/max_brightness", led->path);
+	if (ret < 0 || ret >= LED_BUFFER_SIZE)
+		return -ENAMETOOLONG;
+
+	ret = snprintf(led->delay_on_path, LED_BUFFER_SIZE,
+				   "%s/delay_on", led->path);
+	if (ret < 0 || ret >= LED_BUFFER_SIZE)
+		return -ENAMETOOLONG;
+
+	ret = snprintf(led->delay_off_path, LED_BUFFER_SIZE,
+				   "%s/delay_off", led->path);
+	if (ret < 0 || ret >= LED_BUFFER_SIZE)
+		return -ENAMETOOLONG;
 
 	return 0;
 }
-#pragma GCC diagnostic pop
 
 void led_close(led_device_t *led)
 {
@@ -347,8 +376,14 @@ int led_get_info(led_device_t *led, led_info_t *info)
 
 	memset(info, 0, sizeof(*info));
 
-	/* Copy name */
-	strncpy(info->name, led->name, LED_BUFFER_SIZE - 1);
+	/* Copy name safely - use memcpy since we know source is null-terminated */
+	{
+		size_t name_len = strlen(led->name);
+		if (name_len >= LED_BUFFER_SIZE)
+			name_len = LED_BUFFER_SIZE - 1;
+		memcpy(info->name, led->name, name_len);
+		info->name[name_len] = '\0';
+	}
 
 	/* Get brightness */
 	ret = led_get_brightness(led);
