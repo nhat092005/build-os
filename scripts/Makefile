@@ -61,12 +61,20 @@ install-overlays:
 		echo "Error: install-overlays.sh not found"; \
 		exit 1; \
 	fi
+	@if [ "$$(id -u)" -ne 0 ]; then \
+		echo "Error: Deployment requires root privileges"; \
+		exit 1; \
+	fi
 	bash $(SCRIPTS_DIR)/install-overlays.sh
 
 # Remove Device Tree overlays from system
 remove-overlays:
 	@if [ ! -f "$(SCRIPTS_DIR)/remove-overlays.sh" ]; then \
 		echo "Error: remove-overlays.sh not found"; \
+		exit 1; \
+	fi
+	@if [ "$$(id -u)" -ne 0 ]; then \
+		echo "Error: Deployment requires root privileges"; \
 		exit 1; \
 	fi
 	bash $(SCRIPTS_DIR)/remove-overlays.sh
