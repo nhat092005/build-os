@@ -160,7 +160,7 @@ remove-tools:
 
 # Install Device Tree overlays
 install-overlays:
-	$(MAKE) -C $$(SCRIPTS_DIR) install-overlays
+	$(MAKE) -C $(SCRIPTS_DIR) install-overlays
 
 # Remove Device Tree overlays
 remove-overlays:
