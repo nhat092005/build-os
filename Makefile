@@ -18,17 +18,20 @@ CROSS_COMPILE   := $(BUILDROOT_DIR)/output/host/bin/aarch64-linux-
 CC              := $(CROSS_COMPILE)gcc
 CFLAGS          := -Wall -Wextra -O2
 AR              := $(CROSS_COMPILE)ar
+DTC             := dtc
+DTC_FLAGS       := -@ -I dts -O dtb -Wno-unit_address_vs_reg
 
 # Kernel directory (Buildroot kernel only)
 KERNELDIR       := $(BUILDROOT_DIR)/output/build/linux-custom
 
 # Default configuration
-DRIVER          ?= all
-USERSPACE       ?= all
+DTBO			?= all
+MODULE          ?= all
+TOOLS           ?= all
 DEVICE          ?= /dev/sda
 
 # Export for sub-makefiles
-export ARCH CROSS_COMPILE KERNELDIR
+export ARCH CROSS_COMPILE KERNELDIR DTBO MODULE TOOLS DEVICE
 
 # PHONY Targets
 .PHONY: all clean help
@@ -38,7 +41,7 @@ export ARCH CROSS_COMPILE KERNELDIR
 all: help
 
 # Clean all build artifacts
-clean: buildroot-clean driver-clean userspace-clean output-clean
+clean: buildroot-clean modules-clean tools-clean output-clean
 
 # Clean staged output files
 output-clean:
@@ -46,40 +49,54 @@ output-clean:
 		echo "Error: Staging output requires root privileges"; \
 		exit 1; \
 	fi
-	rm -rf $(OUTPUT_DIR)/*
-
-.PHONY: driver driver-clean 
+	rm -rf $(OUTPUT_DIR)
 
 # Build all components
-build-all: buildroot driver userspace
+build-all: buildroot dtbo modules tools
 
-# Build Drivers
-driver:
-	$(MAKE) -C $(DRIVERS_DIR) driver\
+.PHONY: dtbo dtbo-clean
+
+# Build Device Tree Blob Overlays
+dtbo:
+	$(MAKE) -C $(DRIVERS_DIR) dtbo \
+		DTC=$(DTC) \
+		DTC_FLAGS="$(DTC_FLAGS) \
+		DTBO=$(DTBO)
+
+# Clean Device Tree Blob Overlays
+dtbo-clean:
+	$(MAKE) -C $(DRIVERS_DIR) dtbo-clean \
+		DTBO=$(DTBO)
+
+.PHONY: modules modules-clean 
+
+# Build Modules
+modules:
+	$(MAKE) -C $(DRIVERS_DIR) modules \
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
 		KERNELDIR=$(KERNELDIR) \
-		DRIVER=$(DRIVER)
+		MODULE=$(MODULE)
 
-# Clean Drivers
-driver-clean:
-	$(MAKE) -C $(DRIVERS_DIR) driver-clean \
-		DRIVER=$(DRIVER)
+# Clean Modules
+modules-clean:
+	$(MAKE) -C $(DRIVERS_DIR) modules-clean \
+		MODULE=$(MODULE)
 
-.PHONY: userspace userspace-clean
+.PHONY: tools tools-clean
 
 # Build Userspace Tools
-userspace:
-	$(MAKE) -C $(DRIVERS_DIR) userspace \
+tools:
+	$(MAKE) -C $(DRIVERS_DIR) tools \
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
 		KERNELDIR=$(KERNELDIR) \
-		USERSPACE=$(USERSPACE)
+		TOOLS=$(TOOLS)
 
 # Clean Userspace Tools
-userspace-clean:
-	$(MAKE) -C $(DRIVERS_DIR) userspace-clean \
-		USERSPACE=$(USERSPACE)
+tools-clean:
+	$(MAKE) -C $(DRIVERS_DIR) tools-clean \
+		TOOLS=$(TOOLS)
 
 .PHONY: buildroot buildroot-clean menuconfig
 
@@ -132,11 +149,11 @@ deploy-sdcard:
 
 .PHONY: install-tools remove-tools 
 
-# Install userspace tools
+# Install tools
 install-tools:
 	$(MAKE) -C $(SCRIPTS_DIR) install-tools
 
-# Remove userspace tools
+# Remove tools
 remove-tools:
 	$(MAKE) -C $(SCRIPTS_DIR) remove-tools
 
@@ -150,12 +167,18 @@ install-overlay:
 remove-overlay:
 	$(MAKE) -C $(SCRIPTS_DIR) remove-overlays
 
+.PHONY: list
+
+# List available drivers and tools
+list:
+	$(MAKE) -C $(DRIVERS_DIR) list
+
 help:
 	@echo "Build:"
-	@echo "  build-all                Build Buildroot, drivers, and userspace tools"
+	@echo "  build-all                Build Buildroot, modules, and userspace tools"
 	@echo "  buildroot                Build kernel + rootfs with Buildroot"
-	@echo "  driver                   Build kernel driver(s)"
-	@echo "  userspace                Build userspace tools"
+	@echo "  modules                  Build kernel module(s)"
+	@echo "  tools                    Build userspace tools"
 	@echo ""
 	@echo "Configuration:"
 	@echo "  menuconfig               Configure Buildroot (interactive)"
@@ -163,18 +186,21 @@ help:
 	@echo ""
 	@echo "Clean:"
 	@echo "  clean                    Clean all build artifacts"
-	@echo "  driver-clean             Clean driver(s)"
+	@echo "  modules-clean            Clean module(s)"
 	@echo "  buildroot-clean          Clean Buildroot output"
-	@echo "  userspace-clean          Clean userspace tools"
+	@echo "  tools-clean              Clean tools"
 	@echo ""
 	@echo "Deployment:"
 	@echo "  identify-sdcard          Identify SD card device"
 	@echo "  stage-output             Stage buildroot output to output/ (requires root)"
-	@echo "  install-tools            Install userspace tools to staged rootfs (requires root)"
+	@echo "  install-tools            Install tools to staged rootfs (requires root)"
 	@echo "  deploy-sdcard            Deploy to SD card (requires root, DEVICE=/dev/sdX)"
 	@echo "  image                    Stage output, install tools, and deploy to SD card (requires root)"
+	@echo "Others:"
+	@echo "  list                     List available drivers and tools"
 	@echo ""
 	@echo "Build Options:"
-	@echo "  DRIVER=<name|all>        Build specific driver (default: all)"
-	@echo "  USERSPACE=<name|all>     Build specific userspace tool (default: all)"
+	@echo "  DTBO=<name|all>          Build specific device tree blob overlay (default: all)"
+	@echo "  MODULE=<name|all>        Build specific module (default: all)"
+	@echo "  TOOLS=<name|all>         Build specific userspace tool (default: all)"
 	@echo "  DEVICE=<device>          SD card device (default: /dev/sda)"

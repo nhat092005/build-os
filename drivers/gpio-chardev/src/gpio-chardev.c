@@ -477,7 +477,7 @@ static void __exit gpio_chardev_exit(void)
 module_init(gpio_chardev_init);
 module_exit(gpio_chardev_exit);
 
-MODULE_LICENSE("GPL");
 MODULE_AUTHOR("nhat092005");
 MODULE_DESCRIPTION("GPIO LED Character Device Driver");
+MODULE_LICENSE("GPL");
 MODULE_VERSION(GPIO_CHARDEV_DRIVER_VERSION);

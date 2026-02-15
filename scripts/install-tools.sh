@@ -22,18 +22,38 @@ check_rootfs() {
     fi
 }
 
+# Check if file is an ELF executable
+is_elf_executable() {
+    local file="$1"
+    
+    # Check if file exists and is executable
+    [ -x "$file" ] || return 1
+    
+    # Check if it's an ELF file
+    if command -v file &> /dev/null; then
+        file "$file" | grep -q "ELF.*executable"
+        return $?
+    else
+        # Fallback: check magic number
+        local magic=$(od -An -N4 -tx1 "$file" 2>/dev/null | tr -d ' ')
+        [ "$magic" = "7f454c46" ]
+        return $?
+    fi
+}
+
 # Find userspace tools
 find_tools() {
     local tools=()
     
-    # Find all executable files in drivers/*/build/tools/
-    while IFS= read -r tool; do
-        if [ -x "$tool" ]; then
-            tools+=("$tool")
+    # Find all files in drivers/*/build/tools/
+    while IFS= read -r -d '' file; do
+        # Check if it's an ELF executable
+        if is_elf_executable "$file"; then
+            tools+=("$file")
         fi
-    done < <(find "$DRIVERS_DIR" -path "*/build/tools/*" -type f 2>/dev/null)
+    done < <(find "$DRIVERS_DIR" -path "*/build/tools/*" -type f -print0 2>/dev/null)
     
-    # Only output the tools array (no messages)
+    # Output the tools array
     echo "${tools[@]}"
 }
 
@@ -45,7 +65,7 @@ install_tools() {
     
     for tool in "${tools[@]}"; do
         local name=$(basename "$tool")
-        if ! cp -v "$tool" "$dest/$name"; then
+        if ! cp -f "$tool" "$dest/$name"; then
             echo "Error: Failed to copy $name"
             exit 1
         fi
@@ -61,10 +81,10 @@ main() {
     IFS=' ' read -r -a tools <<< "$(find_tools)"
     
     if [ ${#tools[@]} -eq 0 ] || [ -z "${tools[0]}" ]; then
-        echo "No userspace tools found to install."
+        echo "No ELF executable tools found to install."
         exit 0
     fi
-    
+
     install_tools "${tools[@]}"
 }
 

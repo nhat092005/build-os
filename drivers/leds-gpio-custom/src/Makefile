@@ -1,4 +1,4 @@
-# Makefile for GPIO Character Device Kernel Driver
+# Makefile for GPIO LED Driver - LED Class Interface with Device Tree Support
 
 # Target platform configuration
 ARCH            ?= arm64
@@ -12,8 +12,8 @@ CROSS_COMPILE   ?= $(BUILDROOT_DIR)/output/host/bin/aarch64-linux-
 # Kernel directory (Buildroot kernel only)
 KERNELDIR       ?= $(BUILDROOT_DIR)/output/build/linux-custom
 
-# Module name
-obj-m := gpio-chardev.o
+# Module name (creates leds-gpio-custom.ko)
+obj-m := leds-gpio-custom.o
 
 # Build output directory
 BUILD_DIR := $(CURDIR)/../build/module
@@ -21,20 +21,20 @@ BUILD_DIR := $(CURDIR)/../build/module
 # Build flags - include paths for headers
 ccflags-y := -I$(src)/../include
 
-# PHONY Targets
+# PHONY targets
 .PHONY: all clean help
 .PHONY: modules modules-clean
 
-# Main Targets
+# Default target
 all: modules
 
-# Build Kernel Module
-modules: 
+# Build kernel module
+modules:
 	mkdir -p $(BUILD_DIR)
 	$(MAKE) -C $(KERNELDIR) M=$(CURDIR) \
-	        ARCH=$(ARCH) \
-	        CROSS_COMPILE=$(CROSS_COMPILE) \
-	        modules
+		ARCH=$(ARCH) \
+		CROSS_COMPILE=$(CROSS_COMPILE) \
+		modules
 	mv -f *.ko $(BUILD_DIR)/ 2>/dev/null || true
 	mv -f *.o $(BUILD_DIR)/ 2>/dev/null || true
 	mv -f .*.o $(BUILD_DIR)/ 2>/dev/null || true
@@ -45,23 +45,20 @@ modules:
 	mv -f .*.cmd $(BUILD_DIR)/ 2>/dev/null || true
 	mv -f .tmp_versions $(BUILD_DIR)/ 2>/dev/null || true
 
-# Clean
+# Clean build artifacts
 clean: modules-clean
 
-# Clean Kernel Module build artifacts
+# Clean Modules
 modules-clean:
-	@if [ -d "$(KERNELDIR)" ]; then \
-		$(MAKE) -C $(KERNELDIR) M=$(CURDIR) clean; \
-	fi
-	rm -f *.o *.ko *.mod *.mod.c *.symvers *.order .*.cmd
+	$(MAKE) -C $(KERNELDIR) M=$(CURDIR) clean
+	rm -rf *.o *.ko *.mod.c *.mod *.order *.symvers .*.cmd .tmp_versions
 	rm -f .*.o
-	rm -rf .tmp_versions
 	rm -rf $(BUILD_DIR)
 
-# Help
+# Show help information
 help:
-	@echo "Targets:"
-	@echo "  all             Build kernel module (default)"
-	@echo "  clean           Clean build artifacts"
-	@echo "  modules         Build kernel module"
-	@echo "  modules-clean   Clean kernel module build artifacts"
+	@echo "Available targets:"
+	@echo "  all                Build kernel module (default)"
+	@echo "  modules            Build kernel module"
+	@echo "  clean              Clean build artifacts"
+	@echo "  modules-clean      Clean kernel module build artifacts"
