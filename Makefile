@@ -23,7 +23,7 @@ AR              := $(CROSS_COMPILE)ar
 KERNELDIR       := $(BUILDROOT_DIR)/output/build/linux-custom
 
 # Default configuration
-DRIVER          ?= all
+MODULE          ?= all
 USERSPACE       ?= all
 DEVICE          ?= /dev/sda
 
@@ -38,7 +38,7 @@ export ARCH CROSS_COMPILE KERNELDIR
 all: help
 
 # Clean all build artifacts
-clean: buildroot-clean driver-clean userspace-clean output-clean
+clean: buildroot-clean modules-clean userspace-clean output-clean
 
 # Clean staged output files
 output-clean:
@@ -48,23 +48,23 @@ output-clean:
 	fi
 	rm -rf $(OUTPUT_DIR)/*
 
-.PHONY: driver driver-clean 
+.PHONY: modules modules-clean 
 
 # Build all components
-build-all: buildroot driver userspace
+build-all: buildroot modules userspace
 
-# Build Drivers
-driver:
-	$(MAKE) -C $(DRIVERS_DIR) driver\
+# Build Modules
+modules:
+	$(MAKE) -C $(DRIVERS_DIR) modules \
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
 		KERNELDIR=$(KERNELDIR) \
-		DRIVER=$(DRIVER)
+		MODULE=$(MODULE)
 
-# Clean Drivers
-driver-clean:
-	$(MAKE) -C $(DRIVERS_DIR) driver-clean \
-		DRIVER=$(DRIVER)
+# Clean Modules
+modules-clean:
+	$(MAKE) -C $(DRIVERS_DIR) modules-clean \
+		MODULE=$(MODULE)
 
 .PHONY: userspace userspace-clean
 
@@ -152,9 +152,9 @@ remove-overlay:
 
 help:
 	@echo "Build:"
-	@echo "  build-all                Build Buildroot, drivers, and userspace tools"
+	@echo "  build-all                Build Buildroot, modules, and userspace tools"
 	@echo "  buildroot                Build kernel + rootfs with Buildroot"
-	@echo "  driver                   Build kernel driver(s)"
+	@echo "  modules                  Build kernel module(s)"
 	@echo "  userspace                Build userspace tools"
 	@echo ""
 	@echo "Configuration:"
@@ -163,7 +163,7 @@ help:
 	@echo ""
 	@echo "Clean:"
 	@echo "  clean                    Clean all build artifacts"
-	@echo "  driver-clean             Clean driver(s)"
+	@echo "  modules-clean            Clean module(s)"
 	@echo "  buildroot-clean          Clean Buildroot output"
 	@echo "  userspace-clean          Clean userspace tools"
 	@echo ""
@@ -175,6 +175,6 @@ help:
 	@echo "  image                    Stage output, install tools, and deploy to SD card (requires root)"
 	@echo ""
 	@echo "Build Options:"
-	@echo "  DRIVER=<name|all>        Build specific driver (default: all)"
+	@echo "  MODULE=<name|all>        Build specific module (default: all)"
 	@echo "  USERSPACE=<name|all>     Build specific userspace tool (default: all)"
 	@echo "  DEVICE=<device>          SD card device (default: /dev/sda)"

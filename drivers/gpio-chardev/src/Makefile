@@ -23,13 +23,13 @@ ccflags-y := -I$(src)/../include
 
 # PHONY Targets
 .PHONY: all clean help
-.PHONY: driver driver-clean
+.PHONY: modules modules-clean
 
 # Main Targets
-all: driver
+all: modules
 
-# Build Driver
-driver: 
+# Build Kernel Module
+modules: 
 	mkdir -p $(BUILD_DIR)
 	$(MAKE) -C $(KERNELDIR) M=$(CURDIR) \
 	        ARCH=$(ARCH) \
@@ -46,11 +46,13 @@ driver:
 	mv -f .tmp_versions $(BUILD_DIR)/ 2>/dev/null || true
 
 # Clean
-clean: driver-clean
+clean: modules-clean
 
-# Clean Driver
-driver-clean:
-	$(MAKE) -C $(KERNELDIR) M=$(CURDIR) clean
+# Clean Kernel Module build artifacts
+modules-clean:
+	@if [ -d "$(KERNELDIR)" ]; then \
+		$(MAKE) -C $(KERNELDIR) M=$(CURDIR) clean; \
+	fi
 	rm -f *.o *.ko *.mod *.mod.c *.symvers *.order .*.cmd
 	rm -f .*.o
 	rm -rf .tmp_versions
@@ -61,5 +63,5 @@ help:
 	@echo "Targets:"
 	@echo "  all             Build kernel module (default)"
 	@echo "  clean           Clean build artifacts"
-	@echo "  driver          Build kernel module"
-	@echo "  driver-clean    Clean kernel module build artifacts"
+	@echo "  modules         Build kernel module"
+	@echo "  modules-clean   Clean kernel module build artifacts"

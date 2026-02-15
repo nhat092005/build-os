@@ -2,26 +2,26 @@
 
 # PHONY Targets
 .PHONY: all clean help
-.PHONY: driver driver-clean
+.PHONY: modules modules-clean
 .PHONY: userspace userspace-clean
 
 # Main Targets
-all: driver userspace
+all: modules userspace
 
-# Driver Build
-driver:
-	$(MAKE) -C src driver
+# Kernel Module Build
+modules:
+	$(MAKE) -C src modules
 
 # Userspace Build
 userspace:
 	$(MAKE) -C userspace userspace
 
 # Clean Targets
-clean: driver-clean userspace-clean
+clean: modules-clean userspace-clean
 
 # Clean Kernel Module
-driver-clean:
-	$(MAKE) -C src driver-clean
+modules-clean:
+	$(MAKE) -C src modules-clean
 
 # Clean Userspace Tool
 userspace-clean:
@@ -31,10 +31,10 @@ userspace-clean:
 help:
 	@echo "Build:"
 	@echo "  all        Build kernel module and userspace tool"
-	@echo "  driver     Build kernel module only"
+	@echo "  modules    Build kernel module only"
 	@echo "  userspace  Build userspace tool only"
 	@echo ""
 	@echo "Clean:"
 	@echo "  clean      Clean all build artifacts"
-	@echo "  driver-clean     Clean kernel module artifacts"
+	@echo "  modules-clean     Clean kernel module artifacts"
 	@echo "  userspace-clean  Clean userspace tool artifacts"
