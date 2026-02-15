@@ -55,6 +55,7 @@ extract_rootfs() {
         echo "Error: Failed to copy rootfs from target"
         exit 1
     }
+    rm -f "$ROOTFS_DIR/THIS_IS_NOT_YOUR_ROOT_FILESYSTEM"
 }
 
 # Main
