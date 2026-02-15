@@ -60,7 +60,7 @@ build-all: buildroot dtbo modules tools
 dtbo:
 	$(MAKE) -C $(DRIVERS_DIR) dtbo \
 		DTC=$(DTC) \
-		DTC_FLAGS="$(DTC_FLAGS) \
+		DTC_FLAGS=$(DTC_FLAGS) \
 		DTBO=$(DTBO)
 
 # Clean Device Tree Blob Overlays
