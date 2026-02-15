@@ -3,33 +3,3 @@ config BR2_PACKAGE_LEDS_GPIO_CUSTOM_DRIVER
 	depends on BR2_LINUX_KERNEL
 	help
 	  Production-ready LED class driver using standard Linux LED subsystem.
-	  
-	  This driver provides a proper LED class implementation following
-	  mainline kernel standards. It exposes LEDs through /sys/class/leds/
-	  interface with support for:
-	  
-	  - Standard LED triggers (heartbeat, timer, oneshot, etc.)
-	  - Brightness control (0-255)
-	  - Hardware blinking support
-	  - Power management (suspend/resume)
-	  - Device Tree configuration
-	  - Runtime parameter override via DT overlays
-	  
-	  The driver is designed for GPIO-controlled LEDs and follows
-	  kernel conventions including devm_* resource management,
-	  proper error handling, and maintainable code structure.
-	  
-	  Features:
-	  * LED class subsystem integration (/sys/class/leds/)
-	  * GPIO descriptor API for modern GPIO handling
-	  * Device Tree bindings with runtime overlay support
-	  * Hardware blinking support via set_brightness_blocking
-	  * Proper power management (suspend/resume)
-	  * UAPI header for userspace applications
-	  * Comprehensive documentation
-	  
-	  Compared to the legacy gpio_chardev driver (Lộ trình 3), this driver
-	  follows the production-ready approach (Lộ trình 2) recommended for
-	  mainline kernel submission.
-	  
-	  https://github.com/yourusername/leds-gpio-custom

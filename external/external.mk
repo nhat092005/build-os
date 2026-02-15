@@ -1,1 +1,1 @@
-include $(sort $(wildcard $(BR2_EXTERNAL_GPIO_DRIVERS_PATH)/package/*/*.mk))
+include $(sort $(wildcard $(BR2_EXTERNAL_NHAT092005_PATH)/package/*/*.mk))
