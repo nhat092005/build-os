@@ -1,11 +1,12 @@
 # Makefile for GPIO Character Device Userspace Tool
 
 # Toolchain Configuration
+CROSS_COMPILE   ?=
 CC              := $(CROSS_COMPILE)gcc
 CFLAGS          := -Wall -Wextra -O2
 
 # Directory Configuration
-TOOLS_DIR       := tools
+TOOLS_DIR       := $(shell pwd)/tools
 BUILD_DIR       := $(shell pwd)/../build/tools
 UAPI_DIR        := $(shell pwd)/../include/uapi
 INCLUDES        := -I$(UAPI_DIR)
@@ -18,12 +19,12 @@ TARGETS         := $(patsubst $(TOOLS_DIR)/%.c,%,$(SRCS))
 
 # PHONY Targets
 .PHONY: all clean help
-.PHONY: userspace userspace-clean
+.PHONY: tools tools-clean
 
 # Main Targets
-all: userspace 
+all: tools 
 
-userspace: $(BUILD_DIR) $(TARGETS)
+tools: $(BUILD_DIR) $(TARGETS)
 
 # Directory Creation
 $(BUILD_DIR):
@@ -34,15 +35,16 @@ $(BUILD_DIR):
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(BUILD_DIR)/$@ $<
 
 # Clean Targets
-clean: userspace-clean
+clean: tools-clean
 
 # Clean Userspace Tool
-userspace-clean:
+tools-clean:
 	rm -rf $(BUILD_DIR)
 
 # Help
 help:
 	@echo "Targets:"
-	@echo "  all                     Build GPIO Character Device control tool (default)"
-	@echo "  userspace-clean         Clean userspace tool build artifacts"
-	@echo "  clean                   Remove build artifacts"
+	@echo "  all              Build GPIO Character Device control tool (default)"
+	@echo "  tools            Build userspace tools" 
+	@echo "  clean            Remove build artifacts"
+	@echo "  tools-clean      Clean tools build artifacts"
