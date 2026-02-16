@@ -7,6 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DRIVERS_DIR="$PROJECT_ROOT/drivers"
 OUTPUT_DIR="$PROJECT_ROOT/output"
+
 ROOTFS_DIR="$OUTPUT_DIR/rootfs"
 USR_BIN_DIR="$ROOTFS_DIR/usr/bin"
 
@@ -74,8 +75,8 @@ install_tools() {
             exit 1
         fi
         chmod +x "$dest/$name"
-        installed=$((installed + 1))
         echo "Installed $name"
+        installed=$((installed + 1))
     done
     
     echo "Installed $installed tool(s) to $dest"
@@ -85,7 +86,7 @@ install_tools() {
 main() {    
     check_rootfs
     check_usr_bin
-    
+
     IFS=' ' read -r -a tools <<< "$(find_tools)"
     
     if [ ${#tools[@]} -eq 0 ] || [ -z "${tools[0]}" ]; then

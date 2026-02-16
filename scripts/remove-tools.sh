@@ -7,6 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DRIVERS_DIR="$PROJECT_ROOT/drivers"
 OUTPUT_DIR="$PROJECT_ROOT/output"
+
 ROOTFS_DIR="$OUTPUT_DIR/rootfs"
 USR_BIN_DIR="$ROOTFS_DIR/usr/bin"
 
