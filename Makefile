@@ -224,15 +224,6 @@ deploy-sdcard:
 stage-output:
 	$(MAKE) -C $(SCRIPTS_DIR) stage-output
 
-.PHONY: install-tools remove-tools 
-# Install tools
-install-tools:
-	$(MAKE) -C $(SCRIPTS_DIR) install-tools
-
-# Remove tools
-remove-tools:
-	$(MAKE) -C $(SCRIPTS_DIR) remove-tools
-
 .PHONY: install-overlays remove-overlays
 # Install Device Tree overlays
 install-overlays:
@@ -241,6 +232,24 @@ install-overlays:
 # Remove Device Tree overlays
 remove-overlays:
 	$(MAKE) -C $(SCRIPTS_DIR) remove-overlays
+
+.PHONY: install-modules remove-modules
+# Install kernel modules
+install-modules:
+	$(MAKE) -C $(SCRIPTS_DIR) install-modules
+
+# Remove kernel modules
+remove-modules:
+	$(MAKE) -C $(SCRIPTS_DIR) remove-modules
+
+.PHONY: install-tools remove-tools 
+# Install tools
+install-tools:
+	$(MAKE) -C $(SCRIPTS_DIR) install-tools
+
+# Remove tools
+remove-tools:
+	$(MAKE) -C $(SCRIPTS_DIR) remove-tools
 
 .PHONY: clean
 # Clean all build artifacts
@@ -289,14 +298,18 @@ help:
 	@echo "  buildroot-distclean      Distclean Buildroot (resets to pristine state)"
 	@echo "Deployment:"
 	@echo "  stage-output             Stage buildroot output to output/ (requires root)"
-	@echo "  install-overlays         Install device tree overlays to staged rootfs (requires root)"
-	@echo "  remove-overlays          Remove device tree overlays from staged rootfs (requires root)"
-	@echo "  install-tools            Install tools to staged rootfs"
-	@echo "  remove-tools             Remove tools from staged rootfs"
 	@echo "  image                    Identify SD card, and deploy (requires root)"
 	@echo "  identify-sdcard          Identify SD card device"
 	@echo "  deploy-sdcard            Deploy to SD card (requires root)"
 	@echo "  output-clean             Clean staged output files (requires root)"
+	@echo "Install:" 
+	@echo "  install-overlays         Install device tree overlays to staged rootfs (requires root)"
+	@echo "  install-modules          Install kernel modules to staged rootfs"
+	@echo "  install-tools            Install userspace tools to staged rootfs"
+	@echo "Remove:"
+	@echo "  remove-overlays          Remove device tree overlays from staged rootfs (requires root)"
+	@echo "  remove-modules           Remove kernel modules from staged rootfs"
+	@echo "  remove-tools             Remove userspace tools from staged rootfs"
 	@echo "Others:"
 	@echo "  list                     List available drivers and tools"
 	@echo "Build Options:"
