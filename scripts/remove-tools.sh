@@ -12,8 +12,16 @@ USR_BIN_DIR="$ROOTFS_DIR/usr/bin"
 
 # Check staged rootfs exists
 check_rootfs() {
+    if [ ! -d "$ROOTFS_DIR" ]; then
+        echo "Error: Invalid rootfs directory: $ROOTFS_DIR"
+        exit 1
+    fi
+}
+
+# Check usr/bin directory exists
+check_usr_bin() {
     if [ ! -d "$USR_BIN_DIR" ]; then
-        echo "Error: Invalid or missing rootfs at $USR_BIN_DIR"
+        echo "Error: Invalid usr/bin directory: $USR_BIN_DIR"
         exit 1
     fi
 }
