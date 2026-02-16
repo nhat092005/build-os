@@ -84,27 +84,25 @@ remove_tools() {
     local not_found=0
     local dest="$USR_BIN_DIR"
     
-    echo "Removing userspace tools from: $dest"
-    
     while IFS= read -r name; do
         [ -z "$name" ] && continue
         
         if [ -f "$dest/$name" ]; then
-            echo "  Removing: $name"
+            echo "Removed $name"
             rm -f "$dest/$name"
             removed=$((removed + 1))
         else
-            echo "  Not found: $name (skipping)"
+            echo "Not found $name (skipping)"
             not_found=$((not_found + 1))
         fi
     done < <(find_tools)
     
     if [ $removed -gt 0 ]; then
-        echo "Successfully removed $removed tool(s)"
+        echo "Removed $removed tool(s) from $dest"
     fi
     
     if [ $not_found -gt 0 ]; then
-        echo "Warning: $not_found tool(s) not found in rootfs"
+        echo "Warning $not_found tool(s) not found in rootfs"
     fi
     
     if [ $removed -eq 0 ] && [ $not_found -eq 0 ]; then

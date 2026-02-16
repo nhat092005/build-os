@@ -67,7 +67,10 @@ install_tools() {
         fi
         chmod +x "$dest/$name"
         installed=$((installed + 1))
+        echo "Installed $name"
     done
+    
+    echo "Installed $installed tool(s) to $dest"
 }
 
 # Main
