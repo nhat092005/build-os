@@ -8,11 +8,12 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DRIVERS_DIR="$PROJECT_ROOT/drivers"
 OUTPUT_DIR="$PROJECT_ROOT/output"
 ROOTFS_DIR="$OUTPUT_DIR/rootfs"
+USR_BIN_DIR="$ROOTFS_DIR/usr/bin"
 
 # Check staged rootfs exists
 check_rootfs() {
-    if [ ! -d "$ROOTFS_DIR/usr/bin" ]; then
-        echo "Error: Invalid or missing rootfs at $ROOTFS_DIR/usr/bin"
+    if [ ! -d "$USR_BIN_DIR" ]; then
+        echo "Error: Invalid or missing rootfs at $USR_BIN_DIR"
         exit 1
     fi
 }
@@ -81,7 +82,7 @@ find_tools() {
 remove_tools() {
     local removed=0
     local not_found=0
-    local dest="$ROOTFS_DIR/usr/bin"
+    local dest="$USR_BIN_DIR"
     
     echo "Removing userspace tools from: $dest"
     
