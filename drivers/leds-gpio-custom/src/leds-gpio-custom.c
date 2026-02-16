@@ -198,8 +198,11 @@ static int gpio_led_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	/* Get GPIO descriptor from Device Tree */
-	led->gpiod = devm_gpiod_get(dev, "gpios", GPIOD_ASIS);
+	/* Get GPIO descriptor from Device Tree 
+	 * Using NULL for con_id to match "gpios" property directly
+	 * (not "gpios-gpios" which would be searched with "gpios" con_id)
+	 */
+	led->gpiod = devm_gpiod_get(dev, NULL, GPIOD_ASIS);
 	if (IS_ERR(led->gpiod))
 	{
 		ret = PTR_ERR(led->gpiod);

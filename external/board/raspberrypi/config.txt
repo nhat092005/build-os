@@ -1,7 +1,10 @@
 # Raspberry Pi 4 Configuration
 arm_64bit=1
-kernel=kernel8.img
+kernel=Image
 enable_uart=1
 dtoverlay=miniuart-bt
+
+# Custom device tree overlays
+dtoverlay=leds-gpio-custom
 
 arm_boost=1
