@@ -26,12 +26,12 @@ dtbo:
 ifeq ($(DTBO),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -f "$(DRIVERS_DIR)/$$drv/Makefile" ]; then \
-			$(MAKE) -C $(DRIVERS_DIR)/$$drv dtbo 2>/dev/null || true; \
+			$(MAKE) -C $(DRIVERS_DIR)/$$drv dtbo DTC=$(DTC) DTC_FLAGS="$(DTC_FLAGS)" 2>/dev/null || true; \
 		fi; \
 	done
 else
 	@if [ -f "$(DRIVERS_DIR)/$(DTBO)/Makefile" ]; then \
-		$(MAKE) -C $(DRIVERS_DIR)/$(DTBO) dtbo 2>/dev/null || true; \
+		$(MAKE) -C $(DRIVERS_DIR)/$(DTBO) dtbo DTC=$(DTC) DTC_FLAGS="$(DTC_FLAGS)" 2>/dev/null || true; \
 	fi
 endif
 

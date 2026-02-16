@@ -50,7 +50,9 @@ clean: modules-clean
 
 # Clean Modules
 modules-clean:
-	$(MAKE) -C $(KERNELDIR) M=$(CURDIR) clean
+	@if [ -d "$(KERNELDIR)" ]; then \
+		$(MAKE) -C $(KERNELDIR) M=$(CURDIR) clean; \
+	fi
 	rm -rf *.o *.ko *.mod.c *.mod *.order *.symvers .*.cmd .tmp_versions
 	rm -f .*.o
 	rm -rf $(BUILD_DIR)

@@ -7,12 +7,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 DRIVERS_DIR="$PROJECT_ROOT/drivers"
 OUTPUT_DIR="$PROJECT_ROOT/output"
+
 ROOTFS_DIR="$OUTPUT_DIR/rootfs"
+USR_BIN_DIR="$ROOTFS_DIR/usr/bin"
 
 # Check staged rootfs exists
 check_rootfs() {
-    if [ ! -d "$ROOTFS_DIR/usr/bin" ]; then
-        echo "Error: Invalid or missing rootfs at $ROOTFS_DIR/usr/bin"
+    if [ ! -d "$ROOTFS_DIR" ]; then
+        echo "Error: Invalid rootfs directory: $ROOTFS_DIR"
+        exit 1
+    fi
+}
+
+# Check usr/bin directory exists
+check_usr_bin() {
+    if [ ! -d "$USR_BIN_DIR" ]; then
+        echo "Error: Invalid usr/bin directory: $USR_BIN_DIR"
         exit 1
     fi
 }
@@ -81,29 +91,27 @@ find_tools() {
 remove_tools() {
     local removed=0
     local not_found=0
-    local dest="$ROOTFS_DIR/usr/bin"
-    
-    echo "Removing userspace tools from: $dest"
+    local dest="$USR_BIN_DIR"
     
     while IFS= read -r name; do
         [ -z "$name" ] && continue
         
         if [ -f "$dest/$name" ]; then
-            echo "  Removing: $name"
+            echo "Removed $name"
             rm -f "$dest/$name"
             removed=$((removed + 1))
         else
-            echo "  Not found: $name (skipping)"
+            echo "Not found $name (skipping)"
             not_found=$((not_found + 1))
         fi
     done < <(find_tools)
     
     if [ $removed -gt 0 ]; then
-        echo "Successfully removed $removed tool(s)"
+        echo "Removed $removed tool(s) from $dest"
     fi
     
     if [ $not_found -gt 0 ]; then
-        echo "Warning: $not_found tool(s) not found in rootfs"
+        echo "Warning $not_found tool(s) not found in rootfs"
     fi
     
     if [ $removed -eq 0 ] && [ $not_found -eq 0 ]; then

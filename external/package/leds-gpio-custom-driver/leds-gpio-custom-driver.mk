@@ -5,7 +5,7 @@
 ################################################################################
 
 LEDS_GPIO_CUSTOM_DRIVER_VERSION = 1.0.0
-LEDS_GPIO_CUSTOM_DRIVER_SITE = $(BR2_EXTERNAL_GPIO_DRIVERS_PATH)/../drivers/leds-gpio-custom
+LEDS_GPIO_CUSTOM_DRIVER_SITE = $(BR2_EXTERNAL_NHAT092005_PATH)/../drivers/leds-gpio-custom
 LEDS_GPIO_CUSTOM_DRIVER_SITE_METHOD = local
 LEDS_GPIO_CUSTOM_DRIVER_LICENSE = GPL-2.0
 LEDS_GPIO_CUSTOM_DRIVER_LICENSE_FILES = LICENSE
@@ -43,6 +43,10 @@ define LEDS_GPIO_CUSTOM_DRIVER_INSTALL_TARGET_CMDS
 		INSTALL_MOD_PATH=$(TARGET_DIR) \
 		modules_install
 	
+	# Install module auto-load configuration
+	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_NHAT092005_PATH)/package/leds-gpio-custom-driver/leds-gpio-custom.modules-load \
+		$(TARGET_DIR)/etc/modules-load.d/leds-gpio-custom.conf
+	
 	# Install UAPI header for userspace applications
 	$(INSTALL) -D -m 0644 $(@D)/include/uapi/leds-gpio-custom.h \
 		$(STAGING_DIR)/usr/include/linux/leds-gpio-custom.h
@@ -77,9 +81,9 @@ define LEDS_GPIO_CUSTOM_DRIVER_INSTALL_TARGET_CMDS
 	fi
 	
 	# Install module configuration files (for reference)
-	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_GPIO_DRIVERS_PATH)/package/leds-gpio-custom-driver/leds-gpio-custom.modules-load \
+	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_NHAT092005_PATH)/package/leds-gpio-custom-driver/leds-gpio-custom.modules-load \
 		$(TARGET_DIR)/usr/share/doc/leds-gpio-custom-driver/leds-gpio-custom.modules-load
-	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_GPIO_DRIVERS_PATH)/package/leds-gpio-custom-driver/leds-gpio-custom.modprobe \
+	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_NHAT092005_PATH)/package/leds-gpio-custom-driver/leds-gpio-custom.modprobe \
 		$(TARGET_DIR)/usr/share/doc/leds-gpio-custom-driver/leds-gpio-custom.modprobe
 endef
 
