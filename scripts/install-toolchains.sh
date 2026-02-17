@@ -1,0 +1,52 @@
+#!/bin/bash
+
+set -e
+
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+TOOLCHAINS_DIR="$PROJECT_ROOT/toolchains"
+BUILDROOT_DIR="$PROJECT_ROOT/buildroot"
+BR2_EXTERNAL="$PROJECT_ROOT/external"
+KERNEL_SRC_DIR="$PROJECT_ROOT/kernel"
+
+SDK_NAME="aarch64-buildroot-linux-gnu_sdk-buildroot"
+SDK_TAR="$BUILDROOT_DIR/output/images/${SDK_NAME}.tar.gz"
+SDK_DEST="$TOOLCHAINS_DIR/${SDK_NAME}"
+
+check_BUILDROOT() {
+    if [ ! -d "$BUILDROOT_DIR" ]; then
+        echo "Error: Buildroot directory not found."
+        exit 1
+    fi
+}
+
+check_SDK() {
+    if [ ! -d "$SDK_DEST" ]; then
+        echo "Error: SDK not found at $SDK_DEST"
+        exit 1
+    fi
+}
+
+install_toolchains() {
+    # Build Buildroot and SDK
+    mkdir -p "$TOOLCHAINS_DIR"
+    make -C "$BUILDROOT_DIR" BR2_EXTERNAL="$BR2_EXTERNAL" LINUX_OVERRIDE_SRCDIR="$KERNEL_SRC_DIR"
+
+    make -C "$BUILDROOT_DIR" BR2_EXTERNAL="$BR2_EXTERNAL" LINUX_OVERRIDE_SRCDIR="$KERNEL_SRC_DIR" sdk
+
+    check_SDK
+
+    if [ -d "$SDK_DEST" ]; then
+        rm -rf "$SDK_DEST"
+    fi
+    tar -xf "$SDK_TAR" -C "$TOOLCHAINS_DIR"
+    echo "$SDK_DEST"
+}
+
+main() {
+    check_BUILDROOT
+    install_toolchains
+}
+
+main "$@"
