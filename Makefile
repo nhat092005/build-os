@@ -253,6 +253,14 @@ install-tools:
 remove-tools:
 	$(MAKE) -C $(SCRIPTS_DIR) remove-tools
 
+.PHONY: install-toolchain remove-toolchain
+# Install toolchaininstall-toolchain:
+	$(MAKE) -C $(SCRIPTS_DIR) install-toolchain
+
+# Remove toolchain
+remove-toolchain:
+	$(MAKE) -C $(SCRIPTS_DIR) remove-toolchain
+
 .PHONY: clean
 # Clean all build artifacts
 clean: buildroot-clean dtbo-clean modules-clean tools-clean output-clean
@@ -308,10 +316,12 @@ help:
 	@echo "  install-overlays         Install device tree overlays to staged rootfs (requires root)"
 	@echo "  install-modules          Install kernel modules to staged rootfs"
 	@echo "  install-tools            Install userspace tools to staged rootfs"
+	@echo "  install-toolchain        Install toolchain to project"
 	@echo "Remove:"
 	@echo "  remove-overlays          Remove device tree overlays from staged rootfs (requires root)"
 	@echo "  remove-modules           Remove kernel modules from staged rootfs"
 	@echo "  remove-tools             Remove userspace tools from staged rootfs"
+	@echo "  remove-toolchain         Remove toolchain from project"
 	@echo "Others:"
 	@echo "  list                     List available drivers and tools"
 	@echo "Build Options:"

@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+env:
+  DEFCONFIG: raspberrypi4_64_custom_defconfig
+
+jobs:
+  release:
+    name: Build & Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            build-essential gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+            bison flex libssl-dev libncurses5-dev bc rsync cpio unzip wget \
+            python3 file device-tree-compiler mtools dosfstools parted e2fsprogs
+
+      - name: Cache Buildroot downloads
+        uses: actions/cache@v4
+        with:
+          path: buildroot/dl
+          key: br-dl-${{ hashFiles('external/configs/*_defconfig') }}
+          restore-keys: br-dl-
+
+      - name: Cache Buildroot host tools
+        uses: actions/cache@v4
+        with:
+          path: buildroot/output/host
+          key: br-host-${{ hashFiles('external/configs/*_defconfig', 'kernel/Makefile') }}
+          restore-keys: br-host-
+
+      - name: Build
+        run: |
+          cd buildroot
+          make BR2_EXTERNAL=../external LINUX_OVERRIDE_SRCDIR=../kernel ${{ env.DEFCONFIG }}
+          cd ..
+          make build-all
+
+      - name: Prepare release assets
+        id: prep
+        run: |
+          IMG=buildroot/output/images/sdcard.img
+          [ -f "$IMG" ] || { echo "sdcard.img not found"; exit 1; }
+
+          cp "$IMG" sdcard.img
+          sha256sum sdcard.img > sdcard.img.sha256
+
+          SIZE_MB=$(( $(stat -c%s sdcard.img) / 1048576 ))
+          KVER=$(sed -n 's/^VERSION = //p' kernel/Makefile)
+          KPATCH=$(sed -n 's/^PATCHLEVEL = //p' kernel/Makefile)
+          KSUB=$(sed -n 's/^SUBLEVEL = //p' kernel/Makefile)
+
+          echo "size=${SIZE_MB}" >> "$GITHUB_OUTPUT"
+          echo "kernel=${KVER}.${KPATCH}.${KSUB}" >> "$GITHUB_OUTPUT"
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          body: |
+            ## Build OS ${{ github.ref_name }}
+
+            | Detail | Value |
+            |--------|-------|
+            | **Target** | Raspberry Pi 4 (aarch64) |
+            | **Kernel** | ${{ steps.prep.outputs.kernel }} |
+            | **Image size** | ${{ steps.prep.outputs.size }}MB |
+            | **Commit** | ${{ github.sha }} |
+
+            ### Install
+            ```bash
+            sudo dd if=sdcard.img of=/dev/sdX bs=4M status=progress && sync
+            ```
+          files: |
+            sdcard.img
+            sdcard.img.sha256
