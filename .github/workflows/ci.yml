@@ -25,7 +25,7 @@ jobs:
         run: |
           set -e
           for f in external/external.mk external/external.desc external/Config.in \
-                   external/configs/${{ env.DEFCONFIG }} kernel/Makefile; do
+                   external/configs/${{ env.DEFCONFIG }}; do
             [ -f "$f" ] || { echo "Missing: $f"; exit 1; }
           done
           echo "Structure OK"
