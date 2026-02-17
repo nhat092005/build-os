@@ -26,5 +26,5 @@ fi
 #   "/var/empty must be owned by root and not group or world-writable."
 if [ -d "${FAKEROOT_TARGET_DIR}/var/empty" ]; then
     chown 0:0 "${FAKEROOT_TARGET_DIR}/var/empty"
-    chmod 0755 "${FAKEROOT_TARGET_DIR}/var/empty"
+    chmod 0700 "${FAKEROOT_TARGET_DIR}/var/empty"
 fi
