@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**', 'LICENSE']
+  workflow_dispatch:
+
+env:
+  DEFCONFIG: raspberrypi4_64_custom_defconfig
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck -x scripts/*.sh
+
+      - name: Validate project structure
+        run: |
+          set -e
+          for f in external/external.mk external/external.desc external/Config.in \
+                   external/configs/${{ env.DEFCONFIG }} kernel/Makefile; do
+            [ -f "$f" ] || { echo "Missing: $f"; exit 1; }
+          done
+          echo "Structure OK"
+
+  build:
+    name: Build
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            build-essential gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu \
+            bison flex libssl-dev libncurses5-dev bc rsync cpio unzip wget \
+            python3 file device-tree-compiler mtools dosfstools parted e2fsprogs
+
+      - name: Cache Buildroot downloads
+        uses: actions/cache@v4
+        with:
+          path: buildroot/dl
+          key: br-dl-${{ hashFiles('external/configs/*_defconfig') }}
+          restore-keys: br-dl-
+
+      - name: Cache Buildroot host tools
+        uses: actions/cache@v4
+        with:
+          path: buildroot/output/host
+          key: br-host-${{ hashFiles('external/configs/*_defconfig', 'kernel/Makefile') }}
+          restore-keys: br-host-
+
+      - name: Build
+        run: |
+          cd buildroot
+          make BR2_EXTERNAL=../external LINUX_OVERRIDE_SRCDIR=../kernel ${{ env.DEFCONFIG }}
+          cd ..
+          make build-all
+
+      - name: Verify image
+        run: |
+          IMG=buildroot/output/images/sdcard.img
+          [ -f "$IMG" ] || { echo "sdcard.img not found"; exit 1; }
+          SIZE_MB=$(( $(stat -c%s "$IMG") / 1048576 ))
+          echo "Image: ${SIZE_MB}MB"
+          sha256sum "$IMG" | tee "$IMG.sha256"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdcard-${{ github.sha }}
+          path: |
+            buildroot/output/images/sdcard.img
+            buildroot/output/images/sdcard.img.sha256
+          retention-days: 14
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-${{ github.sha }}
+          path: buildroot/output/build/*/.stamp_*
+          retention-days: 3
