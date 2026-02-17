@@ -40,7 +40,8 @@ is_elf_executable() {
         return $?
     else
         # Fallback: check magic number
-        local magic=$(od -An -N4 -tx1 "$file" 2>/dev/null | tr -d ' ')
+        local magic
+        magic=$(od -An -N4 -tx1 "$file" 2>/dev/null | tr -d ' ')
         [ "$magic" = "7f454c46" ]
         return $?
     fi
@@ -69,7 +70,8 @@ install_tools() {
     local dest="$USR_BIN_DIR"
     
     for tool in "${tools[@]}"; do
-        local name=$(basename "$tool")
+        local name
+        name=$(basename "$tool")
         if ! cp -f "$tool" "$dest/$name"; then
             echo "Error: Failed to copy $name"
             exit 1

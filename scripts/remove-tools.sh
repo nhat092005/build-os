@@ -43,9 +43,11 @@ is_elf_executable() {
     fi
     
     # Method 2: Fallback - check ELF magic number
-    local magic=$(od -An -N4 -tx1 "$file" 2>/dev/null | tr -d ' ')
+    local magic
+    magic=$(od -An -N4 -tx1 "$file" 2>/dev/null | tr -d ' ')
     if [ "$magic" = "7f454c46" ]; then
-        local e_type=$(od -An -j16 -N2 -tx2 "$file" 2>/dev/null | tr -d ' ')
+        local e_type
+        e_type=$(od -An -j16 -N2 -tx2 "$file" 2>/dev/null | tr -d ' ')
         [[ "$e_type" =~ ^000[23] ]]
         return $?
     fi
@@ -56,7 +58,8 @@ is_elf_executable() {
 # Should skip this file?
 should_skip() {
     local file="$1"
-    local basename=$(basename "$file")
+    local basename
+    basename=$(basename "$file")
     
     # Skip by extension
     [[ "$basename" == *.o ]] && return 0
