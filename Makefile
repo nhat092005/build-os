@@ -8,11 +8,16 @@ BR2_EXTERNAL			:= $(shell pwd)/external
 BUILDROOT_DIR			:= $(shell pwd)/buildroot
 DRIVERS_DIR				:= $(shell pwd)/drivers
 SCRIPTS_DIR				:= $(shell pwd)/scripts
+KERNEL_SRC_DIR			:= $(shell pwd)/kernel
+KERNEL_DIR				:= $(BUILDROOT_DIR)/output/build/linux-custom
+TOOLCHAIN_DIR 			:= $(shell pwd)/toolchains/aarch64-buildroot-linux-gnu_sdk-buildroot
+
+# Output directories
 IMAGE_DIR				:= $(BUILDROOT_DIR)/output/images
 OUTPUT_DIR				:= $(shell pwd)/output
 
 # Buildroot toolchain
-CROSS_COMPILE			:= $(BUILDROOT_DIR)/output/host/bin/aarch64-linux-
+CROSS_COMPILE 			:= $(TOOLCHAIN_DIR)/bin/aarch64-linux-
 
 # Toolchain Configuration
 CC						:= $(CROSS_COMPILE)gcc
@@ -20,9 +25,6 @@ CFLAGS					:= -Wall -Wextra -O2
 AR						:= $(CROSS_COMPILE)ar
 DTC						:= dtc
 DTC_FLAGS				:= -@ -I dts -O dtb -Wno-unit_address_vs_reg
-
-# Kernel directory (Buildroot kernel only)
-KERNELDIR				:= $(BUILDROOT_DIR)/output/build/linux-custom
 
 # Auto-detect available drivers
 AVAILABLE_DRIVERS		:= $(notdir $(wildcard $(DRIVERS_DIR)/*))
@@ -35,7 +37,7 @@ DRIVER					?= all
 DEVICE					?= /dev/sda
 
 # Export for sub-makefiles
-export ARCH CROSS_COMPILE KERNELDIR DTBO MODULE TOOLS DEVICE
+export ARCH CROSS_COMPILE KERNEL_DIR DTBO MODULE TOOLS DEVICE
 
 .PHONY: all
 # Main Targets
@@ -54,11 +56,11 @@ buildroot:
 		echo "Run: git submodule update --init buildroot"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL)
+	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) LINUX_OVERRIDE_SRCDIR=$(KERNEL_SRC_DIR)
 
 # Clean Buildroot
 buildroot-clean:
-	$(MAKE) -C $(BUILDROOT_DIR) clean
+	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) LINUX_OVERRIDE_SRCDIR=$(KERNEL_SRC_DIR) clean
 
 # Configure Buildroot
 menuconfig:
@@ -66,7 +68,7 @@ menuconfig:
 		echo "Error: Buildroot not found"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) menuconfig
+	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) LINUX_OVERRIDE_SRCDIR=$(KERNEL_SRC_DIR) menuconfig
 
 # Load defconfig (supports both built-in and BR2_EXTERNAL defconfigs)
 %_defconfig:
@@ -75,7 +77,7 @@ menuconfig:
 		echo "Run: git submodule update --init buildroot"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) $@
+	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) LINUX_OVERRIDE_SRCDIR=$(KERNEL_SRC_DIR) $@
 
 .PHONY: buildroot-distclean
 # Distclean Buildroot
@@ -104,7 +106,7 @@ modules:
 	$(MAKE) -C $(DRIVERS_DIR) modules \
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
-		KERNELDIR=$(KERNELDIR) \
+		KERNEL_DIR=$(KERNEL_DIR) \
 		MODULE=$(MODULE)
 
 # Clean Modules
@@ -118,7 +120,7 @@ tools:
 	$(MAKE) -C $(DRIVERS_DIR) tools \
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
-		KERNELDIR=$(KERNELDIR) \
+		KERNEL_DIR=$(KERNEL_DIR) \
 		TOOLS=$(TOOLS)
 
 # Clean Userspace Tools

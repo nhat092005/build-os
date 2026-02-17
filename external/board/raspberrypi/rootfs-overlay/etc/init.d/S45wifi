@@ -1,0 +1,102 @@
+#!/bin/sh
+#
+# S45wifi - Start/stop WiFi (wpa_supplicant + DHCP on wlan0)
+#
+
+INTERFACE="wlan0"
+WPA_CONF="/etc/wpa_supplicant/wpa_supplicant.conf"
+WPA_PIDFILE="/var/run/wpa_supplicant_${INTERFACE}.pid"
+UDHCPC_PIDFILE="/var/run/udhcpc_${INTERFACE}.pid"
+
+# Ensure wpa_supplicant binary and config exist
+[ -x /usr/sbin/wpa_supplicant ] || exit 0
+[ -f "$WPA_CONF" ] || exit 0
+
+wait_for_interface() {
+    local i=0
+    while [ $i -lt 20 ]; do
+        if [ -e "/sys/class/net/${INTERFACE}" ]; then
+            return 0
+        fi
+        sleep 0.5
+        i=$((i + 1))
+    done
+    return 1
+}
+
+start() {
+    printf "Starting WiFi on %s: " "$INTERFACE"
+
+    # Wait for the wireless interface to appear
+    if ! wait_for_interface; then
+        echo "SKIP (no $INTERFACE)"
+        return 0
+    fi
+
+    # Bring up the interface
+    ip link set "$INTERFACE" up 2>/dev/null || ifconfig "$INTERFACE" up 2>/dev/null
+
+    # Start wpa_supplicant in background
+    wpa_supplicant -B -i "$INTERFACE" -c "$WPA_CONF" -P "$WPA_PIDFILE" 2>/dev/null
+    if [ $? -ne 0 ]; then
+        echo "FAIL (wpa_supplicant)"
+        return 1
+    fi
+
+    # Wait for association to complete before requesting DHCP.
+    # brcmfmac needs time to scan, authenticate, and associate.
+    sleep 5
+
+    # Start DHCP client for wlan0.
+    # -b: background if lease is not immediately obtained (keeps retrying)
+    # -S: log to syslog
+    # No -q: stay running so the lease is renewed automatically
+    # No -R: don't release IP on exit
+    udhcpc -b -i "$INTERFACE" -p "$UDHCPC_PIDFILE" -S 2>/dev/null
+
+    echo "OK"
+}
+
+stop() {
+    printf "Stopping WiFi on %s: " "$INTERFACE"
+
+    # Stop udhcpc
+    if [ -f "$UDHCPC_PIDFILE" ]; then
+        kill "$(cat "$UDHCPC_PIDFILE")" 2>/dev/null
+        rm -f "$UDHCPC_PIDFILE"
+    fi
+
+    # Stop wpa_supplicant
+    if [ -f "$WPA_PIDFILE" ]; then
+        kill "$(cat "$WPA_PIDFILE")" 2>/dev/null
+        rm -f "$WPA_PIDFILE"
+    fi
+
+    # Bring down the interface
+    ip link set "$INTERFACE" down 2>/dev/null || ifconfig "$INTERFACE" down 2>/dev/null
+
+    echo "OK"
+}
+
+restart() {
+    stop
+    sleep 1
+    start
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart|reload)
+        restart
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+esac
+
+exit $?
