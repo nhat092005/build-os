@@ -10,7 +10,7 @@ BUILDROOT_DIR   ?= $(shell pwd)/../../../buildroot
 CROSS_COMPILE   ?= $(BUILDROOT_DIR)/output/host/bin/aarch64-linux-
 
 # Kernel directory (Buildroot kernel only)
-KERNELDIR       ?= $(BUILDROOT_DIR)/output/build/linux-custom
+KERNEL_DIR       ?= $(BUILDROOT_DIR)/output/build/linux-custom
 
 # Module name
 obj-m := gpio-chardev.o
@@ -31,7 +31,7 @@ all: modules
 # Build Kernel Module
 modules: 
 	mkdir -p $(BUILD_DIR)
-	$(MAKE) -C $(KERNELDIR) M=$(CURDIR) \
+	$(MAKE) -C $(KERNEL_DIR) M=$(CURDIR) \
 	        ARCH=$(ARCH) \
 	        CROSS_COMPILE=$(CROSS_COMPILE) \
 	        modules
@@ -50,8 +50,8 @@ clean: modules-clean
 
 # Clean Kernel Module build artifacts
 modules-clean:
-	@if [ -d "$(KERNELDIR)" ]; then \
-		$(MAKE) -C $(KERNELDIR) M=$(CURDIR) clean; \
+	@if [ -d "$(KERNEL_DIR)" ]; then \
+		$(MAKE) -C $(KERNEL_DIR) M=$(CURDIR) clean; \
 	fi
 	rm -f *.o *.ko *.mod *.mod.c *.symvers *.order .*.cmd
 	rm -f .*.o
