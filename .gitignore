@@ -67,3 +67,4 @@ docs/**
 drivers/*/build/
 
 # Others
+toolchains/**
