@@ -1,0 +1,92 @@
+.de  CW
+.sp
+.nf
+.ft CW
+..
+.\" Process this file with
+.\" groff -man -Tascii foo.1
+.\"
+.\" "verbatim" environment (from strace.1)
+.de  CE
+.ft
+.fi
+.sp
+..
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH faked 1 2024\-12\-19 "Debian Project" "Debian manual"
+.\" Manpage by J.H.M. Dassen <jdassen@debian.org>
+.\" and Clint Adams
+.SH NAMN
+faked \- demon som kommer ihåg fejkad ägarskaps\- och rättighetsinformation
+för filer som manipulerats av fakeroot\-processer.
+.SH SYNOPSIS
+\fBfaked\fP \fB[\-\-debug] [\-\-foreground] [\-\-cleanup] [\-\-key\fP
+\fImeddelande\-nyckel\fP\fB]\fP \fB[\-\-load] [\-\-save\-file\fP \fIspar\-fil\fP\fB]\fP \fB[\-\-port\fP
+\fItcp\-port\fP\fB]\fP
+.SH BESKRIVNING
+If a fakeroot process wants to change the ownership of a file, then \fBfaked\fP
+is the process that remembers that new owner.  If later the same fakeroot
+process does a stat() for that filename, then the libfakeroot wrapped stat()
+call will first ask faked for the fake ownership etc.\& of that file, and
+then report it.
+
+.SH FLAGGOR
+.TP 
+\fB\-\-debug\fP
+Skriv ut avlusningsinformation via stderr.
+.TP 
+\fB\-\-foreground\fP
+Förbli en förgrundsprocess.
+.TP 
+\fB\-\-cleanup\fP\fI\ number\fP
+Rensa upp semaforerna.
+.TP 
+\fB\-\-key\fP\fI\ key\-number\fP
+Don't allocate a new communication channel, but use channel specified by
+key.  (If the specified channel doesn't exist, it's created).
+.TP 
+\fB\-\-save\-file\fP\fI\ save\-file\fP
+Spara miljön till sparfil vid avslut.
+.TP 
+\fB\-\-load\fP
+Läsa in en tidigare sparad miljö från standard in.
+.TP 
+\fB\-\-unknown\-is\-real\fP
+Okänt riktigt ägarskap av tidigare okända filer istället för att ställa in
+dem på root:root.
+.TP 
+\fB\-\-port\fP\fI\ tcp\-port\fP
+Använd TCP\-port tcp\-port.
+
+.SH BUGGAR
+None so far.  Be warned, though: although I've written quite a few much
+larger (and smaller)  programs, I've never written anything that was as tiny
+as \fBfakeroot\fP, had as many bugs as \fBfakeroot\fP, and still was as usable as,
+say, \fBfakeroot\fP version 0.0_3, the first version that could be used to
+build itself.
+.SH LICENS
+\fBfakeroot\fP distribueras under GNU General Public License.  (GPL 2.0 eller
+senare).
+.SH FÖRFATTARE
+.TP 
+joost witteveen
+<\fIjoostje@debian.org\fP>
+.TP 
+Clint Adams
+<\fIclint@debian.org\fP>
+.TP 
+Timo Savola
+.SH ÖVERSÄTTNING
+David Weinehall
+.RI < tao@kernel.org >
+.SH MANUALSIDA
+mostly by J.H.M.\& Dassen <\fIjdassen@debian.org\fP> mods/additions by
+joost and Clint.
+.SH "SE ÄVEN"
+\fBfakeroot\fP(1), \fBdpkg\-buildpackage\fP(1), \fBdebuild\fP(1),
+\fB/usr/share/doc/fakeroot/DEBUG\fP

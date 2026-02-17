@@ -1,0 +1,92 @@
+.de  CW
+.sp
+.nf
+.ft CW
+..
+.\" Process this file with
+.\" groff -man -Tascii foo.1
+.\"
+.\" "verbatim" environment (from strace.1)
+.de  CE
+.ft
+.fi
+.sp
+..
+.\"
+.\"*******************************************************************
+.\"
+.\" This file was generated with po4a. Translate the source file.
+.\"
+.\"*******************************************************************
+.TH faked 1 2024\-12\-19 "Projet Debian" "Manuel de Debian"
+.\" Manpage by J.H.M. Dassen <jdassen@debian.org>
+.\" and Clint Adams
+.SH NOM
+Faked \- démon qui mémorise les permissions et propriétaires factices des
+fichiers manipulés par les processus sous fakeroot.
+.SH SYNOPSIS
+\fBfaked\fP \fB[\-\-debug] [\-\-foreground] [\-\-cleanup] [\-\-key\fP \fIclé\-msg\fP\fB]\fP
+\fB[\-\-load] [\-\-save\-file\fP \fIfichier\-de\-sauvegarde\fP\fB]\fP \fB[\-\-port\fP
+\fIport_TCP\fP\fB]\fP
+.SH DESCRIPTION
+If a fakeroot process wants to change the ownership of a file, then \fBfaked\fP
+is the process that remembers that new owner.  If later the same fakeroot
+process does a stat() for that filename, then the libfakeroot wrapped stat()
+call will first ask faked for the fake ownership etc.\& of that file, and
+then report it.
+
+.SH OPTIONS
+.TP 
+\fB\-\-debug\fP
+Affiche les informations de débogage sur la sortie d'erreur.
+.TP 
+\fB\-\-foreground\fP
+Ne pas se dupliquer (fork) en tâche de fond.
+.TP 
+\fB\-\-cleanup\fP\fI\ number\fP
+Nettoyer les sémaphores.
+.TP 
+\fB\-\-key\fP\fI\ key\-number\fP
+Don't allocate a new communication channel, but use channel specified by
+key.  (If the specified channel doesn't exist, it's created).
+.TP 
+\fB\-\-save\-file\fP\fI\ save\-file\fP
+Enregistre l'environnement dans le fichier\-de\-sauvegarde en quittant.
+.TP 
+\fB\-\-load\fP
+Restaure un environnement préalablement enregistré à partir de l'entrée
+standard.
+.TP 
+\fB\-\-unknown\-is\-real\fP
+Utilise le véritable propriétaire des fichiers auparavant inconnus que de
+les attribuer à root:root.
+.TP 
+\fB\-\-port\fP\fI\ tcp\-port\fP
+Utilise le port TCP port\-tcp.
+
+.SH BOGUES
+None so far.  Be warned, though: although I've written quite a few much
+larger (and smaller)  programs, I've never written anything that was as tiny
+as \fBfakeroot\fP, had as many bugs as \fBfakeroot\fP, and still was as usable as,
+say, \fBfakeroot\fP version 0.0_3, the first version that could be used to
+build itself.
+.SH COPIES
+\fBfakeroot\fP est distribué sous la licence GNU General Public License.  (GPL
+2.0 ou supérieure).
+.SH AUTEURS
+.TP 
+Joost Witteveen
+<\fIjoostje@debian.org\fP>
+.TP 
+Clint Adams
+<\fIclint@debian.org\fP>
+.TP 
+Timo Savola
+.SH TRADUCTION
+Sylvain Cherrier <sylvain.cherrier@free.fr>.
+.SH "PAGE DE MANUEL"
+mostly by J.H.M.\& Dassen <\fIjdassen@debian.org\fP> mods/additions by
+joost and Clint.
+.SH "VOIR AUSSI"
+\fBfakeroot\fP(1), \fBdpkg\-buildpackage\fP(1), \fBdebuild\fP(1),
+\fB/usr/share/doc/fakeroot/DEBUG\fP

@@ -1,0 +1,11 @@
+prefix=/home/nhat/Working_Space/build-os/build-os/buildroot/output/host
+exec_prefix=/home/nhat/Working_Space/build-os/build-os/buildroot/output/host
+libdir=/home/nhat/Working_Space/build-os/build-os/buildroot/output/host/lib
+includedir=/home/nhat/Working_Space/build-os/build-os/buildroot/output/host/include
+
+Name: uuid
+Description: Universally unique id library
+Version: 2.41.3
+Cflags: -I${includedir}/uuid
+Libs.private:  -lpthread
+Libs: -L${libdir} -luuid

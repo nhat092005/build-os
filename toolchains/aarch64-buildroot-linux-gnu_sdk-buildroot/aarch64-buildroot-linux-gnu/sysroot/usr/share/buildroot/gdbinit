@@ -1,0 +1,2 @@
+add-auto-load-safe-path /home/nhat/Working_Space/build-os/build-os/buildroot/output/host/aarch64-buildroot-linux-gnu/sysroot
+set sysroot /home/nhat/Working_Space/build-os/build-os/buildroot/output/host/aarch64-buildroot-linux-gnu/sysroot
