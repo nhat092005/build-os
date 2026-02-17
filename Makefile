@@ -219,7 +219,7 @@ identify-sdcard:
 
 # Deploy SD card
 deploy-sdcard:
-	$(MAKE) -C $(SCRIPTS_DIR) deploy-sdcard
+	$(MAKE) -C $(SCRIPTS_DIR) deploy-sdcard DEVICE=$(DEVICE)
 
 .PHONY: stage-output
 # Stage output files
