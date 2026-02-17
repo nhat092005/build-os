@@ -1,14 +1,14 @@
 #!/bin/sh
 #
-# S45wifi - Start/stop WiFi (wpa_supplicant + DHCP on wlan0)
+# wifi
 #
 
 INTERFACE="wlan0"
-WPA_CONF="/etc/wpa_supplicant/wpa_supplicant.conf"
+WPA_CONF="/etc/wpa_supplicant.conf"
 WPA_PIDFILE="/var/run/wpa_supplicant_${INTERFACE}.pid"
 UDHCPC_PIDFILE="/var/run/udhcpc_${INTERFACE}.pid"
 
-# Ensure wpa_supplicant binary and config exist
+# Ensure wpa_supplicant binary and config exiSst
 [ -x /usr/sbin/wpa_supplicant ] || exit 0
 [ -f "$WPA_CONF" ] || exit 0
 
@@ -45,7 +45,7 @@ start() {
 
     # Wait for association to complete before requesting DHCP.
     # brcmfmac needs time to scan, authenticate, and associate.
-    sleep 5
+    sleep 3
 
     # Start DHCP client for wlan0.
     # -b: background if lease is not immediately obtained (keeps retrying)
