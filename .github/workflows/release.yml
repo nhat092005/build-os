@@ -41,6 +41,10 @@ jobs:
           key: br-host-${{ hashFiles('external/configs/*_defconfig', 'kernel/Makefile') }}
           restore-keys: br-host-
 
+      - name: Fix toolchain permissions
+        run: |
+          chmod +x toolchains/aarch64-buildroot-linux-gnu_sdk-buildroot/bin/*
+
       - name: Build
         run: |
           cd buildroot
