@@ -22,10 +22,8 @@ check_prerequisites() {
         exit 1
     fi
 
-    local boot_files
-    boot_files=$(find "$BOOT_DIR" -type f 2>/dev/null | wc -l)
-    local rootfs_files
-    rootfs_files=$(find "$ROOTFS_DIR" -type f 2>/dev/null | wc -l)
+    local boot_files=$(find "$BOOT_DIR" -type f 2>/dev/null | wc -l)
+    local rootfs_files=$(find "$ROOTFS_DIR" -type f 2>/dev/null | wc -l)
 
     if [ "$boot_files" -eq 0 ] || [ "$rootfs_files" -eq 0 ]; then
         echo "Error: Staged output is empty"
@@ -48,8 +46,7 @@ verify_device() {
     fi
 
     # Safety: refuse to write to system disk
-    local root_disk
-    root_disk=$(lsblk -no PKNAME / 2>/dev/null || true)
+    local root_disk=$(lsblk -no PKNAME / 2>/dev/null || true)
     if [ -n "$root_disk" ] && [ "$device" = "/dev/$root_disk" ]; then
         echo "Error: Refusing to write to system disk $device"
         exit 1
@@ -65,7 +62,7 @@ get_device_info() {
 # Unmount all partitions on device
 unmount_device() {
     local device=$1
-    umount ${device}* 2>/dev/null || true
+    umount "${device}"* 2>/dev/null || true
     sleep 1
 }
 
@@ -91,9 +88,8 @@ flash_base_image() {
 # Expand rootfs partition to fill SD card
 expand_rootfs_partition() {
     local device=$1
-    local rootfs_part=$(get_part_name "$device" 2)
-
-    # Re-read partition table
+    local rootfs_part
+    rootfs_part=$(get_part_name "$device" 2)
     partprobe "$device" 2>/dev/null || true
     sleep 1
 
@@ -112,7 +108,8 @@ expand_rootfs_partition() {
 # Apply customized boot files from output/BOOT
 apply_boot_files() {
     local device=$1
-    local boot_part=$(get_part_name "$device" 1)
+    local boot_part
+    boot_part=$(get_part_name "$device" 1)
     local mnt="/tmp/deploy_boot_$$"
 
     mkdir -p "$mnt"
@@ -122,11 +119,7 @@ apply_boot_files() {
         exit 1
     fi
 
-    # Delete old content first to free space
-    rm -rf "$mnt"/*
-
-    # Copy new content
-    rsync -a --info=progress2 "$BOOT_DIR/" "$mnt/" || {
+    rm -rf "${mnt:?}"/*
         umount "$mnt"
         exit 1
     }
@@ -139,8 +132,8 @@ apply_boot_files() {
 # Apply customized rootfs from output/rootfs
 apply_rootfs_files() {
     local device=$1
-    local rootfs_part=$(get_part_name "$device" 2)
-    local mnt="/tmp/deploy_rootfs_$$"
+    local rootfs_part
+    rootfs_part=$(get_part_name "$device" 2)
 
     mkdir -p "$mnt"
 
@@ -149,11 +142,7 @@ apply_rootfs_files() {
         exit 1
     fi
 
-    # Delete old content first to free space
-    rm -rf "$mnt"/*
-
-    # Copy new content
-    rsync -a --info=progress2 "$ROOTFS_DIR/" "$mnt/" || {
+    rm -rf "${mnt:?}"/*
         umount "$mnt"
         exit 1
     }
@@ -165,7 +154,7 @@ apply_rootfs_files() {
 
 # Confirm with user
 confirm_proceed() {
-    read -p "Type 'y' to continue: (y/n) " confirm
+    read -r -p "Type 'y' to continue: (y/n) " confirm
     if [ "$confirm" != "y" ]; then
         exit 0
     fi
