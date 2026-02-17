@@ -22,8 +22,10 @@ check_prerequisites() {
         exit 1
     fi
 
-    local boot_files=$(find "$BOOT_DIR" -type f 2>/dev/null | wc -l)
-    local rootfs_files=$(find "$ROOTFS_DIR" -type f 2>/dev/null | wc -l)
+    local boot_files
+    boot_files=$(find "$BOOT_DIR" -type f 2>/dev/null | wc -l)
+    local rootfs_files
+    rootfs_files=$(find "$ROOTFS_DIR" -type f 2>/dev/null | wc -l)
 
     if [ "$boot_files" -eq 0 ] || [ "$rootfs_files" -eq 0 ]; then
         echo "Error: Staged output is empty"
@@ -46,7 +48,8 @@ verify_device() {
     fi
 
     # Safety: refuse to write to system disk
-    local root_disk=$(lsblk -no PKNAME / 2>/dev/null || true)
+    local root_disk
+    root_disk=$(lsblk -no PKNAME / 2>/dev/null || true)
     if [ -n "$root_disk" ] && [ "$device" = "/dev/$root_disk" ]; then
         echo "Error: Refusing to write to system disk $device"
         exit 1
