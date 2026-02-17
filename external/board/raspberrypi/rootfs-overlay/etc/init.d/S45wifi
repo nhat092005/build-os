@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# S45wifi - Start/stop WiFi (wpa_supplicant + DHCP on wlan0)
+# wifi
 #
 
 INTERFACE="wlan0"
@@ -45,7 +45,7 @@ start() {
 
     # Wait for association to complete before requesting DHCP.
     # brcmfmac needs time to scan, authenticate, and associate.
-    sleep 5
+    sleep 3
 
     # Start DHCP client for wlan0.
     # -b: background if lease is not immediately obtained (keeps retrying)
