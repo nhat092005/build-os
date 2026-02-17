@@ -28,20 +28,3 @@ if [ -d "${FAKEROOT_TARGET_DIR}/var/empty" ]; then
     chown 0:0 "${FAKEROOT_TARGET_DIR}/var/empty"
     chmod 0755 "${FAKEROOT_TARGET_DIR}/var/empty"
 fi
-
-# Fix SSH directory and file permissions for StrictModes.
-# Buildroot's SYSTEM_RSYNC uses --chmod=u=rwX,go=rX which normalizes
-# ALL overlay files to 0755 (directories) and 0644 (regular files).
-# OpenSSH StrictModes (enabled by default) requires:
-#   - ~/.ssh/ must be 0700 (not group/other-readable)
-#   - ~/.ssh/authorized_keys must be 0600 (not group/other-readable)
-#   - User's home directory must not be group/other-writable
-# Without this fix, SSH key authentication will be silently rejected.
-if [ -d "${FAKEROOT_TARGET_DIR}/root/.ssh" ]; then
-    chmod 0700 "${FAKEROOT_TARGET_DIR}/root/.ssh"
-    if [ -f "${FAKEROOT_TARGET_DIR}/root/.ssh/authorized_keys" ]; then
-        chmod 0600 "${FAKEROOT_TARGET_DIR}/root/.ssh/authorized_keys"
-    fi
-    # Remove unnecessary example file from final image
-    rm -f "${FAKEROOT_TARGET_DIR}/root/.ssh/authorized_keys.example"
-fi
