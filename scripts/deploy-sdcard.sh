@@ -22,8 +22,10 @@ check_prerequisites() {
         exit 1
     fi
 
-    local boot_files=$(find "$BOOT_DIR" -type f 2>/dev/null | wc -l)
-    local rootfs_files=$(find "$ROOTFS_DIR" -type f 2>/dev/null | wc -l)
+    local boot_files
+    boot_files=$(find "$BOOT_DIR" -type f 2>/dev/null | wc -l)
+    local rootfs_files
+    rootfs_files=$(find "$ROOTFS_DIR" -type f 2>/dev/null | wc -l)
 
     if [ "$boot_files" -eq 0 ] || [ "$rootfs_files" -eq 0 ]; then
         echo "Error: Staged output is empty"
@@ -46,7 +48,8 @@ verify_device() {
     fi
 
     # Safety: refuse to write to system disk
-    local root_disk=$(lsblk -no PKNAME / 2>/dev/null || true)
+    local root_disk
+    root_disk=$(lsblk -no PKNAME / 2>/dev/null || true)
     if [ -n "$root_disk" ] && [ "$device" = "/dev/$root_disk" ]; then
         echo "Error: Refusing to write to system disk $device"
         exit 1
@@ -90,6 +93,8 @@ expand_rootfs_partition() {
     local device=$1
     local rootfs_part
     rootfs_part=$(get_part_name "$device" 2)
+
+    # Re-read partition table
     partprobe "$device" 2>/dev/null || true
     sleep 1
 
@@ -119,7 +124,11 @@ apply_boot_files() {
         exit 1
     fi
 
+    # Delete old content first to free space
     rm -rf "${mnt:?}"/*
+
+    # Copy new content
+    rsync -a --info=progress2 "$BOOT_DIR/" "$mnt/" || {
         umount "$mnt"
         exit 1
     }
@@ -134,6 +143,7 @@ apply_rootfs_files() {
     local device=$1
     local rootfs_part
     rootfs_part=$(get_part_name "$device" 2)
+    local mnt="/tmp/deploy_rootfs_$$"
 
     mkdir -p "$mnt"
 
@@ -142,7 +152,11 @@ apply_rootfs_files() {
         exit 1
     fi
 
+    # Delete old content first to free space
     rm -rf "${mnt:?}"/*
+
+    # Copy new content
+    rsync -a --info=progress2 "$ROOTFS_DIR/" "$mnt/" || {
         umount "$mnt"
         exit 1
     }
