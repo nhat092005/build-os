@@ -4,11 +4,11 @@
 #
 
 INTERFACE="wlan0"
-WPA_CONF="/etc/wpa_supplicant/wpa_supplicant.conf"
+WPA_CONF="/etc/wpa_supplicant.conf"
 WPA_PIDFILE="/var/run/wpa_supplicant_${INTERFACE}.pid"
 UDHCPC_PIDFILE="/var/run/udhcpc_${INTERFACE}.pid"
 
-# Ensure wpa_supplicant binary and config exist
+# Ensure wpa_supplicant binary and config exiSst
 [ -x /usr/sbin/wpa_supplicant ] || exit 0
 [ -f "$WPA_CONF" ] || exit 0
 
