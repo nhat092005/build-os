@@ -36,7 +36,8 @@ install_overlays() {
     mkdir -p "$dest"
     
     for overlay in "${overlays[@]}"; do
-        local name=$(basename "$overlay")
+        local name
+        name=$(basename "$overlay")
         if ! cp -v "$overlay" "$dest/$name"; then
             echo "Error: Failed to copy $name"
             exit 1
