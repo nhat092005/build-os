@@ -34,14 +34,9 @@ jobs:
           key: br-dl-${{ hashFiles('external/configs/*_defconfig') }}
           restore-keys: br-dl-
 
-      - name: Cache Buildroot host tools
-        uses: actions/cache@v4
-        with:
-          path: buildroot/output/host
-          key: br-host-${{ hashFiles('external/configs/*_defconfig', 'kernel/Makefile') }}
-          restore-keys: br-host-
-
       - name: Build SDK
+        # Note: Use upstream defconfig to build SDK (BR2_TOOLCHAIN_EXTERNAL_BOOTLIN)
+        # because custom defconfig requires toolchain preinstalled at toolchains/
         run: |
           cd buildroot
           make BR2_EXTERNAL=../external LINUX_OVERRIDE_SRCDIR=../kernel \
@@ -52,6 +47,8 @@ jobs:
         run: make install-toolchains
 
       - name: Build
+        # Note: Now use custom defconfig (BR2_TOOLCHAIN_EXTERNAL_CUSTOM)
+        # because toolchain is already installed at toolchains/
         run: |
           cd buildroot
           make BR2_EXTERNAL=../external LINUX_OVERRIDE_SRCDIR=../kernel ${{ env.DEFCONFIG }}
