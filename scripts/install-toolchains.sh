@@ -34,18 +34,42 @@ install_toolchains() {
 
     # Build SDK only if tarball doesn't exist
     if [ ! -f "$SDK_TAR" ]; then
+        echo "Building Buildroot SDK..."
         make -C "$BUILDROOT_DIR" BR2_EXTERNAL="$BR2_EXTERNAL" LINUX_OVERRIDE_SRCDIR="$KERNEL_SRC_DIR"
         make -C "$BUILDROOT_DIR" BR2_EXTERNAL="$BR2_EXTERNAL" LINUX_OVERRIDE_SRCDIR="$KERNEL_SRC_DIR" sdk
+    else
+        echo "SDK tarball already exists, skipping build"
     fi
 
     check_SDK_tarball
 
     # Extract toolchain
     if [ -d "$SDK_DEST" ]; then
+        echo "Removing existing toolchain..."
         rm -rf "$SDK_DEST"
     fi
+    
+    echo "Extracting toolchain to $TOOLCHAINS_DIR..."
     tar -xf "$SDK_TAR" -C "$TOOLCHAINS_DIR"
-    echo "Toolchain installed to $SDK_DEST"
+    
+    # Relocate SDK (update absolute paths)
+    if [ -f "$SDK_DEST/relocate-sdk.sh" ]; then
+        echo "Relocating SDK..."
+        cd "$SDK_DEST"
+        ./relocate-sdk.sh
+        cd "$PROJECT_ROOT"
+    else
+        echo "Warning: relocate-sdk.sh not found, SDK may not work properly"
+    fi
+    
+    # Verify compiler exists and is executable
+    if [ -x "$SDK_DEST/bin/aarch64-linux-gcc" ]; then
+        echo "✓ Toolchain installed successfully to $SDK_DEST"
+        "$SDK_DEST/bin/aarch64-linux-gcc" --version | head -n1
+    else
+        echo "Error: Compiler not found or not executable at $SDK_DEST/bin/aarch64-linux-gcc"
+        exit 1
+    fi
 }
 
 main() {
