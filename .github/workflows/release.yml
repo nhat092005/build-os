@@ -48,7 +48,7 @@ jobs:
             raspberrypi4_64_custom_defconfig
           make BR2_EXTERNAL=../external LINUX_OVERRIDE_SRCDIR=../kernel sdk
           cd ..
-          make install-sdk  
+          make install-toolchains
 
       - name: Build
         run: |
