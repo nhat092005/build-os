@@ -102,22 +102,22 @@ remove-tools:
 	fi
 	bash $(SCRIPTS_DIR)/remove-tools.sh
 
-.PHONY: install-toolchain remove-toolchain
+.PHONY: install-toolchains remove-toolchains
 # Install toolchain to system
-install-toolchain:
-	@if [ ! -f "$(SCRIPTS_DIR)/install-toolchain.sh" ]; then \
-		echo "Error: install-toolchain.sh not found"; \
+install-toolchains:
+	@if [ ! -f "$(SCRIPTS_DIR)/install-toolchains.sh" ]; then \
+		echo "Error: install-toolchains.sh not found"; \
 		exit 1; \
 	fi
-	bash $(SCRIPTS_DIR)/install-toolchain.sh
+	bash $(SCRIPTS_DIR)/install-toolchains.sh
 
 # Remove toolchain from system
-remove-toolchain:
-	@if [ ! -f "$(SCRIPTS_DIR)/remove-toolchain.sh" ]; then \
-		echo "Error: remove-toolchain.sh not found"; \
+remove-toolchains:
+	@if [ ! -f "$(SCRIPTS_DIR)/remove-toolchains.sh" ]; then \
+		echo "Error: remove-toolchains.sh not found"; \
 		exit 1; \
 	fi
-	bash $(SCRIPTS_DIR)/remove-toolchain.sh
+	bash $(SCRIPTS_DIR)/remove-toolchains.sh
 
 .PHONY: help
 # Help
@@ -131,9 +131,9 @@ help:
 	@echo "  install-overlays        Install Device Tree overlays to system (requires root)"
 	@echo "  install-modules         Install kernel modules to rootfs"
 	@echo "  install-tools           Install userspace tools to rootfs"
-	@echo "  install-toolchain       Install toolchain to project"
+	@echo "  install-toolchains      Install toolchains to project"
 	@echo "Remove:"
 	@echo "  remove-overlays         Remove Device Tree overlays from system(requires root)"
 	@echo "  remove-modules          Remove kernel modules from rootfs"
 	@echo "  remove-tools            Remove userspace tools from rootfs"
-	@echo "  remove-toolchain        Remove toolchain from project"
+	@echo "  remove-toolchains       Remove toolchains from project"

@@ -253,13 +253,14 @@ install-tools:
 remove-tools:
 	$(MAKE) -C $(SCRIPTS_DIR) remove-tools
 
-.PHONY: install-toolchain remove-toolchain
-# Install toolchaininstall-toolchain:
-	$(MAKE) -C $(SCRIPTS_DIR) install-toolchain
+.PHONY: install-toolchains remove-toolchains
+# Install toolchains
+install-toolchains:
+	$(MAKE) -C $(SCRIPTS_DIR) install-toolchains
 
-# Remove toolchain
-remove-toolchain:
-	$(MAKE) -C $(SCRIPTS_DIR) remove-toolchain
+# Remove toolchains
+remove-toolchains:
+	$(MAKE) -C $(SCRIPTS_DIR) remove-toolchains
 
 .PHONY: clean
 # Clean all build artifacts
