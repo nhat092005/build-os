@@ -21,27 +21,31 @@ check_BUILDROOT() {
     fi
 }
 
-check_SDK() {
-    if [ ! -d "$SDK_DEST" ]; then
-        echo "Error: SDK not found at $SDK_DEST"
+check_SDK_tarball() {
+    if [ ! -f "$SDK_TAR" ]; then
+        echo "Error: SDK tarball not found at $SDK_TAR"
         exit 1
     fi
 }
 
 install_toolchains() {
-    # Build Buildroot and SDK
+    # Ensure toolchains directory exists
     mkdir -p "$TOOLCHAINS_DIR"
-    make -C "$BUILDROOT_DIR" BR2_EXTERNAL="$BR2_EXTERNAL" LINUX_OVERRIDE_SRCDIR="$KERNEL_SRC_DIR"
 
-    make -C "$BUILDROOT_DIR" BR2_EXTERNAL="$BR2_EXTERNAL" LINUX_OVERRIDE_SRCDIR="$KERNEL_SRC_DIR" sdk
+    # Build SDK only if tarball doesn't exist
+    if [ ! -f "$SDK_TAR" ]; then
+        make -C "$BUILDROOT_DIR" BR2_EXTERNAL="$BR2_EXTERNAL" LINUX_OVERRIDE_SRCDIR="$KERNEL_SRC_DIR"
+        make -C "$BUILDROOT_DIR" BR2_EXTERNAL="$BR2_EXTERNAL" LINUX_OVERRIDE_SRCDIR="$KERNEL_SRC_DIR" sdk
+    fi
 
-    check_SDK
+    check_SDK_tarball
 
+    # Extract toolchain
     if [ -d "$SDK_DEST" ]; then
         rm -rf "$SDK_DEST"
     fi
     tar -xf "$SDK_TAR" -C "$TOOLCHAINS_DIR"
-    echo "$SDK_DEST"
+    echo "Toolchain installed to $SDK_DEST"
 }
 
 main() {
