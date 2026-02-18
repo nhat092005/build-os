@@ -65,3 +65,6 @@ docs/**
 
 # Driver build directories
 drivers/*/build/
+
+# Others
+toolchains/

@@ -41,9 +41,14 @@ jobs:
           key: br-host-${{ hashFiles('external/configs/*_defconfig', 'kernel/Makefile') }}
           restore-keys: br-host-
 
-      - name: Fix toolchain permissions
+      - name: Install toolchain
         run: |
-          chmod +x toolchains/aarch64-buildroot-linux-gnu_sdk-buildroot/bin/*
+          cd buildroot
+          make BR2_EXTERNAL=../external LINUX_OVERRIDE_SRCDIR=../kernel \
+            raspberrypi4_64_custom_defconfig
+          make BR2_EXTERNAL=../external LINUX_OVERRIDE_SRCDIR=../kernel sdk
+          cd ..
+          make install-sdk  
 
       - name: Build
         run: |
