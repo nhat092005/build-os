@@ -6,10 +6,10 @@ DTC         ?= dtc
 DTC_FLAGS   ?= -@ -I dts -O dtb -Wno-unit_address_vs_reg
 
 # Source file
-DTS := leds-gpio-custom-overlay.dts
+DTS := gpio-leds-overlay.dts
 
 # Output file
-DTBO := leds-gpio-custom.dtbo
+DTBO := gpio-leds.dtbo
 
 .PHONY: all dtbo clean dtbo-clean help
 

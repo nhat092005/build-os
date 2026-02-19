@@ -11,8 +11,8 @@
  *   /sys/class/leds/<led-name>/max_brightness
  */
 
-#ifndef _UAPI_LEDS_GPIO_CUSTOM_H
-#define _UAPI_LEDS_GPIO_CUSTOM_H
+#ifndef _UAPI_GPIO_LEDS_H
+#define _UAPI_GPIO_LEDS_H
 
 #include <linux/types.h>
 
@@ -36,4 +36,4 @@
  *   - mmc0/mmc1: Blink on SD card activity
  */
 
-#endif /* _UAPI_LEDS_GPIO_CUSTOM_H */
+#endif /* _UAPI_GPIO_LEDS_H */

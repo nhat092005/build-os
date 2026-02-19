@@ -1,19 +1,20 @@
 # Makefile for GPIO LED Driver - LED Class Interface with Device Tree Support
 
 # Target platform configuration
-ARCH            ?= arm64
+ARCH				?= arm64
 
 # Directory paths
-BUILDROOT_DIR   ?= $(shell pwd)/../../../buildroot
+BUILDROOT_DIR		?= $(shell pwd)/../../../buildroot
+TOOLCHAIN_DIR		?= $(shell pwd)/toolchains/aarch64-buildroot-linux-gnu_sdk-buildroot
 
 # Buildroot toolchain (must match kernel compiler)
-CROSS_COMPILE   ?= $(BUILDROOT_DIR)/output/host/bin/aarch64-linux-
+CROSS_COMPILE 		?= $(TOOLCHAIN_DIR)/bin/aarch64-linux-
 
 # Kernel directory (Buildroot kernel only)
-KERNEL_DIR       ?= $(BUILDROOT_DIR)/output/build/linux-custom
+KERNEL_DIR			?= $(BUILDROOT_DIR)/output/build/linux-custom
 
-# Module name (creates leds-gpio-custom.ko)
-obj-m := leds-gpio-custom.o
+# Module name (creates gpio-leds.ko)
+obj-m := gpio-leds.o
 
 # Build output directory
 BUILD_DIR := $(CURDIR)/../build/module

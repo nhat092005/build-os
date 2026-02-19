@@ -6,8 +6,8 @@
  * This is for kernel-internal use only.
  */
 
-#ifndef _LEDS_GPIO_CUSTOM_H
-#define _LEDS_GPIO_CUSTOM_H
+#ifndef _GPIO_LEDS_H
+#define _GPIO_LEDS_H
 
 #ifdef __KERNEL__
 
@@ -15,10 +15,10 @@
 #include <linux/gpio/consumer.h>
 #include <linux/platform_device.h>
 
-#include "uapi/leds-gpio-custom.h"
+#include "uapi/gpio-leds.h"
 
 /* Driver information */
-#define DRIVER_NAME "leds-gpio-custom"
+#define DRIVER_NAME "gpio-leds"
 #define DRIVER_VERSION "1.0.0"
 
 /**
@@ -45,4 +45,4 @@ struct gpio_led_data
 
 #endif /* __KERNEL__ */
 
-#endif /* _LEDS_GPIO_CUSTOM_H */
+#endif /* _GPIO_LEDS_H */

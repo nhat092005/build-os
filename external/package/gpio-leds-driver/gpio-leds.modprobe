@@ -3,10 +3,10 @@
 # To use, copy to /etc/modprobe.d/ and uncomment the option line
 
 # Enable dynamic debug messages
-#options leds_gpio_custom dyndbg=+p
+#options gpio_leds dyndbg=+p
 
 # Note: This driver is primarily configured via Device Tree overlay
-# Example: dtoverlay=leds-gpio-custom,gpio=17,label="status:red:led",trigger="heartbeat"
+# Example: dtoverlay=gpio-leds,gpio=27,label="status:red:led",trigger="heartbeat"
 # 
 # Manual module loading (without Device Tree):
 #   Not recommended - use Device Tree overlay instead
