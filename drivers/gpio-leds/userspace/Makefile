@@ -22,7 +22,7 @@ LIB_SOURCE      := $(LIB_DIR)/libled.c
 LIB_OBJECT      := $(BUILD_DIR)/libled.o
 
 # Tool Configuration
-TOOL_NAME       := led-ctl
+TOOL_NAME       := gpio-led-ctl
 TOOL_SOURCE     := $(TOOLS_DIR)/$(TOOL_NAME).c
 TOOL_OBJECT     := $(BUILD_DIR)/$(TOOL_NAME).o
 TOOL_BINARY     := $(BUILD_DIR)/$(TOOL_NAME)

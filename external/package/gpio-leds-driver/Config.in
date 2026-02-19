@@ -1,5 +1,5 @@
-config BR2_PACKAGE_LEDS_GPIO_CUSTOM_DRIVER
-	bool "leds-gpio-custom-driver"
+config BR2_PACKAGE_GPIO_LEDS_DRIVER
+	bool "gpio-leds-driver"
 	depends on BR2_LINUX_KERNEL
 	help
 	  Production-ready LED class driver using standard Linux LED subsystem.

@@ -10,7 +10,7 @@ DRIVERS_DIR				:= $(shell pwd)/drivers
 SCRIPTS_DIR				:= $(shell pwd)/scripts
 KERNEL_SRC_DIR			:= $(shell pwd)/kernel
 KERNEL_DIR				:= $(BUILDROOT_DIR)/output/build/linux-custom
-TOOLCHAIN_DIR 			:= $(shell pwd)/toolchains/aarch64-buildroot-linux-gnu_sdk-buildroot
+TOOLCHAIN_DIR 			:= $(BUILDROOT_DIR)/output/host
 
 # Output directories
 IMAGE_DIR				:= $(BUILDROOT_DIR)/output/images

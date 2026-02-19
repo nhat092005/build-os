@@ -13,8 +13,8 @@ CROSS_COMPILE 		?= $(TOOLCHAIN_DIR)/bin/aarch64-linux-
 # Kernel directory (Buildroot kernel only)
 KERNEL_DIR			?= $(BUILDROOT_DIR)/output/build/linux-custom
 
-# Module name (creates leds-gpio-custom.ko)
-obj-m := leds-gpio-custom.o
+# Module name (creates gpio-leds.ko)
+obj-m := gpio-leds.o
 
 # Build output directory
 BUILD_DIR := $(CURDIR)/../build/module
