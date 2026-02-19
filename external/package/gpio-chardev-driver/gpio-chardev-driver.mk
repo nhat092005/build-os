@@ -24,9 +24,9 @@ define GPIO_CHARDEV_DRIVER_INSTALL_TARGET_CMDS
 		$(TARGET_DIR)/etc/modules-load.d/gpio-chardev.conf
 	
 	# Install userspace tools
-	if [ -f $(@D)/build/tools/gpio-chardev-ioctl ]; then \
-		$(INSTALL) -D -m 0755 $(@D)/build/tools/gpio-chardev-ioctl \
-			$(TARGET_DIR)/usr/bin/gpio-chardev-ioctl; \
+	if [ -f $(@D)/build/tools/gpio-chardev-ctl ]; then \
+		$(INSTALL) -D -m 0755 $(@D)/build/tools/gpio-chardev-ctl \
+			$(TARGET_DIR)/usr/bin/gpio-chardev-ctl; \
 	fi
 	
 	# Install UAPI header for userspace applications
