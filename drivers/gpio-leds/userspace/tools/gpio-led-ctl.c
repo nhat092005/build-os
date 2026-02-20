@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * led-ctl - LED Control Utility
- * Command-line tool using libled for LED control
+ * gpio-led-ctl - LED Control Utility
+ * Command-line tool using gpio-leds for LED control
  */
 
 #include "libled.h"
