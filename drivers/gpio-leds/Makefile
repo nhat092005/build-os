@@ -25,21 +25,21 @@ dtbo-clean:
 # Kernel Module Build
 modules:
 	$(MAKE) -C src modules
+	
+# Clean Kernel Module
+modules-clean:
+	$(MAKE) -C src modules-clean
 
 # Userspace Build
 tools:
 	$(MAKE) -C userspace tools
 
-# Clean Targets
-clean: modules-clean tools-clean
-
-# Clean Kernel Module
-modules-clean:
-	$(MAKE) -C src modules-clean
-
 # Clean Userspace Tool
 tools-clean:
 	$(MAKE) -C userspace tools-clean
+
+# Clean Targets
+clean: dtbo-clean modules-clean tools-clean
 
 # Help
 help:

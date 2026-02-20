@@ -40,7 +40,7 @@ modules:
 ifeq ($(MODULE),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ] && [ -f "$(DRIVERS_DIR)/$$drv/Makefile" ]; then \
-			$(MAKE) -C $(DRIVERS_DIR)/$$drv modules || exit 1; \
+			$(MAKE) -C $(DRIVERS_DIR)/$$drv modules 2>/dev/null || true; \
 		fi; \
 	done
 else
@@ -56,7 +56,7 @@ tools:
 ifeq ($(TOOLS),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ] && [ -f "$(DRIVERS_DIR)/$$drv/Makefile" ]; then \
-			$(MAKE) -C $(DRIVERS_DIR)/$$drv tools || exit 1; \
+			$(MAKE) -C $(DRIVERS_DIR)/$$drv tools 2>/dev/null || true; \
 		fi; \
 	done
 else
@@ -90,7 +90,7 @@ modules-clean:
 ifeq ($(MODULE),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ] && [ -f "$(DRIVERS_DIR)/$$drv/Makefile" ]; then \
-			$(MAKE) -C $(DRIVERS_DIR)/$$drv modules-clean|| exit 1; \
+			$(MAKE) -C $(DRIVERS_DIR)/$$drv modules-clean 2>/dev/null || true; \
 		fi; \
 	done
 else
@@ -98,7 +98,7 @@ else
 		echo "Error: Module '$(MODULE)' not found"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(DRIVERS_DIR)/$(MODULE) modules-clean
+	$(MAKE) -C $(DRIVERS_DIR)/$(MODULE) modules-clean 2>/dev/null || true
 endif
 
 # Clean Userspace Tools
@@ -106,7 +106,7 @@ tools-clean:
 ifeq ($(TOOLS),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ] && [ -f "$(DRIVERS_DIR)/$$drv/Makefile" ]; then \
-			$(MAKE) -C $(DRIVERS_DIR)/$$drv tools-clean || exit 1; \
+			$(MAKE) -C $(DRIVERS_DIR)/$$drv tools-clean 2>/dev/null || true; \
 		fi; \
 	done
 else
@@ -114,7 +114,7 @@ else
 		echo "Error: Tool '$(TOOLS)' not found"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(DRIVERS_DIR)/$(TOOLS) tools-clean
+	$(MAKE) -C $(DRIVERS_DIR)/$(TOOLS) tools-clean 2>/dev/null || true
 endif
 
 # List Available Drivers

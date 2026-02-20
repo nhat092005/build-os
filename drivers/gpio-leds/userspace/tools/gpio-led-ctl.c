@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * led-ctl - LED Control Utility
- * Command-line tool using libled for LED control
+ * gpio-led-ctl - LED Control Utility
+ * Command-line tool using gpio-leds for LED control
  */
 
 #include "libled.h"
@@ -166,7 +166,7 @@ static struct command commands[] = {
 int main(int argc, char *argv[])
 {
 	led_device_t led;
-	const char *led_name = "custom-led";
+	const char *led_name = "gpio-led"; /* Default LED device name */
 	const char *cmd_name;
 	int opt, ret, i;
 
@@ -247,7 +247,7 @@ static void usage(const char *progname)
 
 	printf("Usage: %s [options] <command> [args...]\n\n", progname);
 	printf("Options:\n");
-	printf("  -d, --device NAME    LED device name (default: custom-led)\n");
+	printf("  -d, --device NAME    LED device name (default: gpio-led)\n");
 	printf("  -v, --verbose        Verbose output\n");
 	printf("  -h, --help           Show this help message\n\n");
 	printf("Commands:\n");
