@@ -1,0 +1,5 @@
+config BR2_PACKAGE_GPIO_SYSFS_DRIVER:
+    bool "gpio-sysfs-driver"
+	depends on BR2_LINUX_KERNEL
+	help	
+	  GPIO Sysfs driver for controlling GPIO via /sys/class/gpio.

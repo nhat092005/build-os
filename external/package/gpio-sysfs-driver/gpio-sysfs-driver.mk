@@ -1,0 +1,20 @@
+# GPIO Sysfs Driver Makefile
+GPIO_SYSFS_DRIVER_VERSION = 1.0.0
+GPIO_SYSFS_DRIVER_SITE = $(BR2_EXTERNAL_NHAT092005_PATH)/../drivers/gpio-sysfs
+GPIO_SYSFS_DRIVER_SITE_METHOD = local
+GPIO_SYSFS_DRIVER_LICENSE = GPL-2.0
+GPIO_SYSFS_DRIVER_LICENSE_FILES = LICENSE
+
+define GPIO_SYSFS_DRIVER_BUILD_CMDS
+    $(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/userspace \
+        CC=$(TARGET_CC) \
+        CFLAGS="$(TARGET_CFLAGS)" \
+        LDFLAGS="$(TARGET_LDFLAGS)"
+endef
+
+define GPIO_SYSFS_DRIVER_INSTALL_TARGET_CMDS
+    $(INSTALL) -D -m 0755 $(@D)/userspace/gpio-sysfs-ctl \
+        $(TARGET_DIR)/usr/bin/gpio-sysfs-ctl
+endef
+
+$(eval $(generic-package))
