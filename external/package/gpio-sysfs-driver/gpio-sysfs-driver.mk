@@ -6,15 +6,16 @@ GPIO_SYSFS_DRIVER_LICENSE = GPL-2.0
 GPIO_SYSFS_DRIVER_LICENSE_FILES = LICENSE
 
 define GPIO_SYSFS_DRIVER_BUILD_CMDS
-    $(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/userspace \
-        CC=$(TARGET_CC) \
-        CFLAGS="$(TARGET_CFLAGS)" \
-        LDFLAGS="$(TARGET_LDFLAGS)"
+	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) \
+		CC=$(TARGET_CC) \
+		CFLAGS="$(TARGET_CFLAGS)" \
+		LDFLAGS="$(TARGET_LDFLAGS)" \
+		all
 endef
 
 define GPIO_SYSFS_DRIVER_INSTALL_TARGET_CMDS
-    $(INSTALL) -D -m 0755 $(@D)/userspace/gpio-sysfs-ctl \
-        $(TARGET_DIR)/usr/bin/gpio-sysfs-ctl
+	$(INSTALL) -D -m 0755 $(@D)/build/tools/gpio-sysfs-ctl \
+		$(TARGET_DIR)/usr/bin/gpio-sysfs-ctl
 endef
 
 $(eval $(generic-package))
