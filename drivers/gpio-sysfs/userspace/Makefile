@@ -1,4 +1,4 @@
-# Makefile for LED Control Library and Tools
+# Makefile for GPIO Sysfs Control Library and Tools
 
 # Toolchain Configuration
 CROSS_COMPILE   ?= 
@@ -9,20 +9,20 @@ LDFLAGS         :=
 
 # Directory Configuration
 USERSPACE_DIR   := $(shell pwd)
-LIB_DIR         := $(USERSPACE_DIR)/lib/libled
+LIB_DIR         := $(USERSPACE_DIR)/lib/libio
 TOOLS_DIR       := $(USERSPACE_DIR)/tools
 BUILD_DIR       := $(USERSPACE_DIR)/../build/tools
 
 # Library Configuration
-LIB_NAME        := libled
+LIB_NAME        := libio
 LIB_STATIC      := $(BUILD_DIR)/lib$(LIB_NAME).a
 LIB_SHARED      := $(BUILD_DIR)/lib$(LIB_NAME).so
-LIB_HEADER      := $(LIB_DIR)/libled.h
-LIB_SOURCE      := $(LIB_DIR)/libled.c
-LIB_OBJECT      := $(BUILD_DIR)/libled.o
+LIB_HEADER      := $(LIB_DIR)/libio.h
+LIB_SOURCE      := $(LIB_DIR)/libio.c
+LIB_OBJECT      := $(BUILD_DIR)/libio.o
 
 # Tool Configuration
-TOOL_NAME       := gpio-led-ctl
+TOOL_NAME       := gpio-sysfs-ctl
 TOOL_SOURCE     := $(TOOLS_DIR)/$(TOOL_NAME).c
 TOOL_OBJECT     := $(BUILD_DIR)/$(TOOL_NAME).o
 TOOL_BINARY     := $(BUILD_DIR)/$(TOOL_NAME)
