@@ -5,6 +5,9 @@ DTS_DIR        := $(shell pwd)/dts
 SRC_DIR        := $(shell pwd)/src
 USERSPACE_DIR  := $(shell pwd)/userspace
 
+# Export toolchain variables for sub-makes
+export ARCH CROSS_COMPILE KERNEL_DIR
+
 # PHONY Targets
 .PHONY: all clean help
 .PHONY: modules modules-clean

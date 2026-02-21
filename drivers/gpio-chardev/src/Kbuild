@@ -1,0 +1,3 @@
+# kbuild definitions for GPIO Character Device Driver
+obj-m := gpio-chardev.o
+ccflags-y := -I$(src)/../include
