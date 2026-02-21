@@ -39,11 +39,15 @@ clean: modules-clean
 # Clean Kernel Module build artifacts
 modules-clean:
 	@if [ -d "$(KERNEL_DIR)" ]; then \
-		$(MAKE) -C $(KERNEL_DIR) M=$(CURDIR) clean || true; \
+		$(MAKE) -C $(KERNEL_DIR) M=$(CURDIR) clean 2>/dev/null || true; \
 	fi
+	# Remove kbuild artifacts directly from src/ (no KERNEL_DIR required)
+	rm -f  $(CURDIR)/*.ko $(CURDIR)/*.o $(CURDIR)/*.mod $(CURDIR)/*.mod.c \
+	       $(CURDIR)/modules.order $(CURDIR)/Module.symvers
+	rm -f  $(CURDIR)/.*.cmd $(CURDIR)/..*.cmd
+	rm -f  $(CURDIR)/.module-common.o
+	rm -rf $(CURDIR)/.tmp_versions
 	rm -rf $(BUILD_DIR)
-
-# Help
 help:
 	@echo "Targets:"
 	@echo "  all             Build kernel module (default)"
