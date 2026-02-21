@@ -41,7 +41,7 @@
 				pinctrl-names = "default";
 				pinctrl-0 = <&led_pins>;
 				gpios = <&gpio 27 0>;               /* GPIO27, Active High (changed from 17) */
-				label = "gpio_led";               /* Name in /sys/class/leds/ */
+				label = "gpio-led";                 /* Name in /sys/class/leds/ */
 				linux,default-trigger = "none";     /* No automatic trigger */
 				default-state = "off";              /* Start with LED off */
 				status = "okay";

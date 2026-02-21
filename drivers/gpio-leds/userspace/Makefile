@@ -46,7 +46,7 @@ $(LIB_STATIC): $(LIB_OBJECT) | $(BUILD_DIR)
 # Build shared library
 shared: $(LIB_SHARED)
 
-$(LIB_SHARED): $(LIB_OBJECT) | $(BUILD_DIR)"
+$(LIB_SHARED): $(LIB_OBJECT) | $(BUILD_DIR)
 	$(CC) -shared -o $@ $^ $(LDFLAGS)
 
 # Compile library object

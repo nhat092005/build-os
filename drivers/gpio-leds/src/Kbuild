@@ -1,0 +1,3 @@
+# kbuild definitions for GPIO LED Driver
+obj-m := gpio-leds.o
+ccflags-y := -I$(src)/../include
