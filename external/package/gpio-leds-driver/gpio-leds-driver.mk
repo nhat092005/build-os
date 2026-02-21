@@ -68,13 +68,6 @@ define GPIO_LEDS_DRIVER_INSTALL_TARGET_CMDS
 			$(TARGET_DIR)/usr/share/doc/gpio-leds-driver/README.md; \
 	fi
 	
-	# Install test scripts if available
-	if [ -d $(@D)/tests ] && [ -n "$$(ls -A $(@D)/tests/*.sh 2>/dev/null)" ]; then \
-		$(INSTALL) -d $(TARGET_DIR)/usr/share/gpio-leds-driver/tests; \
-		$(INSTALL) -D -m 0755 $(@D)/tests/*.sh \
-			$(TARGET_DIR)/usr/share/gpio-leds-driver/tests/ || true; \
-	fi
-	
 	# Install module configuration files (for reference)
 	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_NHAT092005_PATH)/package/gpio-leds-driver/gpio-leds.modules-load \
 		$(TARGET_DIR)/usr/share/doc/gpio-leds-driver/gpio-leds.modules-load

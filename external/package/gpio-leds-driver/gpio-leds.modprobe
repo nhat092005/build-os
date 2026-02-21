@@ -10,5 +10,3 @@
 # 
 # Manual module loading (without Device Tree):
 #   Not recommended - use Device Tree overlay instead
-#
-# See documentation at: /usr/share/doc/leds-gpio-custom-driver/README.md
