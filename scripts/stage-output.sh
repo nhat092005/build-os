@@ -84,11 +84,21 @@ extract_rootfs() {
     echo "rootfs extracted to $ROOTFS_DIR"
 }
 
+# Overlay config.txt from external board config (if exists)
+overlay_config() {
+    local config_src="$PROJECT_ROOT/external/board/raspberrypi/config.txt"
+    if [ -f "$config_src" ]; then
+        cp -f "$config_src" "$BOOT_DIR/config.txt"
+        echo "Overlaid config.txt from $config_src"
+    fi
+}
+
 # Main
 main() {
     check_images
     extract_boot
     extract_rootfs
+    overlay_config
 }
 
 main "$@"

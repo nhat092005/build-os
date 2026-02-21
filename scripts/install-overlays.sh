@@ -50,7 +50,7 @@ install_overlays() {
 main() {    
     check_BOOT
     
-    IFS=' ' read -r -a overlays <<< "$(find_overlay)"
+    mapfile -t overlays < <(find_overlay)
     
     if [ ${#overlays[@]} -eq 0 ] || [ -z "${overlays[0]}" ]; then
         echo "No device tree overlays found to install."

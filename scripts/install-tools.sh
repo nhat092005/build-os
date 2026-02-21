@@ -49,18 +49,13 @@ is_elf_executable() {
 
 # Find userspace tools
 find_tools() {
-    local tools=()
-    
     # Find all files in drivers/*/build/tools/
     while IFS= read -r -d '' file; do
         # Check if it's an ELF executable
         if is_elf_executable "$file"; then
-            tools+=("$file")
+            echo "$file"
         fi
     done < <(find "$DRIVERS_DIR" -path "*/build/tools/*" -type f -print0 2>/dev/null)
-    
-    # Output the tools array
-    echo "${tools[@]}"
 }
 
 # Install tools to rootfs
@@ -89,7 +84,7 @@ main() {
     check_rootfs
     check_usr_bin
 
-    IFS=' ' read -r -a tools <<< "$(find_tools)"
+    mapfile -t tools < <(find_tools)
     
     if [ ${#tools[@]} -eq 0 ] || [ -z "${tools[0]}" ]; then
         echo "No ELF executable tools found to install."
