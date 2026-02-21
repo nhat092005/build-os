@@ -2,7 +2,10 @@
 /*
  * GPIO LED Character Device Driver
  *
- * Author: nhat092005
+ * This driver provides a character device interface to control a GPIO pin as an LED.
+ * It supports basic operations like turning the LED on/off, toggling its state,
+ * and blinking it with configurable parameters. The driver uses a platform device
+ * to manage GPIO access and a kernel thread for blinking functionality.
  */
 
 #include <linux/module.h>

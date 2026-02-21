@@ -2,9 +2,9 @@
 /*
  * GPIO CHARDEV IOCTL Tool
  *
- * Author: nhat092005
- *
- * Command-line utility to test ioctl interface of gpio-chardev driver.
+ * This is a simple userspace tool to interact with the GPIO character device driver
+ * using IOCTL commands. It allows users to control the GPIO pin state, toggle it,
+ * get the current state, and blink the GPIO with specified parameters.
  */
 
 #define _DEFAULT_SOURCE
@@ -57,12 +57,14 @@ int main(int argc, char *argv[])
 	/* Execute command */
 	const char *cmd = argv[1];
 
+	int gpio_pin = get_gpio_pin(fd);
+
 	if (strcmp(cmd, "on") == 0)
 	{
 		ret = set_led_state(fd, GPIO_CHARDEV_ON);
 		if (ret == 0)
 		{
-			printf("GPIO turned ON\n");
+			printf("GPIO %d: ON\n", gpio_pin);
 		}
 	}
 	else if (strcmp(cmd, "off") == 0)
@@ -70,7 +72,7 @@ int main(int argc, char *argv[])
 		ret = set_led_state(fd, GPIO_CHARDEV_OFF);
 		if (ret == 0)
 		{
-			printf("GPIO turned OFF\n");
+			printf("GPIO %d: OFF\n", gpio_pin);
 		}
 	}
 	else if (strcmp(cmd, "toggle") == 0)
@@ -78,7 +80,8 @@ int main(int argc, char *argv[])
 		ret = toggle_led(fd);
 		if (ret == 0)
 		{
-			printf("GPIO toggled\n");
+			printf("GPIO %d: TOGGLED\n", gpio_pin);
+			printf("GPIO %d: %s\n", gpio_pin, get_led_state(fd) ? "ON" : "OFF");
 		}
 	}
 	else if (strcmp(cmd, "get") == 0)
@@ -86,7 +89,7 @@ int main(int argc, char *argv[])
 		ret = get_led_state(fd);
 		if (ret >= 0)
 		{
-			printf("GPIO state: %s\n", ret ? "ON" : "OFF");
+			printf("GPIO %d state: %s\n", gpio_pin, ret ? "ON" : "OFF");
 			ret = 0;
 		}
 	}
@@ -116,8 +119,8 @@ int main(int argc, char *argv[])
 			ret = blink_led(fd, count, on_ms, off_ms);
 			if (ret == 0)
 			{
-				printf("Blinking GPIO %u times (%ums on, %ums off)\n",
-					   count, on_ms, off_ms);
+				printf("Blinking GPIO %d: %d times (%ums on, %ums off)\n",
+					   gpio_pin, count, on_ms, off_ms);
 			}
 		}
 	}
