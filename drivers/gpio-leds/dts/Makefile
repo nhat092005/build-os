@@ -25,7 +25,7 @@ $(BUILD_DIR):
 
 # Compile DTS to DTBO
 $(DTBO): $(DTS)
-	@echo "Compiling Device Tree Overlay: $< -> $@"
+	@echo "Device Tree Overlay: $< -> $@"
 	$(DTC) $(DTC_FLAGS) -o $(BUILD_DIR)/$@ $<
 
 # Clean build artifacts

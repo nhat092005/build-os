@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
  * libled - LED Control Library Implementation
- * Library for controlling Linux LED class devices via sysfs
+ *
+ * This library provides functions to control Linux LED class devices via sysfs.
+ * It allows userspace applications to easily manipulate LED brightness, triggers,
+ * and other attributes without needing to interact with sysfs directly.
  */
 
 #include "libled.h"
@@ -139,6 +142,11 @@ int led_open(led_device_t *led, const char *name)
 
 	ret = snprintf(led->delay_off_path, LED_BUFFER_SIZE,
 				   "%s/delay_off", led->path);
+	if (ret < 0 || ret >= LED_BUFFER_SIZE)
+		return -ENAMETOOLONG;
+
+	ret = snprintf(led->gpio_pin_path, LED_BUFFER_SIZE,
+			   "%s/gpio_pin", led->path);
 	if (ret < 0 || ret >= LED_BUFFER_SIZE)
 		return -ENAMETOOLONG;
 
@@ -402,7 +410,26 @@ int led_get_info(led_device_t *led, led_info_t *info)
 	if (ret < 0)
 		return ret;
 
+	/* Get GPIO pin number (may be absent on non-gpio-leds drivers) */
+	ret = led_get_gpio_pin(led);
+	info->gpio_pin = (ret >= 0) ? ret : -1;
+
 	return 0;
+}
+
+int led_get_gpio_pin(led_device_t *led)
+{
+	char buffer[16];
+	int ret;
+
+	if (!led)
+		return -EINVAL;
+
+	ret = read_sysfs(led->gpio_pin_path, buffer, sizeof(buffer));
+	if (ret < 0)
+		return ret;
+
+	return atoi(buffer);
 }
 
 int led_exists(const char *name)

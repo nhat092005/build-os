@@ -164,6 +164,44 @@ static int gpio_led_parse_dt(struct device *dev, struct gpio_led_data *led)
 }
 
 /**
+ * gpio_pin_show() - Expose hardware GPIO pin number via sysfs
+ * @dev: LED class device
+ * @attr: Device attribute (unused)
+ * @buf: Output buffer
+ *
+ * Writes the hardware GPIO pin number so userspace tools can report
+ * which physical GPIO pin this LED is wired to.
+ * Read from: /sys/class/leds/<name>/gpio_pin
+ *
+ * Return: Number of bytes written to buf
+ */
+static ssize_t gpio_pin_show(struct device *dev,
+							 struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *cdev = dev_get_drvdata(dev);
+	struct gpio_led_data *led = container_of(cdev,
+											 struct gpio_led_data,
+											 cdev);
+	return sysfs_emit(buf, "%d\n", desc_to_gpio(led->gpiod));
+}
+static DEVICE_ATTR_RO(gpio_pin);
+
+/* Extra sysfs attributes appended to the LED class device */
+static struct attribute *gpio_led_attrs[] = {
+	&dev_attr_gpio_pin.attr,
+	NULL,
+};
+
+static const struct attribute_group gpio_led_group = {
+	.attrs = gpio_led_attrs,
+};
+
+static const struct attribute_group *gpio_led_groups[] = {
+	&gpio_led_group,
+	NULL,
+};
+
+/**
  * gpio_led_probe() - Probe function for GPIO LED device
  * @pdev: Platform device
  *
@@ -242,6 +280,9 @@ static int gpio_led_probe(struct platform_device *pdev)
 	led->cdev.brightness_get = gpio_led_get_brightness;
 	led->cdev.max_brightness = LED_FULL;
 	led->cdev.brightness = led->default_state;
+
+	/* Attach extra sysfs attributes (gpio_pin) */
+	led->cdev.groups = gpio_led_groups;
 
 	/* Register LED class device with LED subsystem */
 	ret = devm_led_classdev_register(dev, &led->cdev);
