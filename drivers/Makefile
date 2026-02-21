@@ -4,13 +4,16 @@
 DRIVERS_DIR          ?= $(shell pwd)
 AVAILABLE_DRIVERS    := $(notdir $(wildcard $(DRIVERS_DIR)/*))
 
-# Filter out Makefile from driver list
-AVAILABLE_DRIVERS    := $(filter-out Makefile, $(AVAILABLE_DRIVERS))
+# Filter out non-driver files from list
+AVAILABLE_DRIVERS    := $(filter-out Makefile README.md, $(AVAILABLE_DRIVERS))
 
 # Default configuration
 MODULE               ?= all
 TOOLS                ?= all
 DTBO                 ?= all
+
+# Export toolchain variables for sub-makes
+export ARCH CROSS_COMPILE KERNEL_DIR
 
 # PHONY Targets
 .PHONY: all clean list help
@@ -26,12 +29,12 @@ dtbo:
 ifeq ($(DTBO),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -f "$(DRIVERS_DIR)/$$drv/Makefile" ]; then \
-			$(MAKE) -C $(DRIVERS_DIR)/$$drv dtbo DTC=$(DTC) DTC_FLAGS="$(DTC_FLAGS)" 2>/dev/null || true; \
+			$(MAKE) -C $(DRIVERS_DIR)/$$drv dtbo DTC=$(DTC) DTC_FLAGS="$(DTC_FLAGS)" || true; \
 		fi; \
 	done
 else
 	@if [ -f "$(DRIVERS_DIR)/$(DTBO)/Makefile" ]; then \
-		$(MAKE) -C $(DRIVERS_DIR)/$(DTBO) dtbo DTC=$(DTC) DTC_FLAGS="$(DTC_FLAGS)" 2>/dev/null || true; \
+		$(MAKE) -C $(DRIVERS_DIR)/$(DTBO) dtbo DTC=$(DTC) DTC_FLAGS="$(DTC_FLAGS)" || true; \
 	fi
 endif
 
@@ -40,7 +43,7 @@ modules:
 ifeq ($(MODULE),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ] && [ -f "$(DRIVERS_DIR)/$$drv/Makefile" ]; then \
-			$(MAKE) -C $(DRIVERS_DIR)/$$drv modules 2>/dev/null || true; \
+			$(MAKE) -C $(DRIVERS_DIR)/$$drv modules || true; \
 		fi; \
 	done
 else
@@ -56,7 +59,7 @@ tools:
 ifeq ($(TOOLS),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ] && [ -f "$(DRIVERS_DIR)/$$drv/Makefile" ]; then \
-			$(MAKE) -C $(DRIVERS_DIR)/$$drv tools 2>/dev/null || true; \
+			$(MAKE) -C $(DRIVERS_DIR)/$$drv tools || true; \
 		fi; \
 	done
 else
@@ -74,12 +77,12 @@ dtbo-clean:
 ifeq ($(DTBO),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -f "$(DRIVERS_DIR)/$$drv/Makefile" ]; then \
-			$(MAKE) -C $(DRIVERS_DIR)/$$drv dtbo-clean 2>/dev/null || true; \
+			$(MAKE) -C $(DRIVERS_DIR)/$$drv dtbo-clean || true; \
 		fi; \
 	done
 else
 	@if [ -f "$(DRIVERS_DIR)/$(DTBO)/Makefile" ]; then \
-		$(MAKE) -C $(DRIVERS_DIR)/$(DTBO) dtbo-clean 2>/dev/null || true; \
+		$(MAKE) -C $(DRIVERS_DIR)/$(DTBO) dtbo-clean || true; \
 	else \
 		echo "Error: Driver '$(DTBO)' not found"; \
 	fi
@@ -90,7 +93,7 @@ modules-clean:
 ifeq ($(MODULE),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ] && [ -f "$(DRIVERS_DIR)/$$drv/Makefile" ]; then \
-			$(MAKE) -C $(DRIVERS_DIR)/$$drv modules-clean 2>/dev/null || true; \
+			$(MAKE) -C $(DRIVERS_DIR)/$$drv modules-clean || true; \
 		fi; \
 	done
 else
@@ -98,7 +101,7 @@ else
 		echo "Error: Module '$(MODULE)' not found"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(DRIVERS_DIR)/$(MODULE) modules-clean 2>/dev/null || true
+	$(MAKE) -C $(DRIVERS_DIR)/$(MODULE) modules-clean || true
 endif
 
 # Clean Userspace Tools
@@ -106,7 +109,7 @@ tools-clean:
 ifeq ($(TOOLS),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ] && [ -f "$(DRIVERS_DIR)/$$drv/Makefile" ]; then \
-			$(MAKE) -C $(DRIVERS_DIR)/$$drv tools-clean 2>/dev/null || true; \
+			$(MAKE) -C $(DRIVERS_DIR)/$$drv tools-clean || true; \
 		fi; \
 	done
 else
@@ -114,7 +117,7 @@ else
 		echo "Error: Tool '$(TOOLS)' not found"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(DRIVERS_DIR)/$(TOOLS) tools-clean 2>/dev/null || true
+	$(MAKE) -C $(DRIVERS_DIR)/$(TOOLS) tools-clean || true
 endif
 
 # List Available Drivers
