@@ -3,6 +3,9 @@
 # Configuration
 USERSPACE_DIR  := $(shell pwd)/userspace
 
+# Export toolchain variables for sub-makes
+export ARCH CROSS_COMPILE KERNEL_DIR
+
 # PHONY Targets
 .PHONY: all clean help
 .PHONY: tools tools-clean
