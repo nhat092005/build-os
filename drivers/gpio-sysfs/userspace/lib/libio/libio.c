@@ -181,7 +181,8 @@ int gpio_list(gpio_list_callback_t callback, void *user_data)
 {
 	DIR *dir;
 	struct dirent *entry;
-	char path[GPIO_BUFFER_SIZE];
+	/* sizeof(GPIO_SYSFS_PATH) includes NUL; +1 for '/' separator, +NAME_MAX for d_name */
+	char path[sizeof(GPIO_SYSFS_PATH) + NAME_MAX + 1];
 	struct stat st;
 	int ret = 0;
 	int count = 0;
