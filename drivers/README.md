@@ -22,6 +22,14 @@ A character device driver that exposes a single GPIO pin through `/dev/gpio-char
 
 A platform driver that integrates with the Linux LED class subsystem. Devices are configured via Device Tree overlay and controlled through the standard sysfs interface at `/sys/class/leds/<led-name>/`. Supports configurable triggers, active-low logic, suspend/resume behavior, and per-LED default state. Includes a userspace library (`libled`) and command-line tool (`gpio-led-ctl`).
 
+### gpio-rust
+
+A safe Rust kernel module that demonstrates the upstream kernel Rust driver pattern applied to GPIO control within a "Mixed C-Rust Architecture". It uses Rust's ownership system to manage GPIO resources automatically through RAII (the `Drop` trait), while C-based wrappers create a character misc device (`/dev/gpio-rust`) to support userspace interaction via `read`, `write`, and `ioctl` commands. The module manages a single GPIO pin (default GPIO22) and is accompanied by a userspace CLI tool `gpio-rust-ctl`.
+
+### gpio-sysfs
+
+A userspace-only GPIO control tool that uses the kernel's built-in sysfs GPIO interface at `/sys/class/gpio/`. No custom kernel module is required.
+
 ## Top-Level Makefile
 
 The top-level Makefile auto-detects subdirectories and dispatches builds to each driver. It supports building kernel modules, userspace tools, and device tree blob overlays individually or all at once.
