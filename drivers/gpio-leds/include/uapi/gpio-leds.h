@@ -19,6 +19,6 @@
  * Read this file to find out which physical GPIO pin the LED is wired to.
  * Example: cat /sys/class/leds/gpio-led/gpio_pin
  */
-#define GPIO_LED_ATTR_GPIO_PIN  "gpio_pin"
+#define GPIO_LED_ATTR_GPIO_PIN "gpio_pin"
 
 #endif /* _UAPI_GPIO_LEDS_H */

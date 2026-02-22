@@ -15,6 +15,30 @@
 #include <string.h>
 #include <getopt.h>
 #include <stdarg.h>
+#include <limits.h>
+#include <errno.h>
+
+/**
+ * parse_int - Safely parse a string to int
+ * @str: NUL-terminated string
+ * @result: Output int
+ * Return: 0 on success, -1 on failure
+ */
+static int parse_int(const char *str, int *result)
+{
+	char *endptr;
+	long val;
+
+	errno = 0;
+	val = strtol(str, &endptr, 10);
+	if (errno != 0 || endptr == str || *endptr != '\0')
+		return -1;
+	if (val < INT_MIN || val > INT_MAX)
+		return -1;
+
+	*result = (int)val;
+	return 0;
+}
 
 /* Command handler function type */
 typedef int (*cmd_handler_t)(led_device_t *led, int argc, char *argv[]);
@@ -297,7 +321,11 @@ static int cmd_set(led_device_t *led, int argc, char *argv[])
 		return 1;
 	}
 
-	brightness = atoi(argv[0]);
+	if (parse_int(argv[0], &brightness) != 0)
+	{
+		print_error("Invalid brightness value: %s", argv[0]);
+		return 1;
+	}
 
 	ret = led_set_brightness(led, brightness);
 	if (ret < 0)
@@ -363,10 +391,16 @@ static int cmd_blink(led_device_t *led, int argc, char *argv[])
 	int delay_ms = 500; /* Default: 500ms */
 	int ret;
 
-	if (argc >= 1)
-		count = atoi(argv[0]);
-	if (argc >= 2)
-		delay_ms = atoi(argv[1]);
+	if (argc >= 1 && parse_int(argv[0], &count) != 0)
+	{
+		print_error("Invalid count value: %s", argv[0]);
+		return 1;
+	}
+	if (argc >= 2 && parse_int(argv[1], &delay_ms) != 0)
+	{
+		print_error("Invalid delay value: %s", argv[1]);
+		return 1;
+	}
 
 	ret = led_blink(led, count, delay_ms);
 	if (ret < 0)
@@ -385,10 +419,16 @@ static int cmd_timer(led_device_t *led, int argc, char *argv[])
 	int delay_off = 500; /* Default: 500ms off */
 	int ret;
 
-	if (argc >= 1)
-		delay_on = atoi(argv[0]);
-	if (argc >= 2)
-		delay_off = atoi(argv[1]);
+	if (argc >= 1 && parse_int(argv[0], &delay_on) != 0)
+	{
+		print_error("Invalid delay_on value: %s", argv[0]);
+		return 1;
+	}
+	if (argc >= 2 && parse_int(argv[1], &delay_off) != 0)
+	{
+		print_error("Invalid delay_off value: %s", argv[1]);
+		return 1;
+	}
 
 	ret = led_set_timer(led, delay_on, delay_off);
 	if (ret < 0)
@@ -407,10 +447,16 @@ static int cmd_pulse(led_device_t *led, int argc, char *argv[])
 	int steps = 50;		 /* Default: 50 steps */
 	int ret;
 
-	if (argc >= 1)
-		duration = atoi(argv[0]);
-	if (argc >= 2)
-		steps = atoi(argv[1]);
+	if (argc >= 1 && parse_int(argv[0], &duration) != 0)
+	{
+		print_error("Invalid duration value: %s", argv[0]);
+		return 1;
+	}
+	if (argc >= 2 && parse_int(argv[1], &steps) != 0)
+	{
+		print_error("Invalid steps value: %s", argv[1]);
+		return 1;
+	}
 
 	ret = led_pulse(led, duration, steps);
 	if (ret < 0)
