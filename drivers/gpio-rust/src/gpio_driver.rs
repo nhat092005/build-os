@@ -35,6 +35,9 @@ extern "C" {
     // Rust handlers; the C side handles only misc device bookkeeping.
     fn rust_helper_misc_register() -> core::ffi::c_int;
     fn rust_helper_misc_deregister();
+    // GPIO pin configuration — sourced from C module_param
+    fn rust_helper_get_gpio_pin() -> core::ffi::c_uint;
+    fn rust_helper_get_hw_pin_param() -> core::ffi::c_uint;
 }
 
 // Layer 2: Safe abstraction — all `unsafe` is confined to this struct.
@@ -110,12 +113,9 @@ impl Drop for GpioPin {
 
 // Layer 3: Module logic — no `unsafe` code.
 
-/// BCM GPIO base offset on kernel 6.x (`gpiochip0` starts at 512).
-const GPIO_BASE: u32 = 512;
-/// Hardware BCM GPIO pin number (GPIO22).
-const GPIO_HW_PIN: u32 = 22;
-/// Global GPIO number passed to `gpio_request()` (base + hardware pin).
-const DEFAULT_GPIO_PIN: u32 = GPIO_BASE + GPIO_HW_PIN;
+// GPIO pin numbers are sourced from the C module_param at init time
+// via `rust_helper_get_gpio_pin()` and `rust_helper_get_hw_pin_param()`.
+// No hardcoded constants needed — single source of truth in C header.
 
 /// Global GPIO number of the active pin, published before misc device
 /// registration so Layer 4 handlers can read it safely. Cleared to 0 after
@@ -145,11 +145,15 @@ struct GpioRustModule {
 impl kernel::Module for GpioRustModule {
     fn init(_module: &'static ThisModule) -> Result<Self> {
         pr_info!("gpio_rust: initializing\n");
-        let led = GpioPin::request(DEFAULT_GPIO_PIN, c_str!("gpio_rust_led"), 0)?;
+        // Resolve GPIO pin from C module_param (single source of truth).
+        let gpio_pin = unsafe { rust_helper_get_gpio_pin() };
+        let hw_pin = unsafe { rust_helper_get_hw_pin_param() };
+
+        let led = GpioPin::request(gpio_pin, c_str!("gpio_rust_led"), 0)?;
         // Publish pin numbers before registering the misc device so that
         // Layer 4 handlers are ready the moment userspace can open the node.
-        ACTIVE_PIN.store(DEFAULT_GPIO_PIN, Ordering::Release);
-        ACTIVE_HW_PIN.store(GPIO_HW_PIN, Ordering::Release);
+        ACTIVE_PIN.store(gpio_pin, Ordering::Release);
+        ACTIVE_HW_PIN.store(hw_pin, Ordering::Release);
         // SAFETY: Called exactly once during module init. The C file_operations
         // registered here delegate all GPIO logic to Layer 4 Rust handlers.
         let ret = unsafe { rust_helper_misc_register() };
@@ -161,7 +165,7 @@ impl kernel::Module for GpioRustModule {
         }
         pr_info!("gpio_rust: /dev/gpio-rust created\n");
         led.set_high();
-        pr_info!("gpio_rust: LED on GPIO {} is ON\n", GPIO_HW_PIN);
+        pr_info!("gpio_rust: LED on GPIO {} is ON\n", hw_pin);
         pr_info!("gpio_rust: module loaded\n");
         Ok(GpioRustModule { led })
     }
@@ -177,10 +181,11 @@ impl Drop for GpioRustModule {
         pr_info!("gpio_rust: /dev/gpio-rust removed\n");
         // Clear published state after deregistration; Layer 4 handlers that
         // observe pin == 0 will return safe defaults.
+        let hw_pin = ACTIVE_HW_PIN.load(Ordering::Acquire);
         ACTIVE_PIN.store(0, Ordering::Release);
         ACTIVE_HW_PIN.store(0, Ordering::Release);
         self.led.set_low();
-        pr_info!("gpio_rust: LED on GPIO {} is OFF\n", GPIO_HW_PIN);
+        pr_info!("gpio_rust: LED on GPIO {} is OFF\n", hw_pin);
         pr_info!("gpio_rust: module unloaded\n");
         // `self.led` is dropped here, which calls `gpio_free()` automatically.
     }
@@ -231,5 +236,7 @@ pub extern "C" fn rust_gpio_handle_set_value(value: core::ffi::c_int) {
 /// Called by the C `GPIO_RUST_IOC_GET_GPIO` ioctl shim.
 #[no_mangle]
 pub extern "C" fn rust_gpio_handle_get_hw_pin() -> core::ffi::c_uint {
-    ACTIVE_HW_PIN.load(Ordering::Relaxed)
+    // Use Acquire to pair with the Release store in GpioRustModule::init(),
+    // ensuring the pin number is fully visible before userspace reads it.
+    ACTIVE_HW_PIN.load(Ordering::Acquire)
 }
