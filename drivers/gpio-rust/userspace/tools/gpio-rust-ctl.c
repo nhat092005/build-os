@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * gpio-rust-ctl - GPIO Rust Driver Control Tool
+ * GPIO Rust Driver Control Tool
  *
- * Command-line utility for controlling the gpio-rust kernel module.
- * Uses libgpio-rust to interact with GPIO22 via the misc char device
- * at /dev/gpio-rust.
+ * This is a simple command-line tool to control the GPIO Rust driver from userspace.
+ * It uses the libgpio-rust library to interact with the /dev/gpio-rust device.
  */
 
 #define _DEFAULT_SOURCE
@@ -205,7 +204,7 @@ static int cmd_toggle(gpio_rust_device_t *dev)
 		printf("GPIO %d: toggled\n", GPIO_RUST_DEFAULT_PIN);
 		return 0;
 	}
-	printf("GPIO %d: → %s\n", GPIO_RUST_DEFAULT_PIN,
+	printf("GPIO %d: %s\n", GPIO_RUST_DEFAULT_PIN,
 	       value ? "ON" : "OFF");
 	return 0;
 }

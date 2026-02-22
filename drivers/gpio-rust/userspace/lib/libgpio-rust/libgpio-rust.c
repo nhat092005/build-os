@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * libgpio-rust - GPIO Rust Driver Control Library Implementation
+ * GPIO Rust Driver Control Library Implementation
  *
- * Provides userspace access to the gpio-rust kernel module via the
- * misc character device at /dev/gpio-rust.
- *
- * Operations:
- *   - read()  → current GPIO value ("0\n" or "1\n")
- *   - write() → set GPIO value ("0" or "1")
- *   - ioctl() → structured control (set/get/toggle/get_gpio)
+ * This library provides functions to control the GPIO Rust driver from userspace.
+ * It allows userspace applications to easily manipulate GPIO state, direction,
+ * and retrieve information without needing to interact with the device file directly.
  */
 
 #include "libgpio-rust.h"
