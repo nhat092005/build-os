@@ -1,0 +1,3 @@
+# kbuild definitions for GPIO Rust Driver
+obj-m := gpio_rust.o
+gpio_rust-y := gpio_helpers.o gpio_driver.o

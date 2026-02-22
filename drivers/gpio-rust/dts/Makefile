@@ -1,15 +1,15 @@
 # SPDX-License-Identifier: GPL-2.0
 # Makefile for Device Tree Overlays
 
-BUILD_DIR 	:= $(shell pwd)/../build/dtbo
+BUILD_DIR	:= $(shell pwd)/../build/dtbo
 DTC         ?= dtc
-DTC_FLAGS   ?= -@ -I dts -O dtb -Wno-unit_address_vs_reg
+DTC_FLAGS   ?= -@ -I dts -O dtb -Wno-unit_address_vs_reg -Wno-label_is_string
 
 # Source file
-DTS := gpio-leds-overlay.dts
+DTS := gpio-rust-overlay.dts
 
 # Output file
-DTBO := gpio-leds.dtbo
+DTBO := gpio-rust.dtbo
 
 .PHONY: all dtbo clean dtbo-clean help
 
@@ -25,7 +25,7 @@ $(BUILD_DIR):
 
 # Compile DTS to DTBO
 $(DTBO): $(DTS)
-	@echo "Device Tree Overlay: $< -> $@"
+	@echo "Compiling Device Tree Overlay: $< -> $@"
 	$(DTC) $(DTC_FLAGS) -o $(BUILD_DIR)/$@ $<
 
 # Clean build artifacts

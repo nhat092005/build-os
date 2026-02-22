@@ -42,6 +42,30 @@ verify_device() {
         exit 1
     fi
 
+    if [ -e "$device" ] && [ ! -b "$device" ]; then
+        echo "Warning: $device exists but is a regular file, not a block device."
+
+        local devname
+        devname=$(basename "$device")
+        local major minor
+
+        # Look up the correct major:minor from the kernel's partition table
+        read -r major minor <<< "$(awk -v dev="$devname" '$4 == dev {print $1, $2}' /proc/partitions)"
+
+        if [ -n "$major" ] && [ -n "$minor" ]; then
+            echo "  Recreating $device as block device node (major=$major, minor=$minor)..."
+            rm -f "$device"
+            mknod "$device" b "$major" "$minor"
+            chown root:disk "$device"
+            chmod 660 "$device"
+            echo "  Fixed: $device is now a proper block device node."
+        else
+            echo "Error: $device is not a block device and could not be auto-fixed."
+            echo "  Run manually: sudo rm $device && sudo mknod $device b <major> <minor>"
+            exit 1
+        fi
+    fi
+
     if [ ! -b "$device" ]; then
         echo "Error: $device is not a block device"
         exit 1

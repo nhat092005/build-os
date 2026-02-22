@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
  * libio - GPIO Control Library
- * Library for controlling Linux GPIO sysfs interface
+ *
+ * This library provides functions to control Linux GPIO pins
+ * via the sysfs interface. It allows userspace applications
+ * to easily manipulate GPIO pins without needing to interact
+ * with sysfs directly.
  */
 
 #ifndef _LIBIO_H

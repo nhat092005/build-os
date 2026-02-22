@@ -1,0 +1,7 @@
+config BR2_PACKAGE_GPIO_RUST_DRIVER
+	bool "gpio-rust-driver"
+	depends on BR2_LINUX_KERNEL
+	help
+	  Safe GPIO driver written in Rust. Demonstrates upstream
+	  kernel Rust driver patterns with automatic resource management
+	  via Rust's ownership system and Drop trait.

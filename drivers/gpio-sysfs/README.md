@@ -1,6 +1,6 @@
 # gpio-sysfs
 
-A userspace-only GPIO control tool that uses the kernel's built-in sysfs GPIO interface at `/sys/class/gpio/`. No custom kernel module is required it works with any kernel that has.
+A userspace-only GPIO control tool that uses the kernel's built-in sysfs GPIO interface at `/sys/class/gpio/`. No custom kernel module is required; it works with any kernel that has the sysfs GPIO interface enabled.
 
 ## Directory Structure
 

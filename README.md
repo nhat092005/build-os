@@ -22,7 +22,8 @@ build-os/
 ├── drivers/              # Out-of-tree kernel drivers and userspace tools
 │   ├── gpio-chardev/     # Character device driver for GPIO control
 │   ├── gpio-leds/        # LED class driver with Device Tree support
-│   └── gpio-sysfs/
+│   ├── gpio-sysfs/       # Userspace-only GPIO control tool
+│   └── gpio-rust/        # Safe Rust kernel module for GPIO control
 ├── scripts/              # Deployment and installation scripts
 ├── output/               # Staged boot and rootfs (generated)
 └── toolchains/           # Extracted Buildroot SDK (generated)
@@ -80,20 +81,20 @@ sudo make deploy-sdcard DEVICE=/dev/sdX
 
 ### Build
 
-| Target      | Description                                         |
-| ----------- | --------------------------------------------------- |
-| `build-all` | Build Buildroot image, DT overlays, modules, tools  |
-| `buildroot` | Build kernel and rootfs with Buildroot               |
-| `dtbo`      | Build device tree blob overlays from drivers         |
-| `modules`   | Build out-of-tree kernel modules                     |
-| `tools`     | Build userspace tools                                |
+| Target      | Description                                        |
+| ----------- | -------------------------------------------------- |
+| `build-all` | Build Buildroot image, DT overlays, modules, tools |
+| `buildroot` | Build kernel and rootfs with Buildroot             |
+| `dtbo`      | Build device tree blob overlays from drivers       |
+| `modules`   | Build out-of-tree kernel modules                   |
+| `tools`     | Build userspace tools                              |
 
 ### Configuration
 
-| Target              | Description                                   |
-| ------------------- | --------------------------------------------- |
-| `menuconfig`        | Open Buildroot interactive configuration      |
-| `<name>_defconfig`  | Load a Buildroot defconfig                    |
+| Target             | Description                              |
+| ------------------ | ---------------------------------------- |
+| `menuconfig`       | Open Buildroot interactive configuration |
+| `<name>_defconfig` | Load a Buildroot defconfig               |
 
 ### Driver (via Buildroot package system)
 
@@ -102,18 +103,18 @@ sudo make deploy-sdcard DEVICE=/dev/sdX
 | `driver`             | Build driver package(s) in Buildroot |
 | `driver-rebuild`     | Rebuild driver package(s)            |
 | `driver-reconfigure` | Reconfigure driver package(s)        |
-| `driver-clean`       | Clean driver package(s)             |
+| `driver-clean`       | Clean driver package(s)              |
 | `driver-dirclean`    | Remove driver build directory        |
 
 ### Deployment
 
-| Target             | Root Required | Description                                    |
-| ------------------ | ------------- | ---------------------------------------------- |
-| `stage-output`     | Yes           | Extract boot.vfat and rootfs.ext4 into output/ |
-| `identify-sdcard`  | No            | List block devices and detect SD cards         |
-| `deploy-sdcard`    | Yes           | Flash base image and apply staged output       |
-| `image`            | Yes           | Shortcut: identify + deploy                    |
-| `output-clean`     | Yes           | Remove the output/ directory                   |
+| Target            | Root Required | Description                                    |
+| ----------------- | ------------- | ---------------------------------------------- |
+| `stage-output`    | Yes           | Extract boot.vfat and rootfs.ext4 into output/ |
+| `identify-sdcard` | No            | List block devices and detect SD cards         |
+| `deploy-sdcard`   | Yes           | Flash base image and apply staged output       |
+| `image`           | Yes           | Shortcut: identify + deploy                    |
+| `output-clean`    | Yes           | Remove the output/ directory                   |
 
 ### Install / Remove
 
@@ -130,14 +131,14 @@ sudo make deploy-sdcard DEVICE=/dev/sdX
 
 ### Clean
 
-| Target              | Description                             |
-| ------------------- | --------------------------------------- |
-| `clean`             | Clean all (Buildroot + drivers + output)|
-| `buildroot-clean`   | Clean Buildroot output                  |
-| `buildroot-distclean` | Reset Buildroot to pristine state     |
-| `dtbo-clean`        | Clean device tree overlays              |
-| `modules-clean`     | Clean kernel modules                    |
-| `tools-clean`       | Clean userspace tools                   |
+| Target                | Description                              |
+| --------------------- | ---------------------------------------- |
+| `clean`               | Clean all (Buildroot + drivers + output) |
+| `buildroot-clean`     | Clean Buildroot output                   |
+| `buildroot-distclean` | Reset Buildroot to pristine state        |
+| `dtbo-clean`          | Clean device tree overlays               |
+| `modules-clean`       | Clean kernel modules                     |
+| `tools-clean`         | Clean userspace tools                    |
 
 ### Build Options
 
@@ -158,6 +159,14 @@ Character device driver exposing a single GPIO pin at `/dev/gpio-chardev`. Suppo
 ### gpio-leds
 
 Platform driver using the Linux LED class subsystem. Devices are configured via Device Tree overlay and controlled through sysfs at `/sys/class/leds/<led-name>/`. Supports configurable triggers, active-low logic, default state, and suspend/resume behavior. Default pin: GPIO27. Includes the `libled` library and `gpio-led-ctl` command-line tool.
+
+### gpio-sysfs
+
+A userspace-only GPIO control tool that uses the kernel's built-in sysfs GPIO interface at `/sys/class/gpio/`. No custom kernel module is required; it works with any kernel that has the sysfs GPIO interface enabled.
+
+### gpio-rust
+
+A safe Rust kernel module that demonstrates the upstream kernel Rust driver pattern applied to GPIO control within a "Mixed C-Rust Architecture". It uses Rust's ownership system to manage GPIO resources automatically through RAII (the `Drop` trait), while C-based wrappers create a character misc device (`/dev/gpio-rust`) to support userspace interaction via `read`, `write`, and `ioctl` commands. The module manages a single GPIO pin (default GPIO22) and is accompanied by a userspace CLI tool `gpio-rust-ctl`.
 
 ## License
 

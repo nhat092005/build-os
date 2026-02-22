@@ -1,5 +1,5 @@
 #!/bin/bash
-# Custom post-image script for Raspberry Pi 4 64-bit
+
 # This script generates the SD card image using genimage
 
 set -e

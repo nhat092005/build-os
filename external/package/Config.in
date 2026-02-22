@@ -1,3 +1,4 @@
 source "$BR2_EXTERNAL_NHAT092005_PATH/package/gpio-chardev-driver/Config.in"
 source "$BR2_EXTERNAL_NHAT092005_PATH/package/gpio-leds-driver/Config.in"
+source "$BR2_EXTERNAL_NHAT092005_PATH/package/gpio-rust-driver/Config.in"
 source "$BR2_EXTERNAL_NHAT092005_PATH/package/gpio-sysfs-driver/Config.in"

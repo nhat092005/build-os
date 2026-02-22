@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
  * gpio-sysfs-ctl - GPIO Control Utility
- * Command-line tool for controlling GPIO pins via Linux sysfs interface
+ *
+ * This utility allows users to control GPIO pins from the command line
+ * using the sysfs interface. It supports exporting/unexporting pins,
+ * setting direction, value, edge, and active_low attributes, and more.
  */
 
 #include "libio.h"
@@ -243,6 +246,7 @@ static void print_error(const char *fmt, ...)
 
 static void usage(const char *progname)
 {
+	printf("GPIO Sysfs Control Tool\n\n");
 	printf("Usage: %s <command> [args...]\n\n", progname);
 	printf("Commands:\n");
 	printf("  list\n");
@@ -268,6 +272,7 @@ static void usage(const char *progname)
 
 static int cmd_export(int argc, char *argv[])
 {
+	int pin, gpio_num;
 	char str_pin[16];
 	int ret;
 
@@ -277,19 +282,26 @@ static int cmd_export(int argc, char *argv[])
 		return 1;
 	}
 
-	snprintf(str_pin, sizeof(str_pin), "%d", atoi(argv[0]) + GPIO_BASE);
+	pin = atoi(argv[0]);
+	gpio_num = pin + GPIO_BASE;
+
+	snprintf(str_pin, sizeof(str_pin), "%d", gpio_num);
 
 	ret = gpio_export(str_pin);
 	if (ret < 0)
 	{
-		print_error("Failed to export GPIO %s: %s", str_pin, gpio_strerror(ret));
+		print_error("Failed to export GPIO %d: %s",
+					gpio_num, gpio_strerror(ret));
 		return 1;
 	}
+
+	printf("GPIO %d (gpio%d): Exported successfully\n", pin, gpio_num);
 	return 0;
 }
 
 static int cmd_unexport(int argc, char *argv[])
 {
+	int pin, gpio_num;
 	char str_pin[16];
 	int ret;
 
@@ -299,13 +311,22 @@ static int cmd_unexport(int argc, char *argv[])
 		return 1;
 	}
 
-	snprintf(str_pin, sizeof(str_pin), "%d", atoi(argv[0]) + GPIO_BASE);
+	pin = atoi(argv[0]);
+	gpio_num = pin + GPIO_BASE;
+
+	snprintf(str_pin, sizeof(str_pin), "%d", gpio_num);
+
 	ret = gpio_unexport(str_pin);
 	if (ret < 0)
 	{
-		print_error("Failed to unexport GPIO %s: %s", str_pin, gpio_strerror(ret));
+		print_error("Failed to unexport GPIO %d: %s",
+					gpio_num, gpio_strerror(ret));
 		return 1;
 	}
+
+	printf("GPIO %d (gpio%d): Unexported successfully\n",
+		   pin, gpio_num);
+
 	return 0;
 }
 
@@ -325,6 +346,7 @@ static int cmd_set_direction(gpio_sysfs_device_t *gpio, int argc, char *argv[])
 		print_error("Failed to set direction: %s", gpio_strerror(ret));
 		return 1;
 	}
+	printf("GPIO %d: %s\n", atoi(gpio->gpio_pin) - GPIO_BASE, strcmp(argv[0], "in") == 0 ? "INPUT" : "OUTPUT");
 	return 0;
 }
 
@@ -339,7 +361,7 @@ static int cmd_get_direction(gpio_sysfs_device_t *gpio)
 		print_error("Failed to get direction: %s", gpio_strerror(ret));
 		return 1;
 	}
-	printf("direction: %s\n", buffer);
+	printf("GPIO %d: %s\n", atoi(gpio->gpio_pin) - GPIO_BASE, strcmp(buffer, "in") == 0 ? "INPUT" : "OUTPUT");
 	return 0;
 }
 
@@ -366,6 +388,7 @@ static int cmd_set_value(gpio_sysfs_device_t *gpio, int argc, char *argv[])
 		print_error("Failed to set value: %s", gpio_strerror(ret));
 		return 1;
 	}
+	printf("GPIO %d: %s\n", atoi(gpio->gpio_pin) - GPIO_BASE, value ? "ON" : "OFF");
 	return 0;
 }
 
@@ -379,7 +402,7 @@ static int cmd_get_value(gpio_sysfs_device_t *gpio)
 		print_error("Failed to get value: %s", gpio_strerror(ret));
 		return 1;
 	}
-	printf("value: %d\n", value);
+	printf("GPIO %d: value = %s\n", atoi(gpio->gpio_pin) - GPIO_BASE, value ? "ON" : "OFF");
 	return 0;
 }
 
@@ -433,6 +456,10 @@ static int cmd_set_edge(gpio_sysfs_device_t *gpio, int argc, char *argv[])
 		print_error("Failed to set edge: %s", gpio_strerror(ret));
 		return 1;
 	}
+	printf("GPIO %d: %s\n", atoi(gpio->gpio_pin) - GPIO_BASE,
+		   strcmp(argv[0], "none") == 0 ? "NONE" : strcmp(argv[0], "rising") == 0 ? "RISING"
+									: strcmp(argv[0], "falling") == 0	? "FALLING"
+															: "BOTH");
 	return 0;
 }
 
@@ -447,7 +474,10 @@ static int cmd_get_edge(gpio_sysfs_device_t *gpio)
 		print_error("Failed to get edge: %s", gpio_strerror(ret));
 		return 1;
 	}
-	printf("edge: %s\n", buffer);
+	printf("GPIO %d: edge = %s\n", atoi(gpio->gpio_pin) - GPIO_BASE,
+		   strcmp(buffer, "none") == 0 ? "NONE" : strcmp(buffer, "rising") == 0 ? "RISING"
+								   : strcmp(buffer, "falling") == 0  ? "FALLING"
+														  : "BOTH");
 	return 0;
 }
 
@@ -474,6 +504,8 @@ static int cmd_set_active_low(gpio_sysfs_device_t *gpio, int argc, char *argv[])
 		print_error("Failed to set active_low: %s", gpio_strerror(ret));
 		return 1;
 	}
+	printf("GPIO %d: %s\n", atoi(gpio->gpio_pin) - GPIO_BASE,
+		   active_low ? "ACTIVE_LOW" : "ACTIVE_HIGH");
 	return 0;
 }
 
@@ -487,7 +519,8 @@ static int cmd_get_active_low(gpio_sysfs_device_t *gpio)
 		print_error("Failed to get active_low: %s", gpio_strerror(ret));
 		return 1;
 	}
-	printf("active_low: %d\n", active_low);
+	printf("GPIO %d: active_low = %s\n", atoi(gpio->gpio_pin) - GPIO_BASE,
+		   active_low ? "ACTIVE_LOW" : "ACTIVE_HIGH");
 	return 0;
 }
 
@@ -525,9 +558,12 @@ static int cmd_info(gpio_sysfs_device_t *gpio)
 	}
 
 	printf("GPIO:       %s\n", info.gpio_pin);
-	printf("Direction:  %s\n", info.direction);
-	printf("Edge:       %s\n", info.edge);
-	printf("Value:      %d\n", info.value);
-	printf("Active Low: %d\n", info.active_low);
+	printf("Direction:  %s\n", strcmp(info.direction, "in") == 0 ? "INPUT" : "OUTPUT");
+	printf("Edge:       %s\n", strcmp(info.edge, "none") == 0		? "NONE"
+							   : strcmp(info.edge, "rising") == 0	? "RISING"
+							   : strcmp(info.edge, "falling") == 0 ? "FALLING"
+														: "BOTH");
+	printf("Value:      %s\n", info.value ? "ON" : "OFF");
+	printf("Active Low: %s\n", info.active_low ? "ACTIVE_LOW" : "ACTIVE_HIGH");
 	return 0;
 }

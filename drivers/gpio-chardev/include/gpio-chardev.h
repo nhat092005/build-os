@@ -38,9 +38,6 @@
  * @gpio_pin: GPIO pin number used by this device
  * @state: Current GPIO state (0=off, 1=on)
  * @gpio_requested: Flag indicating if GPIO has been requested
- *
- * This structure holds all the information needed to manage the
- * GPIO character device.
  */
 struct gpio_chardev_dev
 {

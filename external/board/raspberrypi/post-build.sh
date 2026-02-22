@@ -1,6 +1,10 @@
 #!/bin/sh
-# Custom post-build script for Raspberry Pi 4 64-bit
-# This script configures the target root filesystem
+
+# This post-build script runs after the root filesystem 
+# has been fully built and staged in the target directory.
+
+# It performs final adjustments to the target filesystem, 
+# such as configuring a console on tty1 and
 
 set -u
 set -e
@@ -17,7 +21,6 @@ elif [ -d ${TARGET_DIR}/etc/systemd ]; then
        "${TARGET_DIR}/etc/systemd/system/getty.target.wants/getty@tty1.service"
 fi
 
-# Ensure sshd privilege separation user exists (safety fallback)
 # Buildroot's OPENSSH_USERS mechanism creates this during fakeroot,
 # but we add it here as a belt-and-suspenders safeguard.
 if [ -f ${TARGET_DIR}/usr/sbin/sshd ]; then

@@ -1,29 +1,29 @@
-# Makefile for GPIO Character Device Kernel Driver
+# Makefile for GPIO Rust Driver - Rust Kernel Module Build
 
 # Target platform configuration
-ARCH            	?= arm64
+ARCH			?= arm64
 
 # Directory paths
-BUILDROOT_DIR		?= $(shell pwd)/../../../buildroot
-TOOLCHAIN_DIR		?= $(shell pwd)/../../../toolchains/aarch64-buildroot-linux-gnu_sdk-buildroot
+BUILDROOT_DIR	?= $(shell pwd)/../../../buildroot
+TOOLCHAIN_DIR	?= $(shell pwd)/../../../toolchains/aarch64-buildroot-linux-gnu_sdk-buildroot
 
 # Buildroot toolchain (must match kernel compiler)
-CROSS_COMPILE 		?= $(TOOLCHAIN_DIR)/bin/aarch64-linux-
+CROSS_COMPILE	?= $(TOOLCHAIN_DIR)/bin/aarch64-linux-
 
 # Kernel directory (Buildroot kernel only)
-KERNEL_DIR			?= $(BUILDROOT_DIR)/output/build/linux-custom
+KERNEL_DIR		?= $(BUILDROOT_DIR)/output/build/linux-custom
 
 # Build output directory (where install scripts look for .ko)
 BUILD_DIR := $(CURDIR)/../build/module
 
-# PHONY Targets
+# PHONY targets
 .PHONY: all clean help
 .PHONY: modules modules-clean
 
-# Main Targets
+# Default target
 all: modules
 
-# Build Kernel Module
+# Build kernel module
 modules:
 	mkdir -p $(BUILD_DIR)
 	$(MAKE) -C $(KERNEL_DIR) \
@@ -31,12 +31,12 @@ modules:
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
 		modules
-	cp -f $(CURDIR)/gpio-chardev.ko $(BUILD_DIR)/gpio-chardev.ko
+	cp -f $(CURDIR)/gpio_rust.ko $(BUILD_DIR)/gpio_rust.ko
 
-# Clean
+# Clean build artifacts
 clean: modules-clean
 
-# Clean Kernel Module build artifacts
+# Clean Modules
 modules-clean:
 	@if [ -d "$(KERNEL_DIR)" ]; then \
 		$(MAKE) -C $(KERNEL_DIR) M=$(CURDIR) clean 2>/dev/null || true; \
@@ -48,9 +48,11 @@ modules-clean:
 	rm -f  $(CURDIR)/.module-common.o
 	rm -rf $(CURDIR)/.tmp_versions
 	rm -rf $(BUILD_DIR)
+
+# Show help information
 help:
-	@echo "Targets:"
-	@echo "  all             Build kernel module (default)"
-	@echo "  clean           Clean build artifacts"
-	@echo "  modules         Build kernel module"
-	@echo "  modules-clean   Clean kernel module build artifacts"
+	@echo "Available targets:"
+	@echo "  all                Build Rust kernel module (default)"
+	@echo "  modules            Build Rust kernel module"
+	@echo "  clean              Clean build artifacts"
+	@echo "  modules-clean      Clean kernel module build artifacts"

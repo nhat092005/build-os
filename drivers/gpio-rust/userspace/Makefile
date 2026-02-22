@@ -1,7 +1,11 @@
-# Makefile for LED Control Library and Tools
+# Makefile for GPIO Rust Driver - Userspace Library and Tools
+#
+# Builds:
+#   1. libgpio-rust (static library) — sysfs wrapper for gpio-rust driver
+#   2. gpio-rust-ctl (CLI tool) — command-line control for GPIO22
 
 # Toolchain Configuration
-CROSS_COMPILE   ?= 
+CROSS_COMPILE   ?=
 CC              := $(CROSS_COMPILE)gcc
 AR              := $(CROSS_COMPILE)ar
 CFLAGS          := -Wall -Wextra -O2 -std=gnu11 -fPIC
@@ -9,20 +13,20 @@ LDFLAGS         :=
 
 # Directory Configuration
 USERSPACE_DIR   := $(shell pwd)
-LIB_DIR         := $(USERSPACE_DIR)/lib/libled
+LIB_DIR         := $(USERSPACE_DIR)/lib/libgpio-rust
 TOOLS_DIR       := $(USERSPACE_DIR)/tools
 BUILD_DIR       := $(USERSPACE_DIR)/../build/tools
 
 # Library Configuration
-LIB_NAME        := libled
+LIB_NAME        := libgpio-rust
 LIB_STATIC      := $(BUILD_DIR)/lib$(LIB_NAME).a
 LIB_SHARED      := $(BUILD_DIR)/lib$(LIB_NAME).so
-LIB_HEADER      := $(LIB_DIR)/libled.h
-LIB_SOURCE      := $(LIB_DIR)/libled.c
-LIB_OBJECT      := $(BUILD_DIR)/libled.o
+LIB_HEADER      := $(LIB_DIR)/libgpio-rust.h
+LIB_SOURCE      := $(LIB_DIR)/libgpio-rust.c
+LIB_OBJECT      := $(BUILD_DIR)/libgpio-rust.o
 
 # Tool Configuration
-TOOL_NAME       := gpio-leds-ctl
+TOOL_NAME       := gpio-rust-ctl
 TOOL_SOURCE     := $(TOOLS_DIR)/$(TOOL_NAME).c
 TOOL_OBJECT     := $(BUILD_DIR)/$(TOOL_NAME).o
 TOOL_BINARY     := $(BUILD_DIR)/$(TOOL_NAME)

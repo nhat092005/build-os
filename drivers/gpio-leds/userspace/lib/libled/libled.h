@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * libled - LED Control Library
- * Library for controlling Linux LED class devices via sysfs
+ * LED Control Library
+ *
+ * This library provides functions to control Linux LED class devices via sysfs.
+ * It allows userspace applications to easily manipulate LED brightness, triggers,
+ * and other attributes without needing to interact with sysfs directly.
  */
 
 #ifndef _LIBLED_H
@@ -9,19 +12,22 @@
 
 #include <stddef.h>
 
+#define GPIO_BASE 512
+
 /* Constants */
 #define LED_BUFFER_SIZE 512
 #define LED_BASE_PATH "/sys/class/leds"
 
 /**
  * struct led_device - LED device handle
- * @name: LED device name
- * @path: Base sysfs path
+ * @name: LED device name (e.g. "gpio-led")
+ * @path: Base sysfs path (/sys/class/leds/<name>)
  * @brightness_path: Path to brightness attribute
  * @trigger_path: Path to trigger attribute
  * @max_brightness_path: Path to max_brightness attribute
- * @delay_on_path: Path to delay_on attribute
- * @delay_off_path: Path to delay_off attribute
+ * @delay_on_path: Path to delay_on attribute (timer trigger)
+ * @delay_off_path: Path to delay_off attribute (timer trigger)
+ * @gpio_pin_path: Path to gpio_pin attribute (hardware GPIO number)
  */
 typedef struct led_device
 {
@@ -32,14 +38,16 @@ typedef struct led_device
     char max_brightness_path[LED_BUFFER_SIZE];
     char delay_on_path[LED_BUFFER_SIZE];
     char delay_off_path[LED_BUFFER_SIZE];
+    char gpio_pin_path[LED_BUFFER_SIZE];
 } led_device_t;
 
 /**
  * struct led_info - LED device information
- * @name: LED name
+ * @name: LED name (sysfs device name)
  * @brightness: Current brightness value
  * @max_brightness: Maximum brightness value
  * @trigger: Current trigger name
+ * @gpio_pin: Hardware GPIO pin number (-1 if unavailable)
  */
 typedef struct led_info
 {
@@ -47,6 +55,7 @@ typedef struct led_info
     int brightness;
     int max_brightness;
     char trigger[LED_BUFFER_SIZE];
+    int gpio_pin;
 } led_info_t;
 
 /**
@@ -174,6 +183,13 @@ int led_list(led_list_callback_t callback, void *user_data);
  * Return: 0 on success, negative errno on failure
  */
 int led_get_info(led_device_t *led, led_info_t *info);
+
+/**
+ * led_get_gpio_pin - Get the hardware GPIO pin number this LED is wired to
+ * @led: LED device handle
+ * Return: GPIO pin number (>= 0) on success, negative errno on failure
+ */
+int led_get_gpio_pin(led_device_t *led);
 
 /* Utility Functions */
 

@@ -2,38 +2,23 @@
 /*
  * GPIO LED Driver - User API
  *
- * This header defines constants and structures for the GPIO LED driver.
- * It can be included by both kernel and userspace code.
+ * Shared constants between kernel driver and userspace.
  *
- * Note: This driver uses LED class subsystem, so control is via sysfs:
- *   /sys/class/leds/<led-name>/brightness
- *   /sys/class/leds/<led-name>/trigger
- *   /sys/class/leds/<led-name>/max_brightness
+ * Sysfs interface exposed by this driver:
+ *   /sys/class/leds/<name>/brightness     - R/W: 0=off, 255=full
+ *   /sys/class/leds/<name>/max_brightness - RO:  maximum brightness value
+ *   /sys/class/leds/<name>/trigger        - R/W: active trigger name
+ *   /sys/class/leds/<name>/gpio_pin       - RO:  hardware GPIO pin number
  */
 
 #ifndef _UAPI_GPIO_LEDS_H
 #define _UAPI_GPIO_LEDS_H
 
-#include <linux/types.h>
-
 /*
- * LED States (used in sysfs brightness attribute)
+ * Sysfs attribute name for querying the hardware GPIO pin number.
+ * Read this file to find out which physical GPIO pin the LED is wired to.
+ * Example: cat /sys/class/leds/gpio-led/gpio_pin
  */
-#define LED_OFF 0
-#define LED_HALF 127
-#define LED_FULL 255
-
-/*
- * Common LED Triggers
- * Write these to /sys/class/leds/<led-name>/trigger
- *
- * Example triggers:
- *   - none: No trigger, manual control
- *   - heartbeat: Mimic heartbeat pattern
- *   - timer: Blink with configurable on/off times
- *   - default-on: Always on
- *   - cpu: Blink on CPU activity
- *   - mmc0/mmc1: Blink on SD card activity
- */
+#define GPIO_LED_ATTR_GPIO_PIN  "gpio_pin"
 
 #endif /* _UAPI_GPIO_LEDS_H */

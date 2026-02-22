@@ -5,6 +5,7 @@ enable_uart=1
 dtoverlay=miniuart-bt
 
 # Custom device tree overlays
-dtoverlay=leds-gpio-custom
+dtoverlay=gpio-leds
+dtoverlay=gpio-rust
 
 arm_boost=1

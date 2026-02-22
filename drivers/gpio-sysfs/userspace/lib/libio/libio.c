@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
  * libio - GPIO Control Library Implementation
- * Library for controlling Linux GPIO sysfs interface
+ * 
+ * This library provides functions to control Linux GPIO pins 
+ * via the sysfs interface. It allows userspace applications 
+ * to easily manipulate GPIO pins without needing to interact 
+ * with sysfs directly.
  */
 
 #include "libio.h"
@@ -16,7 +20,22 @@
 #include <dirent.h>
 
 /* Internal helper prototypes */
+
+/**
+ * write_sysfs - Helper to write a string value to a sysfs file
+ * @path: Path to sysfs file
+ * @value: String value to write
+ * Return: 0 on success, negative errno on failure
+ */
 static int write_sysfs(const char *path, const char *value);
+
+/**
+ * read_sysfs - Helper to read a string value from a sysfs file
+ * @path: Path to sysfs file
+ * @buffer: Buffer to store the read value
+ * @size: Size of the buffer
+ * Return: 0 on success, negative errno on failure
+ */
 static int read_sysfs(const char *path, char *buffer, size_t size);
 
 int gpio_export(const char *gpio_pin)
