@@ -1,19 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * gpio_helpers.c — C wrappers for inline GPIO functions + misc char device
+ * GPIO Rust Driver - C Helper Functions
  *
- * In kernel 6.x, legacy GPIO API functions (gpio_request, gpio_free,
- * gpio_direction_output, gpio_set_value, gpio_get_value) are defined as
- * static inline functions in <linux/gpio.h>. This means they don't exist
- * as linkable symbols and cannot be called directly from Rust FFI.
- *
- * This file provides:
- *   1. Non-inline wrapper functions that Rust can call via extern "C"
- *      declarations (rust_helper_gpio_*).
- *   2. A misc character device (/dev/gpio-rust) that exposes the GPIO
- *      state to userspace via read/write/ioctl. The Rust module calls
- *      rust_helper_misc_register() / rust_helper_misc_deregister() to
- *      manage the device lifecycle.
+ * This file implements C helper functions that wrap kernel GPIO APIs and
+ * expose a misc char device for user-space interaction. The actual GPIO logic
+ * is owned by Rust; C only handles buffer copies and delegates to Rust handlers.
  */
 
 #include <linux/module.h>
@@ -21,15 +12,49 @@
 #include <linux/miscdevice.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
+#include <linux/mutex.h>
 
 #include "../include/uapi/gpio-rust.h"
 #include "../include/gpio-rust.h"
 
 /* Prototypes — suppress -Wmissing-prototypes */
+
+/* Section 1: GPIO API wrappers for Rust Layer 3 */
+
+/**
+ * rust_helper_gpio_request - Request control of a GPIO pin
+ * @gpio: GPIO pin number (hardware BCM pin)
+ * @label: Human-readable label for the GPIO (for debugging)
+ * Return: 0 on success, negative errno on failure
+ */
 int rust_helper_gpio_request(unsigned int gpio, const char *label);
+
+/**
+ * rust_helper_gpio_free - Release control of a GPIO pin
+ * @gpio: GPIO pin number (hardware BCM pin)
+ */
 void rust_helper_gpio_free(unsigned int gpio);
+
+/**
+ * rust_helper_gpio_direction_output - Set GPIO pin as output and initial value
+ * @gpio: GPIO pin number (hardware BCM pin)
+ * @value: Initial value (0=off, 1=on)
+ * Return: 0 on success, negative errno on failure
+ */
 int rust_helper_gpio_direction_output(unsigned int gpio, int value);
+
+/**
+ * rust_helper_gpio_set_value - Set GPIO pin value
+ * @gpio: GPIO pin number (hardware BCM pin)
+ * @value: Value to set (0=off, 1=on)
+ */
 void rust_helper_gpio_set_value(unsigned int gpio, int value);
+
+/**
+ * rust_helper_gpio_get_value - Get GPIO pin value
+ * @gpio: GPIO pin number (hardware BCM pin)
+ * Return: Current value (0=off, 1=on)
+ */
 int rust_helper_gpio_get_value(unsigned int gpio);
 
 /*
@@ -67,16 +92,28 @@ int rust_helper_gpio_get_value(unsigned int gpio)
 }
 EXPORT_SYMBOL_GPL(rust_helper_gpio_get_value);
 
-/* ------------------------------------------------------------------ */
-/* Misc character device for userspace control (/dev/gpio-rust)       */
-/* ------------------------------------------------------------------ */
+/* Section 2: Misc char device — file_ops delegate to Rust Layer 4    */
 
-/* GPIO pin number (global sysfs number, set by Rust module at init) */
-static unsigned int gpio_rust_ctl_pin;
+/*
+ * Rust-exported handler functions (defined in gpio_driver.rs, Layer 4).
+ * All GPIO logic is owned by Rust; C only handles buffer copies.
+ */
+extern int rust_gpio_handle_get_value(void);
+extern void rust_gpio_handle_set_value(int value);
+extern unsigned int rust_gpio_handle_get_hw_pin(void);
 
-/* Hardware BCM pin number (for reporting to userspace) */
-static unsigned int gpio_rust_hw_pin;
+/* Serialize file_operations to prevent concurrent GPIO access */
 
+static DEFINE_MUTEX(gpio_rust_lock);
+
+/**
+ * gpio_rust_dev_read - Handle read() on /dev/gpio-rust
+ * @filp: File pointer (unused)
+ * @buf: User buffer to copy GPIO state into
+ * @count: Size of user buffer
+ * @ppos: File position pointer (used to allow single read)
+ * Return: Number of bytes read on success, negative errno on failure
+ */
 static ssize_t gpio_rust_dev_read(struct file *filp, char __user *buf,
 				  size_t count, loff_t *ppos)
 {
@@ -86,7 +123,10 @@ static ssize_t gpio_rust_dev_read(struct file *filp, char __user *buf,
 	if (*ppos > 0)
 		return 0;
 
-	value = gpio_get_value(gpio_rust_ctl_pin);
+	mutex_lock(&gpio_rust_lock);
+	value = rust_gpio_handle_get_value();
+	mutex_unlock(&gpio_rust_lock);
+
 	len = snprintf(kbuf, sizeof(kbuf), "%d\n", value);
 
 	if ((size_t)len > count)
@@ -99,6 +139,14 @@ static ssize_t gpio_rust_dev_read(struct file *filp, char __user *buf,
 	return len;
 }
 
+/**
+ * gpio_rust_dev_write - Handle write() on /dev/gpio-rust
+ * @filp: File pointer (unused)
+ * @buf: User buffer containing new GPIO state ("0" or "1")
+ * @count: Size of user buffer
+ * @ppos: File position pointer (unused)
+ * Return: Number of bytes written on success, negative errno on failure
+ */
 static ssize_t gpio_rust_dev_write(struct file *filp, const char __user *buf,
 				   size_t count, loff_t *ppos)
 {
@@ -119,10 +167,20 @@ static ssize_t gpio_rust_dev_write(struct file *filp, const char __user *buf,
 	if (value != 0 && value != 1)
 		return -EINVAL;
 
-	gpio_set_value(gpio_rust_ctl_pin, value);
+	mutex_lock(&gpio_rust_lock);
+	rust_gpio_handle_set_value(value);
+	mutex_unlock(&gpio_rust_lock);
+
 	return count;
 }
 
+/**
+ * gpio_rust_dev_ioctl - Handle ioctl() on /dev/gpio-rust
+ * @filp: File pointer (unused)
+ * @cmd: IOCTL command code
+ * @arg: IOCTL argument (pointer to user data)
+ * Return: 0 on success, negative errno on failure
+ */
 static long gpio_rust_dev_ioctl(struct file *filp, unsigned int cmd,
 				unsigned long arg)
 {
@@ -134,22 +192,28 @@ static long gpio_rust_dev_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 		if (value != GPIO_RUST_OFF && value != GPIO_RUST_ON)
 			return -EINVAL;
-		gpio_set_value(gpio_rust_ctl_pin, value);
+		mutex_lock(&gpio_rust_lock);
+		rust_gpio_handle_set_value(value);
+		mutex_unlock(&gpio_rust_lock);
 		break;
 
 	case GPIO_RUST_IOC_GET_STATE:
-		value = gpio_get_value(gpio_rust_ctl_pin);
+		mutex_lock(&gpio_rust_lock);
+		value = rust_gpio_handle_get_value();
+		mutex_unlock(&gpio_rust_lock);
 		if (copy_to_user((__u32 __user *)arg, &value, sizeof(value)))
 			return -EFAULT;
 		break;
 
 	case GPIO_RUST_IOC_TOGGLE:
-		value = !gpio_get_value(gpio_rust_ctl_pin);
-		gpio_set_value(gpio_rust_ctl_pin, value);
+		mutex_lock(&gpio_rust_lock);
+		value = !rust_gpio_handle_get_value();
+		rust_gpio_handle_set_value(value);
+		mutex_unlock(&gpio_rust_lock);
 		break;
 
 	case GPIO_RUST_IOC_GET_GPIO:
-		value = gpio_rust_hw_pin;
+		value = rust_gpio_handle_get_hw_pin();
 		if (copy_to_user((__u32 __user *)arg, &value, sizeof(value)))
 			return -EFAULT;
 		break;
@@ -176,17 +240,14 @@ static struct miscdevice gpio_rust_miscdev = {
 
 /*
  * rust_helper_misc_register - Register the /dev/gpio-rust misc device
- * @pin:    Global GPIO number (e.g. 534)
- * @hw_pin: Hardware BCM GPIO number (e.g. 22)
  *
- * Called from the Rust module's init() function.
+ * Called from the Rust module's init(). GPIO pin state is managed entirely
+ * by Rust via atomic globals; this function only registers the miscdevice.
  * Return: 0 on success, negative errno on failure
  */
-int rust_helper_misc_register(unsigned int pin, unsigned int hw_pin);
-int rust_helper_misc_register(unsigned int pin, unsigned int hw_pin)
+int rust_helper_misc_register(void);
+int rust_helper_misc_register(void)
 {
-	gpio_rust_ctl_pin = pin;
-	gpio_rust_hw_pin  = hw_pin;
 	return misc_register(&gpio_rust_miscdev);
 }
 EXPORT_SYMBOL_GPL(rust_helper_misc_register);
@@ -194,7 +255,8 @@ EXPORT_SYMBOL_GPL(rust_helper_misc_register);
 /*
  * rust_helper_misc_deregister - Deregister the /dev/gpio-rust misc device
  *
- * Called from the Rust module's drop() function.
+ * Called from the Rust module's drop(). Blocks until all in-flight
+ * file_operations complete before returning.
  */
 void rust_helper_misc_deregister(void);
 void rust_helper_misc_deregister(void)

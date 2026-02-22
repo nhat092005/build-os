@@ -1,14 +1,4 @@
 # Makefile for GPIO Rust Driver - Rust Kernel Module Build
-#
-# Note: The kernel build system (kbuild) handles .rs files natively.
-# Using obj-m += gpio_rust.o with a gpio_rust.rs source file works
-# the same way as C modules — kbuild compiles .rs → .o via rustc.
-#
-# Prerequisites:
-#   - CONFIG_RUST=y in kernel config
-#   - rustc, bindgen, and LLVM installed
-#   - #include <linux/gpio.h> added to kernel/rust/bindings/bindings_helper.h
-#     (OR use extern "C" FFI declarations directly in the .rs file)
 
 # Target platform configuration
 ARCH			?= arm64
@@ -34,8 +24,6 @@ BUILD_DIR := $(CURDIR)/../build/module
 all: modules
 
 # Build kernel module
-# kbuild 6.12 requires sources in the M= directory, so we build
-# in-tree and copy the .ko to BUILD_DIR for install scripts.
 modules:
 	mkdir -p $(BUILD_DIR)
 	$(MAKE) -C $(KERNEL_DIR) \

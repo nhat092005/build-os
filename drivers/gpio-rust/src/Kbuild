@@ -1,7 +1,3 @@
 # kbuild definitions for GPIO Rust Driver
-# This file is read by the kernel build system (kbuild) and must reside
-# in the M= (output) directory. The src= variable tells kbuild where
-# to find the actual source files (.c, .rs, .h).
-
 obj-m := gpio_rust.o
 gpio_rust-y := gpio_helpers.o gpio_driver.o
