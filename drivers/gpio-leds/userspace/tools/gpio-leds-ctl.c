@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * gpio-leds-ctl - LED Control Utility
+ * GPIO LED Control Utility
  *
  * This utility allows users to control GPIO LEDs from the command line.
  * It supports turning LEDs on/off, setting brightness, configuring triggers,
