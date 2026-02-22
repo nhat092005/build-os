@@ -220,6 +220,7 @@ static void usage(const char *progname)
 {
 	int i;
 
+	printf("GPIO LED Driver Control Tool\n\n");
 	printf("Usage: %s [options] <command> [args...]\n\n", progname);
 	printf("Options:\n");
 	printf("  -d, --device NAME    LED device name (default: gpio-led)\n");

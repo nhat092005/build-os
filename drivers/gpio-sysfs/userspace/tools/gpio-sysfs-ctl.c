@@ -246,6 +246,7 @@ static void print_error(const char *fmt, ...)
 
 static void usage(const char *progname)
 {
+	printf("GPIO Sysfs Control Tool\n\n");
 	printf("Usage: %s <command> [args...]\n\n", progname);
 	printf("Commands:\n");
 	printf("  list\n");
