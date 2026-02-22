@@ -4,12 +4,6 @@
  *
  * This header defines the user-visible API for the GPIO Rust driver.
  * It can be included by both kernel and userspace code.
- *
- * The driver exposes a misc character device at /dev/gpio-rust.
- * Userspace can:
- *   - read()  → get current GPIO value ("0\n" or "1\n")
- *   - write() → set GPIO value ("0" or "1")
- *   - ioctl() → structured control (set/get/toggle)
  */
 
 #ifndef _UAPI_GPIO_RUST_H

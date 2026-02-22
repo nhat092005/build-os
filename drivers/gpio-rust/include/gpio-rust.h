@@ -2,8 +2,8 @@
 /*
  * GPIO Rust Driver - Shared Constants
  *
- * Constants shared between the Rust kernel module, C helpers,
- * and the UAPI header. This header can be included by kernel code.
+ * This header defines constants and macros shared across the GPIO Rust driver,
+ * including both C and Rust code. It can be included by both kernel and userspace code.
  */
 
 #ifndef _GPIO_RUST_H
