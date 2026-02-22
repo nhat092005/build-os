@@ -16,12 +16,13 @@
 #include <linux/mutex.h>
 #include <linux/types.h>
 #include <linux/gpio/consumer.h>
+#include <linux/workqueue.h>
 
 #include "uapi/gpio-chardev.h"
 
 /* Driver information */
 #define GPIO_CHARDEV_DRIVER_NAME "gpio-chardev"
-#define GPIO_CHARDEV_DRIVER_VERSION "1.0.0"
+#define GPIO_CHARDEV_DRIVER_VERSION "1.1.0"
 #define GPIO_CHARDEV_CLASS_NAME "gpio-chardev-class"
 
 /* Default configuration */
@@ -30,14 +31,21 @@
 
 /**
  * struct gpio_chardev_dev - GPIO character device structure
- * @dev_num: Device number (major:minor)
- * @cdev: Character device structure
- * @class: Device class pointer
- * @device: Device pointer
- * @lock: Mutex for device access synchronization
- * @gpio_pin: GPIO pin number used by this device
- * @state: Current GPIO state (0=off, 1=on)
- * @gpio_requested: Flag indicating if GPIO has been requested
+ * @dev_num:         Device number (major:minor)
+ * @cdev:            Character device structure
+ * @class:           Device class pointer
+ * @device:          Device pointer
+ * @lock:            Mutex serialising GPIO access (state reads/writes)
+ * @gpio_pin:        GPIO pin number used by this device
+ * @gpio_desc:       GPIO descriptor
+ * @gpio_requested:  Flag indicating if GPIO has been requested
+ * @blink_work:      Delayed work for LED blink (replaces kthread)
+ * @blink_count:     Number of cycles completed so far
+ * @blink_total:     Total cycles to blink (0 = infinite)
+ * @blink_delay_on:  On-phase duration in milliseconds
+ * @blink_delay_off: Off-phase duration in milliseconds
+ * @blink_phase:     Current blink phase (0 = off -> on, 1 = on -> off)
+ * @blink_active:    true while blink is scheduled
  */
 struct gpio_chardev_dev
 {
@@ -48,8 +56,16 @@ struct gpio_chardev_dev
     struct mutex lock;
     int gpio_pin;
     struct gpio_desc *gpio_desc;
-    int state;
     bool gpio_requested;
+
+    /* Blink via delayed workqueue (no kthread) */
+    struct delayed_work blink_work;
+    __u32 blink_count;
+    __u32 blink_total;
+    __u32 blink_delay_on;
+    __u32 blink_delay_off;
+    int blink_phase;
+    bool blink_active;
 };
 
 #endif /* __KERNEL__ */

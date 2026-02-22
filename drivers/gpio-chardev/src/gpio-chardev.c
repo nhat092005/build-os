@@ -5,7 +5,7 @@
  * This driver provides a character device interface to control a GPIO pin as an LED.
  * It supports basic operations like turning the LED on/off, toggling its state,
  * and blinking it with configurable parameters. The driver uses a platform device
- * to manage GPIO access and a kernel thread for blinking functionality.
+ * to manage GPIO access and a delayed workqueue for blinking functionality.
  */
 
 #include <linux/module.h>
@@ -21,7 +21,7 @@
 #include <linux/mutex.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
-#include <linux/kthread.h>
+#include <linux/workqueue.h>
 
 #include "../include/gpio-chardev.h"
 
@@ -32,54 +32,63 @@ MODULE_PARM_DESC(gpio_pin, "GPIO pin number");
 
 /* Device structure */
 static struct gpio_chardev_dev *gpio_chardev_device;
-static struct task_struct *blink_thread;
-static atomic_t blink_stop;
 
 /* Platform device for GPIO access */
 static struct platform_device *gpio_pdev;
 static struct gpiod_lookup_table *gpio_lookup_table;
 
 /**
- * gpio_chardev_blink_fn - Kernel thread function for blinking LED
- * @data: Pointer to gpio_chardev_blink structure
- * Return: 0 on thread exit
+ * gpio_chardev_blink_work_fn - Delayed work function for blinking LED
+ * @work: Pointer to delayed_work embedded in gpio_chardev_dev
+ *
+ * Alternates LED state between on and off phases, rescheduling itself
+ * until the requested blink count is reached.  Runs on the system
+ * workqueue — no kthread lifecycle management needed.
  */
-static int gpio_chardev_blink_fn(void *data)
+static void gpio_chardev_blink_work_fn(struct work_struct *work)
 {
-	struct gpio_chardev_blink *blink = data;
-	struct gpio_chardev_dev *dev = gpio_chardev_device;
-	__u32 count = 0;
-
-	while (!kthread_should_stop() && !atomic_read(&blink_stop))
-	{
-		if (blink->count != 0 && count >= blink->count)
-			break;
-
-		mutex_lock(&dev->lock);
-		gpiod_set_value(dev->gpio_desc, 1);
-		dev->state = 1;
-		mutex_unlock(&dev->lock);
-		msleep(blink->delay_on);
-
-		if (kthread_should_stop() || atomic_read(&blink_stop))
-			break;
-
-		mutex_lock(&dev->lock);
-		gpiod_set_value(dev->gpio_desc, 0);
-		dev->state = 0;
-		mutex_unlock(&dev->lock);
-		msleep(blink->delay_off);
-
-		count++;
-	}
+	struct gpio_chardev_dev *dev = container_of(work,
+												struct gpio_chardev_dev,
+												blink_work.work);
+	__u32 delay_ms;
 
 	mutex_lock(&dev->lock);
-	gpiod_set_value(dev->gpio_desc, 0);
-	dev->state = 0;
+
+	if (!dev->blink_active)
+	{
+		mutex_unlock(&dev->lock);
+		return;
+	}
+
+	if (dev->blink_phase == 0)
+	{
+		/* Off -> On transition */
+		gpiod_set_value(dev->gpio_desc, 1);
+		dev->blink_phase = 1;
+		delay_ms = dev->blink_delay_on;
+	}
+	else
+	{
+		/* On -> Off transition */
+		gpiod_set_value(dev->gpio_desc, 0);
+		dev->blink_phase = 0;
+		dev->blink_count++;
+
+		/* Check if we reached the target count */
+		if (dev->blink_total != 0 &&
+			dev->blink_count >= dev->blink_total)
+		{
+			dev->blink_active = false;
+			mutex_unlock(&dev->lock);
+			return;
+		}
+		delay_ms = dev->blink_delay_off;
+	}
+
 	mutex_unlock(&dev->lock);
 
-	kfree(blink);
-	return 0;
+	schedule_delayed_work(&dev->blink_work,
+						  msecs_to_jiffies(delay_ms));
 }
 
 /**
@@ -121,16 +130,20 @@ static ssize_t gpio_chardev_read(struct file *filp, char __user *buf,
 {
 	struct gpio_chardev_dev *dev = filp->private_data;
 	char kbuf[GPIO_CHARDEV_MAX_BUFFER];
-	int len;
+	int len, value;
 
 	if (*f_pos > 0)
 		return 0;
 
-	mutex_lock(&dev->lock);
-	dev->state = gpiod_get_value(dev->gpio_desc);
-	len = scnprintf(kbuf, sizeof(kbuf), "%d\n", dev->state);
+	if (mutex_lock_interruptible(&dev->lock))
+		return -ERESTARTSYS;
+	value = gpiod_get_value(dev->gpio_desc);
 	mutex_unlock(&dev->lock);
 
+	if (value < 0)
+		return value;
+
+	len = scnprintf(kbuf, sizeof(kbuf), "%d\n", value);
 	if (len > count)
 		len = count;
 
@@ -173,9 +186,9 @@ static ssize_t gpio_chardev_write(struct file *filp, const char __user *buf,
 	if (value != 0 && value != 1)
 		return -EINVAL;
 
-	mutex_lock(&dev->lock);
+	if (mutex_lock_interruptible(&dev->lock))
+		return -ERESTARTSYS;
 	gpiod_set_value(dev->gpio_desc, value);
-	dev->state = value;
 	mutex_unlock(&dev->lock);
 
 	return count;
@@ -192,7 +205,7 @@ static long gpio_chardev_ioctl(struct file *filp, unsigned int cmd,
 							   unsigned long arg)
 {
 	struct gpio_chardev_dev *dev = filp->private_data;
-	struct gpio_chardev_blink *blink;
+	struct gpio_chardev_blink blink_params;
 	__u32 value;
 	int ret = 0;
 
@@ -203,25 +216,34 @@ static long gpio_chardev_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 		if (value != GPIO_CHARDEV_OFF && value != GPIO_CHARDEV_ON)
 			return -EINVAL;
-		mutex_lock(&dev->lock);
+		if (mutex_lock_interruptible(&dev->lock))
+			return -ERESTARTSYS;
 		gpiod_set_value(dev->gpio_desc, value);
-		dev->state = value;
 		mutex_unlock(&dev->lock);
 		break;
 
 	case GPIO_CHARDEV_IOC_GET_STATE:
-		mutex_lock(&dev->lock);
-		value = gpiod_get_value(dev->gpio_desc);
-		dev->state = value;
+		if (mutex_lock_interruptible(&dev->lock))
+			return -ERESTARTSYS;
+		ret = gpiod_get_value(dev->gpio_desc);
 		mutex_unlock(&dev->lock);
+		if (ret < 0)
+			return ret;
+		value = ret;
 		if (copy_to_user((__u32 __user *)arg, &value, sizeof(value)))
 			return -EFAULT;
 		break;
 
 	case GPIO_CHARDEV_IOC_TOGGLE:
-		mutex_lock(&dev->lock);
-		dev->state = !gpiod_get_value(dev->gpio_desc);
-		gpiod_set_value(dev->gpio_desc, dev->state);
+		if (mutex_lock_interruptible(&dev->lock))
+			return -ERESTARTSYS;
+		ret = gpiod_get_value(dev->gpio_desc);
+		if (ret < 0)
+		{
+			mutex_unlock(&dev->lock);
+			return ret;
+		}
+		gpiod_set_value(dev->gpio_desc, !ret);
 		mutex_unlock(&dev->lock);
 		break;
 
@@ -232,41 +254,33 @@ static long gpio_chardev_ioctl(struct file *filp, unsigned int cmd,
 		break;
 
 	case GPIO_CHARDEV_IOC_BLINK:
-		/* Stop existing blink thread if any */
-		if (blink_thread)
-		{
-			atomic_set(&blink_stop, 1);
-			kthread_stop(blink_thread);
-			blink_thread = NULL;
-		}
-
-		blink = kmalloc(sizeof(*blink), GFP_KERNEL);
-		if (!blink)
-			return -ENOMEM;
-
-		if (copy_from_user(blink, (struct gpio_chardev_blink __user *)arg,
-						   sizeof(*blink)))
-		{
-			kfree(blink);
+		if (copy_from_user(&blink_params,
+						   (struct gpio_chardev_blink __user *)arg,
+						   sizeof(blink_params)))
 			return -EFAULT;
-		}
 
-		if (blink->delay_on == 0 || blink->delay_off == 0)
-		{
-			kfree(blink);
+		if (blink_params.delay_on == 0 || blink_params.delay_off == 0)
 			return -EINVAL;
-		}
 
-		atomic_set(&blink_stop, 0);
-		blink_thread = kthread_run(gpio_chardev_blink_fn, blink,
-								   "gpio_chardev_blink");
-		if (IS_ERR(blink_thread))
-		{
-			ret = PTR_ERR(blink_thread);
-			blink_thread = NULL;
-			kfree(blink);
-			return ret;
-		}
+		/*
+		 * Cancel any ongoing blink work, then configure and
+		 * start a new one.  cancel_delayed_work_sync() is
+		 * safe to call even if no work is pending.
+		 */
+		cancel_delayed_work_sync(&dev->blink_work);
+
+		if (mutex_lock_interruptible(&dev->lock))
+			return -ERESTARTSYS;
+		dev->blink_delay_on = blink_params.delay_on;
+		dev->blink_delay_off = blink_params.delay_off;
+		dev->blink_total = blink_params.count;
+		dev->blink_count = 0;
+		dev->blink_phase = 0;
+		dev->blink_active = true;
+		mutex_unlock(&dev->lock);
+
+		/* Kick the first iteration immediately */
+		schedule_delayed_work(&dev->blink_work, 0);
 		break;
 
 	default:
@@ -304,7 +318,8 @@ static int __init gpio_chardev_init(void)
 	gpio_chardev_device = dev;
 	dev->gpio_pin = gpio_pin;
 	mutex_init(&dev->lock);
-	atomic_set(&blink_stop, 0);
+	INIT_DELAYED_WORK(&dev->blink_work, gpio_chardev_blink_work_fn);
+	dev->blink_active = false;
 
 	/* Create GPIO lookup table dynamically */
 	gpio_lookup_table = kzalloc(sizeof(*gpio_lookup_table) +
@@ -429,17 +444,17 @@ static void __exit gpio_chardev_exit(void)
 	if (!dev)
 		return;
 
-	/* Stop blink thread if running */
-	if (blink_thread)
-	{
-		atomic_set(&blink_stop, 1);
-		kthread_stop(blink_thread);
-		blink_thread = NULL;
-	}
+	/* Stop any pending blink work — set flag under lock to avoid data race */
+	mutex_lock(&dev->lock);
+	dev->blink_active = false;
+	mutex_unlock(&dev->lock);
+	cancel_delayed_work_sync(&dev->blink_work);
 
-	/* Turn off LED */
+	/* Turn off LED under lock to serialise with in-flight file_ops */
+	mutex_lock(&dev->lock);
 	if (dev->gpio_requested && dev->gpio_desc)
 		gpiod_set_value(dev->gpio_desc, 0);
+	mutex_unlock(&dev->lock);
 
 	/* Destroy device and class */
 	if (dev->device && !IS_ERR(dev->device))
@@ -470,7 +485,8 @@ static void __exit gpio_chardev_exit(void)
 		gpio_lookup_table = NULL;
 	}
 
-	/* Free device structure */
+	/* Free device structure (mutex_destroy before kfree) */
+	mutex_destroy(&dev->lock);
 	kfree(dev);
 	gpio_chardev_device = NULL;
 

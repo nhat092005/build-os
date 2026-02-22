@@ -18,22 +18,22 @@
 #define GPIO_RUST_IOC_MAGIC 'R'
 
 /* Set GPIO state (0=off, 1=on) */
-#define GPIO_RUST_IOC_SET_STATE  _IOW(GPIO_RUST_IOC_MAGIC, 1, __u32)
+#define GPIO_RUST_IOC_SET_STATE _IOW(GPIO_RUST_IOC_MAGIC, 1, __u32)
 
 /* Get GPIO state */
-#define GPIO_RUST_IOC_GET_STATE  _IOR(GPIO_RUST_IOC_MAGIC, 2, __u32)
+#define GPIO_RUST_IOC_GET_STATE _IOR(GPIO_RUST_IOC_MAGIC, 2, __u32)
 
 /* Toggle GPIO state */
-#define GPIO_RUST_IOC_TOGGLE     _IO(GPIO_RUST_IOC_MAGIC, 3)
+#define GPIO_RUST_IOC_TOGGLE _IO(GPIO_RUST_IOC_MAGIC, 3)
 
 /* Get GPIO pin number (hardware BCM pin) */
-#define GPIO_RUST_IOC_GET_GPIO   _IOR(GPIO_RUST_IOC_MAGIC, 4, __u32)
+#define GPIO_RUST_IOC_GET_GPIO _IOR(GPIO_RUST_IOC_MAGIC, 4, __u32)
 
 /*
  * GPIO states
  */
 #define GPIO_RUST_OFF 0
-#define GPIO_RUST_ON  1
+#define GPIO_RUST_ON 1
 
 /*
  * Device path

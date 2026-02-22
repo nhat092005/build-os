@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * libio - GPIO Control Library Implementation
+ * GPIO Control Library Implementation
  * 
  * This library provides functions to control Linux GPIO pins 
  * via the sysfs interface. It allows userspace applications 
@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <ctype.h>
+#include <limits.h>
 #include <sys/stat.h>
 #include <dirent.h>
 
@@ -67,6 +68,10 @@ int gpio_open(gpio_sysfs_device_t *gpio, const char *gpio_pin)
 	snprintf(gpio->active_low_path, sizeof(gpio->active_low_path),
 			 "%s/gpio%s/active_low", GPIO_SYSFS_PATH, gpio_pin);
 
+	/* Verify the sysfs directory exists (i.e., the GPIO has been exported) */
+	if (access(gpio->base_path, F_OK) != 0)
+		return -ENODEV;
+
 	return 0;
 }
 
@@ -89,12 +94,21 @@ int gpio_get_value(gpio_sysfs_device_t *gpio, int *value)
 {
 	char buf[4];
 	int ret;
+	char *endptr;
+	long parsed;
 
 	ret = read_sysfs(gpio->value_path, buf, sizeof(buf));
 	if (ret < 0)
 		return ret;
 
-	*value = atoi(buf);
+	errno = 0;
+	parsed = strtol(buf, &endptr, 10);
+	if (errno != 0 || endptr == buf) {
+		/* Kernel should always write "0" or "1" — treat as I/O error */
+		return -EIO;
+	}
+
+	*value = (int)parsed;
 	return 0;
 }
 
@@ -117,12 +131,20 @@ int gpio_get_active_low(gpio_sysfs_device_t *gpio, int *active_low)
 {
 	char buf[4];
 	int ret;
+	char *endptr;
+	long parsed;
 
 	ret = read_sysfs(gpio->active_low_path, buf, sizeof(buf));
 	if (ret < 0)
 		return ret;
 
-	*active_low = atoi(buf);
+	errno = 0;
+	parsed = strtol(buf, &endptr, 10);
+	if (errno != 0 || endptr == buf) {
+		return -EIO;
+	}
+
+	*active_low = (int)parsed;
 	return 0;
 }
 
@@ -159,7 +181,8 @@ int gpio_list(gpio_list_callback_t callback, void *user_data)
 {
 	DIR *dir;
 	struct dirent *entry;
-	char path[GPIO_BUFFER_SIZE];
+	/* sizeof(GPIO_SYSFS_PATH) includes NUL; +1 for '/' separator, +NAME_MAX for d_name */
+	char path[sizeof(GPIO_SYSFS_PATH) + NAME_MAX + 1];
 	struct stat st;
 	int ret = 0;
 	int count = 0;
@@ -199,6 +222,25 @@ const char *gpio_strerror(int errnum)
 	return strerror(-errnum);
 }
 
+int parse_int(const char *str, int *result)
+{
+	char *endptr;
+	long val;
+
+	if (!str || !result)
+		return -EINVAL;
+
+	errno = 0;
+	val = strtol(str, &endptr, 10);
+	if (errno != 0 || endptr == str || *endptr != '\0')
+		return -EINVAL;
+	if (val < INT_MIN || val > INT_MAX)
+		return -ERANGE;
+
+	*result = (int)val;
+	return 0;
+}
+
 /**
  * write_sysfs - Helper to write a string value to a sysfs file
  * @path: Path to sysfs file
@@ -209,17 +251,27 @@ static int write_sysfs(const char *path, const char *value)
 {
 	int fd;
 	ssize_t ret;
+	size_t len = strlen(value);
 
 	fd = open(path, O_WRONLY);
 	if (fd < 0)
 		return -errno;
 
-	ret = write(fd, value, strlen(value));
+	do {
+		ret = write(fd, value, len);
+	} while (ret < 0 && errno == EINTR);
+
 	if (ret < 0)
 	{
 		int err = -errno;
 		close(fd);
 		return err;
+	}
+
+	if ((size_t)ret != len)
+	{
+		close(fd);
+		return -EIO; /* partial write */
 	}
 
 	close(fd);
@@ -242,7 +294,10 @@ static int read_sysfs(const char *path, char *buffer, size_t size)
 	if (fd < 0)
 		return -errno;
 
-	ret = read(fd, buffer, size - 1);
+	do {
+		ret = read(fd, buffer, size - 1);
+	} while (ret < 0 && errno == EINTR);
+
 	if (ret < 0)
 	{
 		int err = -errno;

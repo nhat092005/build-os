@@ -36,12 +36,11 @@ static int gpio_led_set_brightness(struct led_classdev *cdev,
 											 cdev);
 	int value;
 
-	/* Convert brightness to GPIO value */
+	/* Convert brightness to logical GPIO value.
+	 * Active-low polarity is handled automatically by the gpiod
+	 * descriptor layer based on DTS flags — no software inversion.
+	 */
 	value = brightness ? 1 : 0;
-
-	/* Handle active low logic */
-	if (led->active_low)
-		value = !value;
 
 	/* Use appropriate GPIO function based on sleep capability */
 	if (led->can_sleep)
@@ -65,15 +64,18 @@ static enum led_brightness gpio_led_get_brightness(struct led_classdev *cdev)
 											 cdev);
 	int value;
 
-	/* Read GPIO value */
+	/* gpiod_get_value() returns logical value adjusted for polarity */
 	if (led->can_sleep)
 		value = gpiod_get_value_cansleep(led->gpiod);
 	else
 		value = gpiod_get_value(led->gpiod);
 
-	/* Handle active low logic */
-	if (led->active_low)
-		value = !value;
+	if (value < 0)
+	{
+		dev_err_ratelimited(cdev->dev->parent,
+							"Failed to read GPIO: %d\n", value);
+		return LED_OFF;
+	}
 
 	return value ? LED_FULL : LED_OFF;
 }
@@ -105,7 +107,7 @@ static int gpio_led_parse_dt(struct device *dev, struct gpio_led_data *led)
 	{
 		/* Fallback to device name if no label specified */
 		label = dev_name(dev);
-		dev_info(dev, "No label specified, using device name: %s\n", label);
+		dev_dbg(dev, "No label specified, using device name: %s\n", label);
 	}
 	led->cdev.name = devm_kstrdup(dev, label, GFP_KERNEL);
 	if (!led->cdev.name)
@@ -118,7 +120,9 @@ static int gpio_led_parse_dt(struct device *dev, struct gpio_led_data *led)
 	{
 		led->cdev.default_trigger =
 			devm_kstrdup(dev, trigger, GFP_KERNEL);
-		dev_info(dev, "Default trigger: %s\n", trigger);
+		if (!led->cdev.default_trigger)
+			return -ENOMEM;
+		dev_dbg(dev, "Default trigger: %s\n", trigger);
 	}
 
 	/* Get default state */
@@ -128,17 +132,17 @@ static int gpio_led_parse_dt(struct device *dev, struct gpio_led_data *led)
 		if (strcmp(state, "on") == 0)
 		{
 			led->default_state = LED_FULL;
-			dev_info(dev, "Default state: ON\n");
+			dev_dbg(dev, "Default state: ON\n");
 		}
 		else if (strcmp(state, "keep") == 0)
 		{
 			led->default_state = LED_FULL; /* Keep current state */
-			dev_info(dev, "Default state: KEEP\n");
+			dev_dbg(dev, "Default state: KEEP\n");
 		}
 		else
 		{
 			led->default_state = LED_OFF;
-			dev_info(dev, "Default state: OFF\n");
+			dev_dbg(dev, "Default state: OFF\n");
 		}
 	}
 	else
@@ -146,10 +150,11 @@ static int gpio_led_parse_dt(struct device *dev, struct gpio_led_data *led)
 		led->default_state = LED_OFF;
 	}
 
-	/* Check if LED is active low */
-	led->active_low = device_property_read_bool(dev, "active-low");
-	if (led->active_low)
-		dev_info(dev, "LED is active-low\n");
+	/*
+	 * Active-low polarity is handled by the gpiod descriptor layer
+	 * via the DTS gpios flags cell (GPIO_ACTIVE_LOW).  No software
+	 * active-low property is needed.
+	 */
 
 	/* Check if state should be retained during suspend */
 	led->retain_state_suspended =
@@ -157,38 +162,50 @@ static int gpio_led_parse_dt(struct device *dev, struct gpio_led_data *led)
 	if (led->retain_state_suspended)
 	{
 		led->cdev.flags |= LED_CORE_SUSPENDRESUME;
-		dev_info(dev, "LED state will be retained during suspend\n");
+		dev_dbg(dev, "LED state will be retained during suspend\n");
 	}
 
 	return 0;
 }
 
 /**
- * gpio_pin_show() - Expose hardware GPIO pin number via sysfs
+ * gpio_state_show() - Expose current GPIO logical state via sysfs
  * @dev: LED class device
  * @attr: Device attribute (unused)
  * @buf: Output buffer
  *
- * Writes the hardware GPIO pin number so userspace tools can report
- * which physical GPIO pin this LED is wired to.
- * Read from: /sys/class/leds/<name>/gpio_pin
+ * Shows the current logical output state of the GPIO (0=off, 1=on).
+ * The gpiod API already adjusts for active-low polarity, so the returned
+ * value is always the logical state.
+ * Read from: /sys/class/leds/<name>/gpio_state
  *
  * Return: Number of bytes written to buf
  */
-static ssize_t gpio_pin_show(struct device *dev,
-							 struct device_attribute *attr, char *buf)
+static ssize_t gpio_state_show(struct device *dev,
+							   struct device_attribute *attr, char *buf)
 {
 	struct led_classdev *cdev = dev_get_drvdata(dev);
 	struct gpio_led_data *led = container_of(cdev,
 											 struct gpio_led_data,
 											 cdev);
-	return sysfs_emit(buf, "%d\n", desc_to_gpio(led->gpiod));
+	int val;
+
+	if (led->can_sleep)
+		val = gpiod_get_value_cansleep(led->gpiod);
+	else
+		val = gpiod_get_value(led->gpiod);
+
+	if (val < 0)
+		return val;
+
+	/* gpiod_get_value() returns logical value — no manual inversion */
+	return sysfs_emit(buf, "%d\n", val);
 }
-static DEVICE_ATTR_RO(gpio_pin);
+static DEVICE_ATTR_RO(gpio_state);
 
 /* Extra sysfs attributes appended to the LED class device */
 static struct attribute *gpio_led_attrs[] = {
-	&dev_attr_gpio_pin.attr,
+	&dev_attr_gpio_state.attr,
 	NULL,
 };
 
@@ -236,11 +253,14 @@ static int gpio_led_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	/* Get GPIO descriptor from Device Tree
-	 * Using NULL for con_id to match "gpios" property directly
-	 * (not "gpios-gpios" which would be searched with "gpios" con_id)
+	/*
+	 * Get GPIO descriptor from Device Tree.
+	 * Use GPIOD_OUT_HIGH or GPIOD_OUT_LOW to set direction + initial
+	 * logical value at acquisition time.  The gpiod layer handles
+	 * active-low inversion based on the DTS flags cell automatically.
 	 */
-	led->gpiod = devm_gpiod_get(dev, NULL, GPIOD_ASIS);
+	led->gpiod = devm_gpiod_get(dev, NULL,
+								led->default_state == LED_FULL ? GPIOD_OUT_HIGH : GPIOD_OUT_LOW);
 	if (IS_ERR(led->gpiod))
 	{
 		ret = PTR_ERR(led->gpiod);
@@ -250,30 +270,6 @@ static int gpio_led_probe(struct platform_device *pdev)
 
 	/* Check if GPIO operations may sleep */
 	led->can_sleep = gpiod_cansleep(led->gpiod);
-	if (led->can_sleep)
-		dev_info(dev, "GPIO operations may sleep\n");
-
-	/* Set GPIO direction and initial state */
-	if (led->default_state == LED_FULL)
-	{
-		ret = gpiod_direction_output(led->gpiod,
-									 led->active_low ? 0 : 1);
-		if (ret)
-		{
-			dev_err(dev, "Failed to set GPIO direction: %d\n", ret);
-			return ret;
-		}
-	}
-	else
-	{
-		ret = gpiod_direction_output(led->gpiod,
-									 led->active_low ? 1 : 0);
-		if (ret)
-		{
-			dev_err(dev, "Failed to set GPIO direction: %d\n", ret);
-			return ret;
-		}
-	}
 
 	/* Setup LED class device */
 	led->cdev.brightness_set_blocking = gpio_led_set_brightness;
@@ -295,11 +291,8 @@ static int gpio_led_probe(struct platform_device *pdev)
 	/* Store LED data in platform device */
 	platform_set_drvdata(pdev, led);
 
-	dev_info(dev, "LED '%s' registered successfully\n", led->cdev.name);
-	dev_info(dev, "  GPIO: %d (%s)\n",
-			 desc_to_gpio(led->gpiod),
-			 led->active_low ? "active-low" : "active-high");
-	dev_info(dev, "  Interface: /sys/class/leds/%s/\n", led->cdev.name);
+	dev_info(dev, "LED '%s' registered\n", led->cdev.name);
+	dev_dbg(dev, "  Interface: /sys/class/leds/%s/\n", led->cdev.name);
 
 	return 0;
 }
@@ -354,11 +347,13 @@ static int __maybe_unused gpio_led_suspend(struct device *dev)
 static int __maybe_unused gpio_led_resume(struct device *dev)
 {
 	struct gpio_led_data *led = dev_get_drvdata(dev);
+	int ret;
 
 	if (!led->retain_state_suspended)
 	{
-		dev_dbg(dev, "Restoring LED state after resume\n");
-		gpio_led_set_brightness(&led->cdev, led->cdev.brightness);
+		ret = gpio_led_set_brightness(&led->cdev, led->cdev.brightness);
+		if (ret)
+			dev_warn(dev, "Failed to restore LED state after resume: %d\n", ret);
 	}
 
 	return 0;

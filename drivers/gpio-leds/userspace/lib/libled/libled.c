@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <limits.h>
 #include <dirent.h>
 
 /* Internal helper functions */
@@ -146,7 +147,7 @@ int led_open(led_device_t *led, const char *name)
 		return -ENAMETOOLONG;
 
 	ret = snprintf(led->gpio_pin_path, LED_BUFFER_SIZE,
-			   "%s/gpio_pin", led->path);
+				   "%s/gpio_pin", led->path);
 	if (ret < 0 || ret >= LED_BUFFER_SIZE)
 		return -ENAMETOOLONG;
 
@@ -173,6 +174,8 @@ int led_set_brightness(led_device_t *led, int value)
 int led_get_brightness(led_device_t *led)
 {
 	char buffer[16];
+	char *endptr;
+	long val;
 	int ret;
 
 	if (!led)
@@ -182,12 +185,19 @@ int led_get_brightness(led_device_t *led)
 	if (ret < 0)
 		return ret;
 
-	return atoi(buffer);
+	errno = 0;
+	val = strtol(buffer, &endptr, 10);
+	if (errno != 0 || endptr == buffer || val < 0 || val > INT_MAX)
+		return -EIO;
+
+	return (int)val;
 }
 
 int led_get_max_brightness(led_device_t *led)
 {
 	char buffer[16];
+	char *endptr;
+	long val;
 	int ret;
 
 	if (!led)
@@ -197,7 +207,12 @@ int led_get_max_brightness(led_device_t *led)
 	if (ret < 0)
 		return ret;
 
-	return atoi(buffer);
+	errno = 0;
+	val = strtol(buffer, &endptr, 10);
+	if (errno != 0 || endptr == buffer || val < 0 || val > INT_MAX)
+		return -EIO;
+
+	return (int)val;
 }
 
 int led_on(led_device_t *led)
@@ -420,6 +435,8 @@ int led_get_info(led_device_t *led, led_info_t *info)
 int led_get_gpio_pin(led_device_t *led)
 {
 	char buffer[16];
+	char *endptr;
+	long val;
 	int ret;
 
 	if (!led)
@@ -429,7 +446,12 @@ int led_get_gpio_pin(led_device_t *led)
 	if (ret < 0)
 		return ret;
 
-	return atoi(buffer);
+	errno = 0;
+	val = strtol(buffer, &endptr, 10);
+	if (errno != 0 || endptr == buffer || val < 0 || val > INT_MAX)
+		return -EIO;
+
+	return (int)val;
 }
 
 int led_exists(const char *name)

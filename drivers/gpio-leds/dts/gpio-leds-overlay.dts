@@ -40,7 +40,15 @@
 				compatible = "custom,gpio-led";
 				pinctrl-names = "default";
 				pinctrl-0 = <&led_pins>;
-				gpios = <&gpio 27 0>;               /* GPIO27, Active High (changed from 17) */
+				gpios = <&gpio 27 0>;               /* GPIO27, Active High (flag=0) */
+				/*
+				 * Polarity is encoded in the third cell (flags):
+				 *   0 = GPIO_ACTIVE_HIGH (default)
+				 *   1 = GPIO_ACTIVE_LOW
+				 * The driver uses gpiod_* API which handles
+				 * inversion automatically — no "active-low"
+				 * DT property needed.
+				 */
 				label = "gpio-led";                 /* Name in /sys/class/leds/ */
 				linux,default-trigger = "none";     /* No automatic trigger */
 				default-state = "off";              /* Start with LED off */
@@ -60,9 +68,6 @@
 		
 		/* Change trigger: dtoverlay=leds-gpio-custom,trigger=heartbeat */
 		trigger = <&gpio_led>, "linux,default-trigger";
-		
-		/* Set active-low: dtoverlay=leds-gpio-custom,active_low */
-		active_low = <&gpio_led>, "active-low?";
 		
 		/* Retain state on suspend: dtoverlay=leds-gpio-custom,retain_state */
 		retain_state = <&gpio_led>, "retain-state-suspended?";

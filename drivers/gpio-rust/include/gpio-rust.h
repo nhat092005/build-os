@@ -11,7 +11,28 @@
 
 #ifdef __KERNEL__
 #include "uapi/gpio-rust.h"
-#endif
+
+/* Prototypes for C helper functions called from Rust via FFI.
+ * Declaring them here satisfies -Wmissing-prototypes in gpio_helpers.c
+ * and makes the ABI explicit for the Rust bindgen step.
+ */
+
+/* GPIO API wrappers */
+int rust_helper_gpio_request(unsigned int gpio, const char *label);
+void rust_helper_gpio_free(unsigned int gpio);
+int rust_helper_gpio_direction_output(unsigned int gpio, int value);
+void rust_helper_gpio_set_value(unsigned int gpio, int value);
+int rust_helper_gpio_get_value(unsigned int gpio);
+
+/* Module-parameter accessors */
+unsigned int rust_helper_get_gpio_pin(void);
+unsigned int rust_helper_get_hw_pin_param(void);
+
+/* Misc char device lifecycle */
+int rust_helper_misc_register(void);
+void rust_helper_misc_deregister(void);
+
+#endif /* __KERNEL__ */
 
 /* Driver information */
 #define GPIO_RUST_DRIVER_NAME "gpio-rust"
@@ -22,8 +43,5 @@
 
 /* GPIO base number for sysfs (gpiochip0 on Raspberry Pi, kernel 6.x) */
 #define GPIO_RUST_BASE 512
-
-/* Device Tree compatible string */
-#define GPIO_RUST_DT_COMPAT "custom,gpio-rust"
 
 #endif /* _GPIO_RUST_H */

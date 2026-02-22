@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <errno.h>
+#include <limits.h>
 
 /* Include UAPI header - same header used by kernel */
 #include "../../include/uapi/gpio-chardev.h"
@@ -28,6 +29,28 @@ static int set_led_state(int fd, unsigned int state);
 static int get_led_state(int fd);
 static int toggle_led(int fd);
 static int get_gpio_pin(int fd);
+
+/**
+ * parse_uint - Safely parse an unsigned integer string
+ * @str: NUL-terminated string to parse
+ * @result: Pointer to unsigned int to store parsed value
+ * Return: 0 on success, -1 on failure
+ */
+static int parse_uint(const char *str, unsigned int *result)
+{
+	char *endptr;
+	unsigned long val;
+
+	errno = 0;
+	val = strtoul(str, &endptr, 10);
+	if (errno != 0 || endptr == str || *endptr != '\0')
+		return -1;
+	if (val > UINT_MAX)
+		return -1;
+
+	*result = (unsigned int)val;
+	return 0;
+}
 static int blink_led(int fd, unsigned int count, unsigned int on_ms,
 					 unsigned int off_ms);
 
@@ -112,15 +135,23 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			unsigned int count = atoi(argv[2]);
-			unsigned int on_ms = atoi(argv[3]);
-			unsigned int off_ms = atoi(argv[4]);
+			unsigned int count, on_ms, off_ms;
 
-			ret = blink_led(fd, count, on_ms, off_ms);
-			if (ret == 0)
+			if (parse_uint(argv[2], &count) != 0 ||
+			    parse_uint(argv[3], &on_ms) != 0 ||
+			    parse_uint(argv[4], &off_ms) != 0)
 			{
-				printf("Blinking GPIO %d: %d times (%ums on, %ums off)\n",
-					   gpio_pin, count, on_ms, off_ms);
+				fprintf(stderr, "Error: invalid blink arguments\n");
+				ret = 1;
+			}
+			else
+			{
+				ret = blink_led(fd, count, on_ms, off_ms);
+				if (ret == 0)
+				{
+					printf("Blinking GPIO %d: %d times (%ums on, %ums off)\n",
+						   gpio_pin, count, on_ms, off_ms);
+				}
 			}
 		}
 	}
