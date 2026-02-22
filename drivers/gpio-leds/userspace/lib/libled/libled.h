@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * libled - LED Control Library
+ * LED Control Library
  *
  * This library provides functions to control Linux LED class devices via sysfs.
  * It allows userspace applications to easily manipulate LED brightness, triggers,
