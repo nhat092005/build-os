@@ -37,10 +37,6 @@ LINUX_MAKE_FLAGS += HOSTRUSTC=$(SYSTEM_RUSTC)
 # The kernel's rust/Makefile uses HOSTCC directly in -Clinker=$(HOSTCC),
 # which causes rustc to see -O2 as its own flag, splitting it into
 # -O (valid) + '2' (Unrecognized option).
-#
-# Fix: override HOSTCC to just the compiler binary and move the extra
-# flags to HOSTCFLAGS/HOSTLDFLAGS, which the kernel Makefile picks up
-# via KBUILD_HOSTCFLAGS/KBUILD_HOSTLDFLAGS.
 LINUX_MAKE_FLAGS += HOSTCC="$(HOSTCC_NOCCACHE)"
 LINUX_MAKE_FLAGS += HOSTCFLAGS="$(subst -I/,-isystem /,$(subst -I /,-isystem /,$(HOST_CFLAGS)))"
 LINUX_MAKE_FLAGS += HOSTLDFLAGS="$(HOST_LDFLAGS)"
