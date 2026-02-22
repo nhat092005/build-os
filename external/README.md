@@ -31,6 +31,8 @@ external/
     ├── Config.in                             # Package menu entries
     ├── gpio-chardev-driver/                  # Buildroot package for gpio-chardev
     ├── gpio-leds-driver/                     # Buildroot package for gpio-leds
+    ├── gpio-rust-driver/                     # Buildroot package for gpio-rust
+    ├── gpio-sysfs-driver/                    # Buildroot package for gpio-sysfs
     └── libopenssl/                           # Host libopenssl build fix
 ```
 
@@ -87,6 +89,20 @@ Buildroot package that builds the `gpio-leds` kernel module, userspace tools, an
 - UAPI header to staging.
 - Device tree overlay (`gpio-leds.dtbo`) to `rpi-firmware/overlays/`.
 - Documentation and module config files to `/usr/share/doc/gpio-leds-driver/`.
+
+### gpio-rust-driver
+
+Buildroot package that builds the `gpio-rust` kernel module and its userspace tools, using the Rust out-of-tree capabilities and standard Makefiles. Installs:
+
+- Kernel module via `modules_install`.
+- `gpio-rust-ctl` client tool to `/usr/bin/`.
+
+### gpio-sysfs-driver
+
+Buildroot package that builds the `gpio-sysfs` library and userspace command-line application (since no kernel module is required). Installs:
+
+- `gpio-sysfs-ctl` to `/usr/bin/`.
+- Static link library component properties if required.
 
 ### libopenssl
 
