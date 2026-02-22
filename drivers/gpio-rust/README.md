@@ -1,8 +1,8 @@
 # gpio-rust
 
-A safe Rust kernel module that demonstrates a "Mixed C-Rust" architecture applied to GPIO control. It uses a C wrapper (`gpio_helpers.c`) to bridge static inline kernel functions and expose a `miscdevice` (`/dev/gpio-rust`), while the Rust logic (`gpio_driver.rs`) safely manages the lifecycle and initialization via RAII.
+A safe Rust kernel module that demonstrates a **4-layer mixed C-Rust architecture** for GPIO control on Linux kernel 6.12. Rust controls all GPIO logic (initialization, runtime operations, and cleanup) while C provides the thinnest possible glue layer for `miscdevice` registration and `static inline` GPIO function wrappers.
 
-This driver provides a full userspace `ioctl`, `read`, and `write` interface to control a GPIO LED, showing how Rust's strict memory and lifecycle safety (via the `Drop` trait) can interact with C-based system resources effortlessly.
+This driver exposes a full userspace `ioctl`, `read`, and `write` interface via `/dev/gpio-rust` to control a GPIO LED, showcasing how Rust's strict memory and lifecycle safety (via the `Drop` trait and atomic state) can govern all hardware operations even when kernel 6.12 does not yet provide native Rust abstractions for `miscdevice` or `file_operations`.
 
 ## Directory Structure
 
@@ -18,10 +18,10 @@ gpio-rust/
 │   └── uapi/
 │       └── gpio-rust.h         # Userspace-kernel shared ioctl/flag definitions
 ├── src/
-│   ├── Makefile                # Kbuild for compiling Rust into .ko
-│   ├── gpio_driver.rs          # Main Rust driver logic & wrapper initialization
-│   ├── gpio_helpers.c          # C inline function wrappers & miscdevice handler
-│   └── gpio_rust.rs            # (Deprecated tech demo code)
+│   ├── Kbuild                  # Kbuild: links gpio_helpers.o + gpio_driver.o
+│   ├── Makefile                # Build configuration for kernel module
+│   ├── gpio_driver.rs          # Rust: RAII lifecycle + Layer 4 runtime handlers
+│   └── gpio_helpers.c          # C: GPIO API wrappers + thin miscdevice shim
 └── userspace/
     ├── Makefile
     ├── lib/
@@ -33,9 +33,12 @@ gpio-rust/
 ## Kernel Module
 
 ### Architecture
-- **Layer 1 (C FFI)**: `gpio_helpers.c` provides non-inline functions (`rust_helper_gpio_*`) and handles the userspace interaction by creating `/dev/gpio-rust`.
-- **Layer 2 (Safe Abstraction)**: `GpioPin` encapsulates the underlying raw integer ID and safely manages `request` and `free` operations.
-- **Layer 3 (Module Logic)**: Manages initialization. On unload, Rust's `Drop` trait destroys the device node and frees the pin automatically without explicit manual cleanup code.
+- **Layer 1 (C FFI)**: `extern "C"` declarations in Rust for the C helper wrappers.
+- **Layer 2 (Safe Abstraction)**: `GpioPin` — RAII wrapper that safely manages `gpio_request` / `gpio_free` lifecycle with automatic cleanup via `Drop`.
+- **Layer 3 (Module Logic)**: `GpioRustModule` — orchestrates init/drop, publishes atomic state for runtime handlers.
+- **Layer 4 (Rust Handlers)**: `#[no_mangle] pub extern "C"` functions exported from Rust and called by C `file_operations`. All GPIO reads/writes/toggles route through Rust, giving it full control over runtime operations.
+
+> **Note**: Kernel 6.12 does not provide Rust abstractions for `miscdevice` or `FileOperations`. The C layer (`gpio_helpers.c`) handles misc device registration and userspace buffer copies as the thinnest possible shim, while ALL GPIO logic is delegated to Rust via bidirectional FFI.
 
 ### Sysfs and Hardware Config
 - Controls a single hardcoded LED pin (Default BCM hardware pin 22, offset 512 = sysfs GPIO pin 534).
