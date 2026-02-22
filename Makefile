@@ -10,11 +10,14 @@ DRIVERS_DIR				:= $(shell pwd)/drivers
 SCRIPTS_DIR				:= $(shell pwd)/scripts
 KERNEL_SRC_DIR			:= $(shell pwd)/kernel
 KERNEL_DIR				:= $(BUILDROOT_DIR)/output/build/linux-custom
-TOOLCHAIN_DIR 			:= $(BUILDROOT_DIR)/output/host
+TOOLCHAIN_DIR 			:= $(shell pwd)/toolchains/aarch64-buildroot-linux-gnu_sdk-buildroot
 
 # Output directories
 IMAGE_DIR				:= $(BUILDROOT_DIR)/output/images
 OUTPUT_DIR				:= $(shell pwd)/output
+
+# Buildroot make command with external and kernel source overrides
+BUILDROOT_MAKE = $(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) LINUX_OVERRIDE_SRCDIR=$(KERNEL_SRC_DIR)
 
 # Buildroot toolchain
 CROSS_COMPILE 			:= $(TOOLCHAIN_DIR)/bin/aarch64-linux-
@@ -27,7 +30,7 @@ DTC						:= dtc
 DTC_FLAGS				:= -@ -I dts -O dtb -Wno-unit_address_vs_reg
 
 # Auto-detect available drivers
-AVAILABLE_DRIVERS		:= $(notdir $(wildcard $(DRIVERS_DIR)/*))
+AVAILABLE_DRIVERS		:= $(filter-out Makefile README.md, $(notdir $(wildcard $(DRIVERS_DIR)/*)))
 
 # Default configuration
 DTBO	  				?= all
@@ -56,11 +59,11 @@ buildroot:
 		echo "Run: git submodule update --init buildroot"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) LINUX_OVERRIDE_SRCDIR=$(KERNEL_SRC_DIR)
+	$(BUILDROOT_MAKE)
 
 # Clean Buildroot
 buildroot-clean:
-	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) LINUX_OVERRIDE_SRCDIR=$(KERNEL_SRC_DIR) clean
+	$(BUILDROOT_MAKE) clean
 
 # Configure Buildroot
 menuconfig:
@@ -68,7 +71,7 @@ menuconfig:
 		echo "Error: Buildroot not found"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) LINUX_OVERRIDE_SRCDIR=$(KERNEL_SRC_DIR) menuconfig
+	$(BUILDROOT_MAKE) menuconfig
 
 # Load defconfig (supports both built-in and BR2_EXTERNAL defconfigs)
 %_defconfig:
@@ -77,7 +80,7 @@ menuconfig:
 		echo "Run: git submodule update --init buildroot"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) LINUX_OVERRIDE_SRCDIR=$(KERNEL_SRC_DIR) $@
+	$(BUILDROOT_MAKE) $@
 
 .PHONY: buildroot-distclean
 # Distclean Buildroot
@@ -134,7 +137,7 @@ driver:
 ifeq ($(DRIVER),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
-			$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) $$drv-driver || exit 1; \
+			$(BUILDROOT_MAKE) $$drv-driver || exit 1; \
 		fi; \
 	done
 else
@@ -142,7 +145,7 @@ else
 		echo "Error: Driver '$(DRIVER)' not found in $(DRIVERS_DIR)"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) $$DRIVER-driver
+	$(BUILDROOT_MAKE) $(DRIVER)-driver
 endif
 
 # Rebuild kernel driver using Buildroot
@@ -150,7 +153,7 @@ driver-rebuild:
 ifeq ($(DRIVER),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
-			$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) $$drv-driver-rebuild || exit 1; \
+			$(BUILDROOT_MAKE) $$drv-driver-rebuild || exit 1; \
 		fi; \
 	done
 else
@@ -158,7 +161,7 @@ else
 		echo "Error: Driver '$(DRIVER)' not found in $(DRIVERS_DIR)"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) $$DRIVER-driver-rebuild
+	$(BUILDROOT_MAKE) $(DRIVER)-driver-rebuild
 endif
 
 # Reconfigure kernel driver using Buildroot
@@ -166,7 +169,7 @@ driver-reconfigure:
 ifeq ($(DRIVER),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
-			$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) $$drv-driver-reconfigure || exit 1; \
+			$(BUILDROOT_MAKE) $$drv-driver-reconfigure || exit 1; \
 		fi; \
 	done
 else
@@ -174,7 +177,7 @@ else
 		echo "Error: Driver '$(DRIVER)' not found in $(DRIVERS_DIR)"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) $$DRIVER-driver-reconfigure
+	$(BUILDROOT_MAKE) $(DRIVER)-driver-reconfigure
 endif
 
 # Clean kernel driver using Buildroot
@@ -182,7 +185,7 @@ driver-clean:
 ifeq ($(DRIVER),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
-			$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) $$drv-driver-clean || exit 1; \
+			$(BUILDROOT_MAKE) $$drv-driver-clean || exit 1; \
 		fi; \
 	done
 else
@@ -190,7 +193,7 @@ else
 		echo "Error: Driver '$(DRIVER)' not found in $(DRIVERS_DIR)"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) $$DRIVER-driver-clean
+	$(BUILDROOT_MAKE) $(DRIVER)-driver-clean
 endif
 
 # Clean driver build artifacts using Buildroot
@@ -198,7 +201,7 @@ driver-dirclean:
 ifeq ($(DRIVER),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
-			$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) $$drv-driver-dirclean || exit 1; \
+			$(BUILDROOT_MAKE) $$drv-driver-dirclean || exit 1; \
 		fi; \
 	done
 else
@@ -206,7 +209,7 @@ else
 		echo "Error: Driver '$(DRIVER)' not found in $(DRIVERS_DIR)"; \
 		exit 1; \
 	fi
-	$(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) $$DRIVER-driver-dirclean
+	$(BUILDROOT_MAKE) $(DRIVER)-driver-dirclean
 endif
 
 .PHONY: image identify-sdcard deploy-sdcard
@@ -253,7 +256,7 @@ install-tools:
 remove-tools:
 	$(MAKE) -C $(SCRIPTS_DIR) remove-tools
 
-.PHONY: install-toolchains remove-toolchains
+.PHONY: install-toolchains remove-toolchains setup-rust
 # Install toolchains
 install-toolchains:
 	$(MAKE) -C $(SCRIPTS_DIR) install-toolchains
@@ -261,6 +264,10 @@ install-toolchains:
 # Remove toolchains
 remove-toolchains:
 	$(MAKE) -C $(SCRIPTS_DIR) remove-toolchains
+
+# Setup Rust toolchain for kernel Rust module support
+setup-rust:
+	$(MAKE) -C $(SCRIPTS_DIR) setup-rust-kernel
 
 .PHONY: clean
 # Clean all build artifacts
@@ -318,6 +325,7 @@ help:
 	@echo "  install-modules          Install kernel modules to staged rootfs"
 	@echo "  install-tools            Install userspace tools to staged rootfs"
 	@echo "  install-toolchain        Install toolchain to project"
+	@echo "  setup-rust               Setup Rust toolchain for kernel Rust modules"
 	@echo "Remove:"
 	@echo "  remove-overlays          Remove device tree overlays from staged rootfs (requires root)"
 	@echo "  remove-modules           Remove kernel modules from staged rootfs"

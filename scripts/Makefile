@@ -119,6 +119,15 @@ remove-toolchains:
 	fi
 	bash $(SCRIPTS_DIR)/remove-toolchains.sh
 
+.PHONY: setup-rust-kernel
+# Setup Rust for kernel development
+setup-rust-kernel:
+	@if [ ! -f "$(SCRIPTS_DIR)/setup-rust-kernel.sh" ]; then \
+		echo "Error: setup-rust-kernel.sh not found"; \
+		exit 1; \
+	fi
+	bash $(SCRIPTS_DIR)/setup-rust-kernel.sh
+
 .PHONY: help
 # Help
 help:
@@ -132,6 +141,7 @@ help:
 	@echo "  install-modules         Install kernel modules to rootfs"
 	@echo "  install-tools           Install userspace tools to rootfs"
 	@echo "  install-toolchains      Install toolchains to project"
+	@echo "  setup-rust-kernel       Setup Rust for kernel development"
 	@echo "Remove:"
 	@echo "  remove-overlays         Remove Device Tree overlays from system(requires root)"
 	@echo "  remove-modules          Remove kernel modules from rootfs"
