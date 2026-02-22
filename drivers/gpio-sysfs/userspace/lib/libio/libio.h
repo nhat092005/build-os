@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * libio - GPIO Control Library
+ * GPIO Control Library
  *
  * This library provides functions to control Linux GPIO pins
  * via the sysfs interface. It allows userspace applications
@@ -14,7 +14,7 @@
 #include <stddef.h>
 
 /* Constants */
-#define GPIO_BUFFER_SIZE 64
+#define GPIO_BUFFER_SIZE 128
 #define GPIO_SYSFS_PATH "/sys/class/gpio"
 #define GPIO_EXPORT_PATH GPIO_SYSFS_PATH "/export"
 #define GPIO_UNEXPORT_PATH GPIO_SYSFS_PATH "/unexport"
@@ -169,5 +169,13 @@ int gpio_list(gpio_list_callback_t callback, void *user_data);
  * Return: Pointer to error string (do not free)
  */
 const char *gpio_strerror(int errnum);
+
+/**
+ * parse_int - Safely parse an integer string
+ * @str: NUL-terminated string to parse
+ * @result: Pointer to int to store parsed value
+ * Return: 0 on success, negative errno on failure (-EINVAL, -ERANGE)
+ */
+int parse_int(const char *str, int *result);
 
 #endif /* _LIBIO_H */
