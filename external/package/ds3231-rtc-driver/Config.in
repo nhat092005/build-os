@@ -1,0 +1,6 @@
+config BR2_PACKAGE_DS3231_RTC_DRIVER
+	bool "ds3231-rtc-driver"
+	depends on BR2_LINUX_KERNEL
+	help
+	  I2C client driver for the Maxim DS3231 RTC/TCXO.
+	  Registers as a standard Linux RTC device (/dev/rtcN).
