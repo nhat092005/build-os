@@ -69,3 +69,4 @@ drivers/*/build/
 # Others
 toolchains/
 .gitignore
+CLAUDE.md
