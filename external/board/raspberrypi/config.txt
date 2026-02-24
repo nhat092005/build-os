@@ -4,8 +4,12 @@ kernel=Image
 enable_uart=1
 dtoverlay=miniuart-bt
 
+# I2C — required for DS3231 RTC on GPIO2/GPIO3 (I2C1)
+dtparam=i2c_arm=on
+
 # Custom device tree overlays
 dtoverlay=gpio-leds
 dtoverlay=gpio-rust
+dtoverlay=ds3231-rtc
 
 arm_boost=1
