@@ -31,7 +31,7 @@ modules:
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
 		modules
-	cp -f $(CURDIR)/gpio-leds.ko $(BUILD_DIR)/gpio-leds.ko
+	cp -f $(CURDIR)/gpio_leds.ko $(BUILD_DIR)/gpio_leds.ko
 
 # Clean build artifacts
 clean: modules-clean

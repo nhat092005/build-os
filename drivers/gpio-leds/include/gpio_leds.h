@@ -15,7 +15,7 @@
 #include <linux/gpio/consumer.h>
 #include <linux/platform_device.h>
 
-#include "uapi/gpio-leds.h"
+#include "uapi/gpio_leds.h"
 
 /* Driver information */
 #define GPIO_LEDS_DRIVER_NAME "gpio-leds"

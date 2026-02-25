@@ -16,7 +16,7 @@
 #include <linux/property.h>
 #include <linux/slab.h>
 
-#include "../include/gpio-leds.h"
+#include "../include/gpio_leds.h"
 
 /**
  * gpio_led_set_brightness() - Set LED brightness

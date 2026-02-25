@@ -70,7 +70,7 @@ The driver implements suspend and resume callbacks via `SIMPLE_DEV_PM_OPS`:
 
 ## Device Tree Overlay
 
-The file `dts/gpio-leds-overlay.dts` provides an overlay for Raspberry Pi (BCM2711/BCM2835). It configures GPIO27 as an output pin and creates a `custom,gpio-led` device with label `"gpio-led"`.
+The file `dts/gpio-leds-overlay.dts` provides an overlay for Raspberry Pi (BCM2711/BCM2835). It configures GPIO20 as an output pin and creates a `custom,gpio-led` device with label `"gpio-led"`.
 
 ### Runtime Override Parameters
 
