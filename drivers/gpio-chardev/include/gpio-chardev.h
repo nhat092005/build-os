@@ -36,9 +36,8 @@
  * @class:           Device class pointer
  * @device:          Device pointer
  * @lock:            Mutex serialising GPIO access (state reads/writes)
- * @gpio_pin:        GPIO pin number used by this device
- * @gpio_desc:       GPIO descriptor
- * @gpio_requested:  Flag indicating if GPIO has been requested
+ * @gpio_pin:        GPIO pin number (populated from DT via desc_to_gpio())
+ * @gpio_desc:       GPIO descriptor (managed by devres)
  * @blink_work:      Delayed work for LED blink (replaces kthread)
  * @blink_count:     Number of cycles completed so far
  * @blink_total:     Total cycles to blink (0 = infinite)
@@ -47,25 +46,23 @@
  * @blink_phase:     Current blink phase (0 = off -> on, 1 = on -> off)
  * @blink_active:    true while blink is scheduled
  */
-struct gpio_chardev_dev
-{
-    dev_t dev_num;
-    struct cdev cdev;
-    struct class *class;
-    struct device *device;
-    struct mutex lock;
-    int gpio_pin;
-    struct gpio_desc *gpio_desc;
-    bool gpio_requested;
+struct gpio_chardev_dev {
+	dev_t dev_num;
+	struct cdev cdev;
+	struct class *class;
+	struct device *device;
+	struct mutex lock;		/* serialises GPIO access across all file_ops */
+	int gpio_pin;
+	struct gpio_desc *gpio_desc;
 
-    /* Blink via delayed workqueue (no kthread) */
-    struct delayed_work blink_work;
-    __u32 blink_count;
-    __u32 blink_total;
-    __u32 blink_delay_on;
-    __u32 blink_delay_off;
-    int blink_phase;
-    bool blink_active;
+	/* Blink via delayed workqueue (no kthread) */
+	struct delayed_work blink_work;
+	__u32 blink_count;
+	__u32 blink_total;
+	__u32 blink_delay_on;
+	__u32 blink_delay_off;
+	int blink_phase;
+	bool blink_active;
 };
 
 #endif /* __KERNEL__ */

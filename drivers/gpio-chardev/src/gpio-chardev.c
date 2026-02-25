@@ -1,11 +1,11 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * GPIO LED Character Device Driver
  *
- * This driver provides a character device interface to control a GPIO pin as an LED.
- * It supports basic operations like turning the LED on/off, toggling its state,
- * and blinking it with configurable parameters. The driver uses a platform device
- * to manage GPIO access and a delayed workqueue for blinking functionality.
+ * Provides a character device interface to control a GPIO pin as an LED.
+ * GPIO configuration is sourced entirely from the Device Tree via the
+ * `gpios` property of the matching DTS node — no board-file lookup table.
+ * Bind by loading the gpio-chardev.dtbo overlay before insmod.
  */
 
 #include <linux/module.h>
@@ -15,7 +15,7 @@
 #include <linux/cdev.h>
 #include <linux/device.h>
 #include <linux/gpio/consumer.h>
-#include <linux/gpio/machine.h>
+#include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/uaccess.h>
 #include <linux/mutex.h>
@@ -24,18 +24,6 @@
 #include <linux/workqueue.h>
 
 #include "../include/gpio-chardev.h"
-
-/* Module parameters */
-static int gpio_pin = GPIO_CHARDEV_DEFAULT_PIN;
-module_param(gpio_pin, int, 0444);
-MODULE_PARM_DESC(gpio_pin, "GPIO pin number");
-
-/* Device structure */
-static struct gpio_chardev_dev *gpio_chardev_device;
-
-/* Platform device for GPIO access */
-static struct platform_device *gpio_pdev;
-static struct gpiod_lookup_table *gpio_lookup_table;
 
 /**
  * gpio_chardev_blink_work_fn - Delayed work function for blinking LED
@@ -298,118 +286,90 @@ static const struct file_operations gpio_chardev_fops = {
 	.read = gpio_chardev_read,
 	.write = gpio_chardev_write,
 	.unlocked_ioctl = gpio_chardev_ioctl,
+	.llseek = noop_llseek,
 };
 
+static const struct of_device_id gpio_chardev_of_match[] = {
+	{.compatible = "gpio-chardev"},
+	{}};
+MODULE_DEVICE_TABLE(of, gpio_chardev_of_match);
+
 /**
- * gpio_chardev_init - Module initialization function
+ * gpio_chardev_probe - Bind driver to a DT node, set up chardev + GPIO
+ * @pdev: platform device provided by the OF core
+ *
+ * Acquires the GPIO described by the `gpios` property of the DT node,
+ * allocates a character device, and makes /dev/gpio-chardev available.
+ *
+ * Returns 0 on success, negative error code on failure.
  */
-static int __init gpio_chardev_init(void)
+static int gpio_chardev_probe(struct platform_device *pdev)
 {
 	struct gpio_chardev_dev *dev;
 	int ret;
 
-	pr_info("%s: Initializing driver v%s\n",
-			GPIO_CHARDEV_DRIVER_NAME, GPIO_CHARDEV_DRIVER_VERSION);
-
-	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
+	dev = devm_kzalloc(&pdev->dev, sizeof(*dev), GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
 
-	gpio_chardev_device = dev;
-	dev->gpio_pin = gpio_pin;
 	mutex_init(&dev->lock);
 	INIT_DELAYED_WORK(&dev->blink_work, gpio_chardev_blink_work_fn);
 	dev->blink_active = false;
 
-	/* Create GPIO lookup table dynamically */
-	gpio_lookup_table = kzalloc(sizeof(*gpio_lookup_table) +
-									2 * sizeof(struct gpiod_lookup),
-								GFP_KERNEL);
-	if (!gpio_lookup_table)
-	{
-		ret = -ENOMEM;
-		goto err_free_dev;
-	}
-
-	gpio_lookup_table->dev_id = "gpio-led-pdev";
-	gpio_lookup_table->table[0].key = "pinctrl-bcm2711";
-	gpio_lookup_table->table[0].chip_hwnum = dev->gpio_pin;
-	gpio_lookup_table->table[0].con_id = "led";
-	gpio_lookup_table->table[0].flags = GPIO_ACTIVE_HIGH;
-
-	/* Register lookup table */
-	gpiod_add_lookup_table(gpio_lookup_table);
-
-	/* Create platform device */
-	gpio_pdev = platform_device_register_simple("gpio-led-pdev", -1, NULL, 0);
-	if (IS_ERR(gpio_pdev))
-	{
-		ret = PTR_ERR(gpio_pdev);
-		pr_err("%s: Failed to register platform device: %d\n",
-			   GPIO_CHARDEV_DRIVER_NAME, ret);
-		gpio_pdev = NULL;
-		goto err_remove_lookup;
-	}
-
-	/* Request GPIO through platform device */
-	dev->gpio_desc = devm_gpiod_get(&gpio_pdev->dev, "led", GPIOD_OUT_LOW);
+	/*
+	 * Acquire the GPIO from the DT `gpios` property (NULL con_id).
+	 * Initial state OUT_LOW keeps the LED off until explicitly enabled.
+	 */
+	dev->gpio_desc = devm_gpiod_get(&pdev->dev, NULL, GPIOD_OUT_LOW);
 	if (IS_ERR(dev->gpio_desc))
-	{
-		ret = PTR_ERR(dev->gpio_desc);
-		pr_err("%s: Failed to get GPIO%d: %d\n",
-			   GPIO_CHARDEV_DRIVER_NAME, dev->gpio_pin, ret);
-		dev->gpio_desc = NULL;
-		goto err_unregister_pdev;
-	}
-	dev->gpio_requested = true;
+		return dev_err_probe(&pdev->dev, PTR_ERR(dev->gpio_desc),
+							 "failed to get GPIO\n");
 
-	pr_info("%s: Successfully configured GPIO%d\n",
-			GPIO_CHARDEV_DRIVER_NAME, dev->gpio_pin);
+	/*
+	 * Populate gpio_pin for the GPIO_CHARDEV_IOC_GET_GPIO ioctl so that
+	 * userspace can discover which hardware pin is in use.
+	 */
+	dev->gpio_pin = desc_to_gpio(dev->gpio_desc);
 
-	/* Allocate character device region */
 	ret = alloc_chrdev_region(&dev->dev_num, 0, 1, GPIO_CHARDEV_DRIVER_NAME);
 	if (ret < 0)
 	{
-		pr_err("%s: Failed to allocate chrdev region: %d\n",
-			   GPIO_CHARDEV_DRIVER_NAME, ret);
-		goto err_unregister_pdev;
+		dev_err(&pdev->dev, "failed to allocate chrdev region: %d\n",
+				ret);
+		goto err_mutex_destroy;
 	}
 
-	/* Initialize and add character device */
 	cdev_init(&dev->cdev, &gpio_chardev_fops);
 	dev->cdev.owner = THIS_MODULE;
 
 	ret = cdev_add(&dev->cdev, dev->dev_num, 1);
 	if (ret < 0)
 	{
-		pr_err("%s: Failed to add cdev: %d\n",
-			   GPIO_CHARDEV_DRIVER_NAME, ret);
+		dev_err(&pdev->dev, "failed to add cdev: %d\n", ret);
 		goto err_unregister_chrdev;
 	}
 
-	/* Create device class */
 	dev->class = class_create(GPIO_CHARDEV_CLASS_NAME);
 	if (IS_ERR(dev->class))
 	{
 		ret = PTR_ERR(dev->class);
-		pr_err("%s: Failed to create class: %d\n",
-			   GPIO_CHARDEV_DRIVER_NAME, ret);
+		dev_err(&pdev->dev, "failed to create class: %d\n", ret);
 		goto err_del_cdev;
 	}
 
-	/* Create device */
-	dev->device = device_create(dev->class, NULL, dev->dev_num,
+	dev->device = device_create(dev->class, &pdev->dev, dev->dev_num,
 								NULL, GPIO_CHARDEV_DRIVER_NAME);
 	if (IS_ERR(dev->device))
 	{
 		ret = PTR_ERR(dev->device);
-		pr_err("%s: Failed to create device: %d\n",
-			   GPIO_CHARDEV_DRIVER_NAME, ret);
+		dev_err(&pdev->dev, "failed to create device: %d\n", ret);
 		goto err_destroy_class;
 	}
 
-	pr_info("%s: Device /dev/%s created (GPIO%d)\n",
-			GPIO_CHARDEV_DRIVER_NAME, GPIO_CHARDEV_DRIVER_NAME, dev->gpio_pin);
+	platform_set_drvdata(pdev, dev);
+
+	dev_info(&pdev->dev, "device /dev/%s created (GPIO%d)\n",
+			 GPIO_CHARDEV_DRIVER_NAME, dev->gpio_pin);
 
 	return 0;
 
@@ -419,82 +379,53 @@ err_del_cdev:
 	cdev_del(&dev->cdev);
 err_unregister_chrdev:
 	unregister_chrdev_region(dev->dev_num, 1);
-err_unregister_pdev:
-	if (gpio_pdev)
-		platform_device_unregister(gpio_pdev);
-err_remove_lookup:
-	if (gpio_lookup_table)
-	{
-		gpiod_remove_lookup_table(gpio_lookup_table);
-		kfree(gpio_lookup_table);
-	}
-err_free_dev:
-	kfree(dev);
-	gpio_chardev_device = NULL;
+err_mutex_destroy:
+	mutex_destroy(&dev->lock);
 	return ret;
 }
 
 /**
- * gpio_chardev_exit - Module exit function
+ * gpio_chardev_remove - Tear down character device and release GPIO
+ * @pdev: platform device being unbound
+ *
+ * Stops any in-flight blink work, turns off the LED, then destroys
+ * the character device.  GPIO is released automatically by devres.
  */
-static void __exit gpio_chardev_exit(void)
+static void gpio_chardev_remove(struct platform_device *pdev)
 {
-	struct gpio_chardev_dev *dev = gpio_chardev_device;
+	struct gpio_chardev_dev *dev = platform_get_drvdata(pdev);
 
-	if (!dev)
-		return;
-
-	/* Stop any pending blink work — set flag under lock to avoid data race */
+	/* Stop blink — set flag under lock to prevent a new reschedule */
 	mutex_lock(&dev->lock);
 	dev->blink_active = false;
 	mutex_unlock(&dev->lock);
 	cancel_delayed_work_sync(&dev->blink_work);
 
-	/* Turn off LED under lock to serialise with in-flight file_ops */
+	/* Turn LED off under lock to serialise with in-flight file_ops */
 	mutex_lock(&dev->lock);
-	if (dev->gpio_requested && dev->gpio_desc)
-		gpiod_set_value(dev->gpio_desc, 0);
+	gpiod_set_value(dev->gpio_desc, 0);
 	mutex_unlock(&dev->lock);
 
-	/* Destroy device and class */
-	if (dev->device && !IS_ERR(dev->device))
-		device_destroy(dev->class, dev->dev_num);
-
-	if (dev->class && !IS_ERR(dev->class))
-		class_destroy(dev->class);
-
-	/* Remove character device */
-	if (dev->dev_num)
-	{
-		cdev_del(&dev->cdev);
-		unregister_chrdev_region(dev->dev_num, 1);
-	}
-
-	/* Unregister platform device */
-	if (gpio_pdev)
-	{
-		platform_device_unregister(gpio_pdev);
-		gpio_pdev = NULL;
-	}
-
-	/* Remove GPIO lookup table */
-	if (gpio_lookup_table)
-	{
-		gpiod_remove_lookup_table(gpio_lookup_table);
-		kfree(gpio_lookup_table);
-		gpio_lookup_table = NULL;
-	}
-
-	/* Free device structure (mutex_destroy before kfree) */
+	device_destroy(dev->class, dev->dev_num);
+	class_destroy(dev->class);
+	cdev_del(&dev->cdev);
+	unregister_chrdev_region(dev->dev_num, 1);
 	mutex_destroy(&dev->lock);
-	kfree(dev);
-	gpio_chardev_device = NULL;
 
-	pr_info("%s: Driver removed\n", GPIO_CHARDEV_DRIVER_NAME);
+	dev_info(&pdev->dev, "driver removed\n");
 }
 
-module_init(gpio_chardev_init);
-module_exit(gpio_chardev_exit);
+static struct platform_driver gpio_chardev_driver = {
+	.probe = gpio_chardev_probe,
+	.remove = gpio_chardev_remove,
+	.driver = {
+		.name = GPIO_CHARDEV_DRIVER_NAME,
+		.owner = THIS_MODULE,
+		.of_match_table = gpio_chardev_of_match,
+	},
+};
+
+module_platform_driver(gpio_chardev_driver);
 
 MODULE_AUTHOR("nhat092005");
 MODULE_DESCRIPTION("GPIO LED Character Device Driver");

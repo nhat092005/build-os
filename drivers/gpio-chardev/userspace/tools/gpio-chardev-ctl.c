@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
  */
 static void print_usage(const char *prog)
 {
-	printf("GPIO Character Device Control Tool\n\n");
+	printf("GPIO Character Device Control Tool\n");
 	printf("Usage: %s <command> [options]\n", prog);
 	printf("  on                                  Turn GPIO on\n");
 	printf("  off                                 Turn GPIO off\n");
