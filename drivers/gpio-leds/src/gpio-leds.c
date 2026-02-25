@@ -250,7 +250,7 @@ static int gpio_led_probe(struct platform_device *pdev)
 	struct gpio_led_data *led;
 	int ret;
 
-	dev_info(dev, "Probing GPIO LED driver v%s\n", DRIVER_VERSION);
+	dev_info(dev, "Probing GPIO LED driver v%s\n", GPIO_LEDS_DRIVER_VERSION);
 
 	/* Allocate memory for LED data */
 	led = devm_kzalloc(dev, sizeof(*led), GFP_KERNEL);
