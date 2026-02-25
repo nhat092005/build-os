@@ -19,9 +19,10 @@
 #include <limits.h>
 
 /* Include UAPI header - same header used by kernel */
-#include "../../include/uapi/gpio-chardev.h"
+#include "../../include/uapi/gpio_chardev.h"
 
 #define DEVICE_PATH "/dev/gpio-chardev"
+#define GPIO_CHARDEV_BASE 512
 
 /* Private Function Prototypes */
 static void print_usage(const char *prog);
@@ -87,7 +88,7 @@ int main(int argc, char *argv[])
 		ret = set_led_state(fd, GPIO_CHARDEV_ON);
 		if (ret == 0)
 		{
-			printf("GPIO %d: ON\n", gpio_pin);
+			printf("GPIO %d: ON\n", gpio_pin - GPIO_CHARDEV_BASE);
 		}
 	}
 	else if (strcmp(cmd, "off") == 0)
@@ -95,7 +96,7 @@ int main(int argc, char *argv[])
 		ret = set_led_state(fd, GPIO_CHARDEV_OFF);
 		if (ret == 0)
 		{
-			printf("GPIO %d: OFF\n", gpio_pin);
+			printf("GPIO %d: OFF\n", gpio_pin - GPIO_CHARDEV_BASE);
 		}
 	}
 	else if (strcmp(cmd, "toggle") == 0)
@@ -103,8 +104,8 @@ int main(int argc, char *argv[])
 		ret = toggle_led(fd);
 		if (ret == 0)
 		{
-			printf("GPIO %d: TOGGLED\n", gpio_pin);
-			printf("GPIO %d: %s\n", gpio_pin, get_led_state(fd) ? "ON" : "OFF");
+			printf("GPIO %d: TOGGLED\n", gpio_pin - GPIO_CHARDEV_BASE);
+			printf("GPIO %d: %s\n", gpio_pin - GPIO_CHARDEV_BASE, get_led_state(fd) ? "ON" : "OFF");
 		}
 	}
 	else if (strcmp(cmd, "get") == 0)
@@ -112,7 +113,7 @@ int main(int argc, char *argv[])
 		ret = get_led_state(fd);
 		if (ret >= 0)
 		{
-			printf("GPIO %d state: %s\n", gpio_pin, ret ? "ON" : "OFF");
+			printf("GPIO %d state: %s\n", gpio_pin - GPIO_CHARDEV_BASE, ret ? "ON" : "OFF");
 			ret = 0;
 		}
 	}
@@ -138,8 +139,8 @@ int main(int argc, char *argv[])
 			unsigned int count, on_ms, off_ms;
 
 			if (parse_uint(argv[2], &count) != 0 ||
-			    parse_uint(argv[3], &on_ms) != 0 ||
-			    parse_uint(argv[4], &off_ms) != 0)
+				parse_uint(argv[3], &on_ms) != 0 ||
+				parse_uint(argv[4], &off_ms) != 0)
 			{
 				fprintf(stderr, "Error: invalid blink arguments\n");
 				ret = 1;
@@ -150,7 +151,7 @@ int main(int argc, char *argv[])
 				if (ret == 0)
 				{
 					printf("Blinking GPIO %d: %d times (%ums on, %ums off)\n",
-						   gpio_pin, count, on_ms, off_ms);
+						   gpio_pin - GPIO_CHARDEV_BASE, count, on_ms, off_ms);
 				}
 			}
 		}

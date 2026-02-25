@@ -18,7 +18,7 @@
 #include <linux/gpio/consumer.h>
 #include <linux/workqueue.h>
 
-#include "uapi/gpio-chardev.h"
+#include "uapi/gpio_chardev.h"
 
 /* Driver information */
 #define GPIO_CHARDEV_DRIVER_NAME "gpio-chardev"

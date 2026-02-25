@@ -23,7 +23,7 @@
 #include <linux/delay.h>
 #include <linux/workqueue.h>
 
-#include "../include/gpio-chardev.h"
+#include "../include/gpio_chardev.h"
 
 /**
  * gpio_chardev_blink_work_fn - Delayed work function for blinking LED

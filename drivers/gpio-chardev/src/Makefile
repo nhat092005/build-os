@@ -31,7 +31,7 @@ modules:
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
 		modules
-	cp -f $(CURDIR)/gpio-chardev.ko $(BUILD_DIR)/gpio-chardev.ko
+	cp -f $(CURDIR)/gpio_chardev.ko $(BUILD_DIR)/gpio_chardev.ko
 
 # Clean
 clean: modules-clean
