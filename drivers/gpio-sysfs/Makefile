@@ -9,6 +9,7 @@ export ARCH CROSS_COMPILE KERNEL_DIR
 # PHONY Targets
 .PHONY: all clean help
 .PHONY: tools tools-clean
+.PHONY: modules modules-clean dtbo dtbo-clean
 
 # Main Targets
 all: tools
@@ -23,6 +24,19 @@ clean: tools-clean
 # Clean Userspace Tool
 tools-clean:
 	$(MAKE) -C userspace tools-clean
+
+# No-op targets for compatibility with top-level drivers/Makefile
+modules:
+	@:
+
+modules-clean:
+	@:
+
+dtbo:
+	@:
+
+dtbo-clean:
+	@:
 
 # Help
 help:
