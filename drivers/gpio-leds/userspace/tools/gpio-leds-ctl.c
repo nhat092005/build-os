@@ -18,28 +18,6 @@
 #include <limits.h>
 #include <errno.h>
 
-/**
- * parse_int - Safely parse a string to int
- * @str: NUL-terminated string
- * @result: Output int
- * Return: 0 on success, -1 on failure
- */
-static int parse_int(const char *str, int *result)
-{
-	char *endptr;
-	long val;
-
-	errno = 0;
-	val = strtol(str, &endptr, 10);
-	if (errno != 0 || endptr == str || *endptr != '\0')
-		return -1;
-	if (val < INT_MIN || val > INT_MAX)
-		return -1;
-
-	*result = (int)val;
-	return 0;
-}
-
 /* Command handler function type */
 typedef int (*cmd_handler_t)(led_device_t *led, int argc, char *argv[]);
 
@@ -159,6 +137,15 @@ static int cmd_pulse(led_device_t *led, int argc, char *argv[]);
  */
 static int cmd_info(led_device_t *led, int argc, char *argv[]);
 
+
+/**
+ * parse_int - Safely parse a string to int
+ * @str: NUL-terminated string
+ * @result: Output int
+ * Return: 0 on success, -1 on failure
+ */
+static int parse_int(const char *str, int *result);
+
 /* Command table */
 static struct command commands[] = {
 	{"on", cmd_on, "", "Turn LED on"},
@@ -244,11 +231,11 @@ static void usage(const char *progname)
 {
 	int i;
 
-	printf("GPIO LED Driver Control Tool\n\n");
-	printf("Usage: %s [options] <command> [args...]\n\n", progname);
+	printf("GPIO LED Driver Control Tool\n");
+	printf("Usage: %s [options] <command> [args...]\n", progname);
 	printf("Options:\n");
-	printf("  -d, --device NAME    LED device name (default: gpio-led)\n");
-	printf("  -h, --help           Show this help message\n\n");
+	printf("  -d, --device NAME    LED device name\n");
+	printf("  -h, --help           Show this help message\n");
 	printf("Commands:\n");
 
 	for (i = 0; commands[i].name != NULL; i++)
@@ -258,14 +245,6 @@ static void usage(const char *progname)
 			   commands[i].args,
 			   commands[i].description);
 	}
-
-	printf("\nExamples:\n");
-	printf("  %s on\n", progname);
-	printf("  %s set 128\n", progname);
-	printf("  %s -d custom:red:status trigger heartbeat\n", progname);
-	printf("  %s blink 10 300\n", progname);
-	printf("  %s timer 200 800\n", progname);
-	printf("  %s pulse 3000 100\n\n", progname);
 }
 
 static void print_error(const char *fmt, ...)
@@ -488,5 +467,21 @@ static int cmd_info(led_device_t *led, int argc __attribute__((unused)),
 	printf("Brightness: %d / %d\n", info.brightness, info.max_brightness);
 	printf("Trigger:    %s\n", info.trigger);
 
+	return 0;
+}
+
+static int parse_int(const char *str, int *result)
+{
+	char *endptr;
+	long val;
+
+	errno = 0;
+	val = strtol(str, &endptr, 10);
+	if (errno != 0 || endptr == str || *endptr != '\0')
+		return -1;
+	if (val < INT_MIN || val > INT_MAX)
+		return -1;
+
+	*result = (int)val;
 	return 0;
 }

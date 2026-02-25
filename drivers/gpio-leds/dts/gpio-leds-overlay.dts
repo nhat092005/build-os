@@ -5,27 +5,20 @@
  * This overlay creates a GPIO-based LED device that uses the standard
  * Linux LED class subsystem. The LED will appear in /sys/class/leds/
  * and can be controlled via sysfs or use LED triggers.
- *
- * GPIO Usage:
- *   - GPIO27 is used by default for this LED driver
- *   - GPIO17 is reserved for gpio-chardev driver
- *   - Avoid conflicts by using different pins for each driver
- *
- * Supported on: Raspberry Pi 4, Pi 3, Pi Zero 2 W
  */
 
 /dts-v1/;
 /plugin/;
 
 / {
-	compatible = "brcm,bcm2711", "brcm,bcm2835";
+	compatible = "brcm,bcm2711", "brcm,bcm2837", "brcm,bcm2835";
 
 	/* Configure GPIO pin for LED */
 	fragment@0 {
 		target = <&gpio>;
 		__overlay__ {
 			led_pins: led_pins {
-				brcm,pins = <27>;           /* GPIO 27 (changed from 17 to avoid conflict) */
+				brcm,pins = <20>;           /* GPIO 20 */
 				brcm,function = <1>;        /* Output */
 				brcm,pull = <0>;            /* No pull up/down */
 			};
@@ -40,15 +33,7 @@
 				compatible = "custom,gpio-led";
 				pinctrl-names = "default";
 				pinctrl-0 = <&led_pins>;
-				gpios = <&gpio 27 0>;               /* GPIO27, Active High (flag=0) */
-				/*
-				 * Polarity is encoded in the third cell (flags):
-				 *   0 = GPIO_ACTIVE_HIGH (default)
-				 *   1 = GPIO_ACTIVE_LOW
-				 * The driver uses gpiod_* API which handles
-				 * inversion automatically — no "active-low"
-				 * DT property needed.
-				 */
+				gpios = <&gpio 20 0>;               /* GPIO20, Active High (flag=0) */
 				label = "gpio-led";                 /* Name in /sys/class/leds/ */
 				linux,default-trigger = "none";     /* No automatic trigger */
 				default-state = "off";              /* Start with LED off */
@@ -59,7 +44,7 @@
 
 	/* Runtime parameters (can be overridden at boot) */
 	__overrides__ {
-		/* Change GPIO pin: dtoverlay=leds-gpio-custom,gpio=27 */
+		/* Change GPIO pin: dtoverlay=leds-gpio-custom,gpio=20 */
 		gpio = <&gpio_led>, "gpios:4",
 		       <&led_pins>, "brcm,pins:0";
 		

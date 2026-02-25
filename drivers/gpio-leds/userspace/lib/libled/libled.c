@@ -19,68 +19,23 @@
 #include <dirent.h>
 
 /* Internal helper functions */
-static int write_sysfs(const char *path, const char *value);
-static int read_sysfs(const char *path, char *buffer, size_t size);
 
 /**
- * write_sysfs - Write a value to a sysfs file
- * @path: Path to the sysfs file
- * @value: Value to write (string)
+ * write_sysfs - Helper to write a string value to a sysfs file
+ * @path: Path to sysfs file
+ * @value: String value to write
  * Return: 0 on success, negative errno on failure
  */
-static int write_sysfs(const char *path, const char *value)
-{
-	int fd, ret;
-	ssize_t len;
-
-	fd = open(path, O_WRONLY);
-	if (fd < 0)
-		return -errno;
-
-	len = strlen(value);
-	ret = write(fd, value, len);
-	if (ret < 0)
-	{
-		ret = -errno;
-		close(fd);
-		return ret;
-	}
-
-	close(fd);
-	return 0;
-}
+static int write_sysfs(const char *path, const char *value);
 
 /**
- * read_sysfs - Read a value from a sysfs file
- * @path: Path to the sysfs file
+ * read_sysfs - Helper to read a string value from a sysfs file
+ * @path: Path to sysfs file
  * @buffer: Buffer to store the read value
  * @size: Size of the buffer
  * Return: 0 on success, negative errno on failure
  */
-static int read_sysfs(const char *path, char *buffer, size_t size)
-{
-	int fd, ret;
-
-	fd = open(path, O_RDONLY);
-	if (fd < 0)
-		return -errno;
-
-	ret = read(fd, buffer, size - 1);
-	if (ret < 0)
-	{
-		ret = -errno;
-		close(fd);
-		return ret;
-	}
-
-	buffer[ret] = '\0';
-	/* Remove trailing newline if present */
-	if (ret > 0 && buffer[ret - 1] == '\n')
-		buffer[ret - 1] = '\0';
-
-	close(fd);
-	return 0;
-}
+static int read_sysfs(const char *path, char *buffer, size_t size);
 
 /* Public API Implementation */
 
@@ -107,9 +62,8 @@ int led_open(led_device_t *led, const char *name)
 
 	memset(led, 0, sizeof(*led));
 
-	/* Safe copy with explicit null termination */
-	strncpy(led->name, name, LED_BUFFER_SIZE - 1);
-	led->name[LED_BUFFER_SIZE - 1] = '\0';
+	/* Safe copy with snprintf — avoids strncpy pitfalls */
+	snprintf(led->name, LED_BUFFER_SIZE, "%s", name);
 
 	/* Build base path with return value check */
 	ret = snprintf(led->path, LED_BUFFER_SIZE, "%s/%s", LED_BASE_PATH, name);
@@ -478,4 +432,51 @@ const char *led_strerror(int errnum)
 
 	/* Use standard strerror for errno values */
 	return strerror(-errnum);
+}
+
+static int write_sysfs(const char *path, const char *value)
+{
+	int fd, ret;
+	ssize_t len;
+
+	fd = open(path, O_WRONLY);
+	if (fd < 0)
+		return -errno;
+
+	len = strlen(value);
+	ret = write(fd, value, len);
+	if (ret < 0)
+	{
+		ret = -errno;
+		close(fd);
+		return ret;
+	}
+
+	close(fd);
+	return 0;
+}
+
+static int read_sysfs(const char *path, char *buffer, size_t size)
+{
+	int fd, ret;
+
+	fd = open(path, O_RDONLY);
+	if (fd < 0)
+		return -errno;
+
+	ret = read(fd, buffer, size - 1);
+	if (ret < 0)
+	{
+		ret = -errno;
+		close(fd);
+		return ret;
+	}
+
+	buffer[ret] = '\0';
+	/* Remove trailing newline if present */
+	if (ret > 0 && buffer[ret - 1] == '\n')
+		buffer[ret - 1] = '\0';
+
+	close(fd);
+	return 0;
 }

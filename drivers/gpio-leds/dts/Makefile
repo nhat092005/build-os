@@ -9,7 +9,7 @@ DTC_FLAGS   ?= -@ -I dts -O dtb -Wno-unit_address_vs_reg
 DTS := gpio-leds-overlay.dts
 
 # Output file
-DTBO := gpio-leds.dtbo
+DTBO_OUT := gpio-leds.dtbo
 
 .PHONY: all dtbo clean dtbo-clean help
 
@@ -17,14 +17,14 @@ DTBO := gpio-leds.dtbo
 all: dtbo
 
 # Build Device Tree overlay
-dtbo: $(BUILD_DIR) $(DTBO)
+dtbo: $(BUILD_DIR) $(DTBO_OUT)
 
 # Create build directory
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 # Compile DTS to DTBO
-$(DTBO): $(DTS)
+$(DTBO_OUT): $(DTS)
 	@echo "Device Tree Overlay: $< -> $@"
 	$(DTC) $(DTC_FLAGS) -o $(BUILD_DIR)/$@ $<
 

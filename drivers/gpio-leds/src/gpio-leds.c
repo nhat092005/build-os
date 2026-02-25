@@ -70,8 +70,7 @@ static enum led_brightness gpio_led_get_brightness(struct led_classdev *cdev)
 	else
 		value = gpiod_get_value(led->gpiod);
 
-	if (value < 0)
-	{
+	if (value < 0) {
 		dev_err_ratelimited(cdev->dev->parent,
 							"Failed to read GPIO: %d\n", value);
 		return LED_OFF;
@@ -103,8 +102,7 @@ static int gpio_led_parse_dt(struct device *dev, struct gpio_led_data *led)
 
 	/* Get LED label (name in sysfs) */
 	ret = device_property_read_string(dev, "label", &label);
-	if (ret)
-	{
+	if (ret) {
 		/* Fallback to device name if no label specified */
 		label = dev_name(dev);
 		dev_dbg(dev, "No label specified, using device name: %s\n", label);
@@ -116,8 +114,7 @@ static int gpio_led_parse_dt(struct device *dev, struct gpio_led_data *led)
 	/* Get default trigger (optional) */
 	ret = device_property_read_string(dev, "linux,default-trigger",
 									  &trigger);
-	if (!ret)
-	{
+	if (!ret) {
 		led->cdev.default_trigger =
 			devm_kstrdup(dev, trigger, GFP_KERNEL);
 		if (!led->cdev.default_trigger)
@@ -127,26 +124,18 @@ static int gpio_led_parse_dt(struct device *dev, struct gpio_led_data *led)
 
 	/* Get default state */
 	ret = device_property_read_string(dev, "default-state", &state);
-	if (!ret)
-	{
-		if (strcmp(state, "on") == 0)
-		{
+	if (!ret) {
+		if (strcmp(state, "on") == 0) {
 			led->default_state = LED_FULL;
 			dev_dbg(dev, "Default state: ON\n");
-		}
-		else if (strcmp(state, "keep") == 0)
-		{
+		} else if (strcmp(state, "keep") == 0) {
 			led->default_state = LED_FULL; /* Keep current state */
 			dev_dbg(dev, "Default state: KEEP\n");
-		}
-		else
-		{
+		} else {
 			led->default_state = LED_OFF;
 			dev_dbg(dev, "Default state: OFF\n");
 		}
-	}
-	else
-	{
+	} else {
 		led->default_state = LED_OFF;
 	}
 
@@ -159,8 +148,7 @@ static int gpio_led_parse_dt(struct device *dev, struct gpio_led_data *led)
 	/* Check if state should be retained during suspend */
 	led->retain_state_suspended =
 		device_property_read_bool(dev, "retain-state-suspended");
-	if (led->retain_state_suspended)
-	{
+	if (led->retain_state_suspended) {
 		led->cdev.flags |= LED_CORE_SUSPENDRESUME;
 		dev_dbg(dev, "LED state will be retained during suspend\n");
 	}
@@ -203,9 +191,33 @@ static ssize_t gpio_state_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(gpio_state);
 
+/**
+ * gpio_pin_show() - Expose hardware GPIO pin number via sysfs
+ * @dev: LED class device
+ * @attr: Device attribute (unused)
+ * @buf: Output buffer
+ *
+ * Shows the hardware GPIO number backing this LED.
+ * Read from: /sys/class/leds/<name>/gpio_pin
+ *
+ * Return: Number of bytes written to buf
+ */
+static ssize_t gpio_pin_show(struct device *dev,
+			     struct device_attribute *attr, char *buf)
+{
+	struct led_classdev *cdev = dev_get_drvdata(dev);
+	struct gpio_led_data *led = container_of(cdev,
+						 struct gpio_led_data,
+						 cdev);
+
+	return sysfs_emit(buf, "%d\n", desc_to_gpio(led->gpiod));
+}
+static DEVICE_ATTR_RO(gpio_pin);
+
 /* Extra sysfs attributes appended to the LED class device */
 static struct attribute *gpio_led_attrs[] = {
 	&dev_attr_gpio_state.attr,
+	&dev_attr_gpio_pin.attr,
 	NULL,
 };
 
@@ -247,8 +259,7 @@ static int gpio_led_probe(struct platform_device *pdev)
 
 	/* Parse Device Tree properties */
 	ret = gpio_led_parse_dt(dev, led);
-	if (ret)
-	{
+	if (ret) {
 		dev_err(dev, "Failed to parse Device Tree properties: %d\n", ret);
 		return ret;
 	}
@@ -261,8 +272,7 @@ static int gpio_led_probe(struct platform_device *pdev)
 	 */
 	led->gpiod = devm_gpiod_get(dev, NULL,
 								led->default_state == LED_FULL ? GPIOD_OUT_HIGH : GPIOD_OUT_LOW);
-	if (IS_ERR(led->gpiod))
-	{
+	if (IS_ERR(led->gpiod)) {
 		ret = PTR_ERR(led->gpiod);
 		dev_err(dev, "Failed to get GPIO descriptor: %d\n", ret);
 		return ret;
@@ -282,8 +292,7 @@ static int gpio_led_probe(struct platform_device *pdev)
 
 	/* Register LED class device with LED subsystem */
 	ret = devm_led_classdev_register(dev, &led->cdev);
-	if (ret)
-	{
+	if (ret) {
 		dev_err(dev, "Failed to register LED class device: %d\n", ret);
 		return ret;
 	}
@@ -322,12 +331,11 @@ static void gpio_led_remove(struct platform_device *pdev)
  *
  * Return: 0 on success
  */
-static int __maybe_unused gpio_led_suspend(struct device *dev)
+static int gpio_led_suspend(struct device *dev)
 {
 	struct gpio_led_data *led = dev_get_drvdata(dev);
 
-	if (!led->retain_state_suspended)
-	{
+	if (!led->retain_state_suspended) {
 		dev_dbg(dev, "Turning off LED during suspend\n");
 		gpio_led_set_brightness(&led->cdev, LED_OFF);
 	}
@@ -344,13 +352,12 @@ static int __maybe_unused gpio_led_suspend(struct device *dev)
  *
  * Return: 0 on success
  */
-static int __maybe_unused gpio_led_resume(struct device *dev)
+static int gpio_led_resume(struct device *dev)
 {
 	struct gpio_led_data *led = dev_get_drvdata(dev);
 	int ret;
 
-	if (!led->retain_state_suspended)
-	{
+	if (!led->retain_state_suspended) {
 		ret = gpio_led_set_brightness(&led->cdev, led->cdev.brightness);
 		if (ret)
 			dev_warn(dev, "Failed to restore LED state after resume: %d\n", ret);
@@ -360,7 +367,7 @@ static int __maybe_unused gpio_led_resume(struct device *dev)
 }
 
 /* Power management operations */
-static SIMPLE_DEV_PM_OPS(gpio_led_pm_ops, gpio_led_suspend, gpio_led_resume);
+static DEFINE_SIMPLE_DEV_PM_OPS(gpio_led_pm_ops, gpio_led_suspend, gpio_led_resume);
 
 /* Device Tree match table */
 static const struct of_device_id gpio_led_of_match[] = {
@@ -373,9 +380,10 @@ static struct platform_driver gpio_led_driver = {
 	.probe = gpio_led_probe,
 	.remove = gpio_led_remove,
 	.driver = {
-		.name = DRIVER_NAME,
+		.name = GPIO_LEDS_DRIVER_NAME,
 		.of_match_table = gpio_led_of_match,
-		.pm = &gpio_led_pm_ops,
+		.owner = THIS_MODULE,
+		.pm = pm_sleep_ptr(&gpio_led_pm_ops),
 	},
 };
 
@@ -385,5 +393,5 @@ module_platform_driver(gpio_led_driver);
 MODULE_AUTHOR("nhat092005");
 MODULE_DESCRIPTION("GPIO LED Driver - LED Class Interface with Device Tree Support");
 MODULE_LICENSE("GPL");
-MODULE_VERSION(DRIVER_VERSION);
-MODULE_ALIAS("platform:" DRIVER_NAME);
+MODULE_VERSION(GPIO_LEDS_DRIVER_VERSION);
+MODULE_ALIAS("platform:" GPIO_LEDS_DRIVER_NAME);

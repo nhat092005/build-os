@@ -18,8 +18,8 @@
 #include "uapi/gpio-leds.h"
 
 /* Driver information */
-#define DRIVER_NAME "gpio-leds"
-#define DRIVER_VERSION "1.0.0"
+#define GPIO_LEDS_DRIVER_NAME "gpio-leds"
+#define GPIO_LEDS_DRIVER_VERSION "1.0.0"
 
 /**
  * struct gpio_led_data - GPIO LED device data
@@ -33,8 +33,7 @@
  * via the DTS gpios flags cell (GPIO_ACTIVE_LOW = 1).  The driver
  * always works with logical values: 1 = on, 0 = off.
  */
-struct gpio_led_data
-{
+struct gpio_led_data {
 	struct led_classdev cdev;
 	struct gpio_desc *gpiod;
 	bool retain_state_suspended;
