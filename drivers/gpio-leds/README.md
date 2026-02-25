@@ -26,7 +26,7 @@ gpio-leds/
     │       ├── libled.c            # LED control library (sysfs-based)
     │       └── libled.h            # Library API header
     └── tools/
-        └── gpio-led-ctl.c          # Command-line tool using libled
+        └── gpio-leds-ctl.c         # Command-line tool using libled
 ```
 
 ## Kernel Module
@@ -70,7 +70,7 @@ The driver implements suspend and resume callbacks via `SIMPLE_DEV_PM_OPS`:
 
 ## Device Tree Overlay
 
-The file `dts/gpio-leds-overlay.dts` provides an overlay for Raspberry Pi (BCM2711/BCM2835). It configures GPIO27 as an output pin and creates a `custom,gpio-led` device with label `"custom-led"`.
+The file `dts/gpio-leds-overlay.dts` provides an overlay for Raspberry Pi (BCM2711/BCM2835). It configures GPIO27 as an output pin and creates a `custom,gpio-led` device with label `"gpio-led"`.
 
 ### Runtime Override Parameters
 
@@ -111,9 +111,9 @@ A C library for controlling Linux LED class devices through sysfs. Located in `u
 
 All functions return 0 on success or a negative errno value on failure.
 
-## Userspace Tool: gpio-led-ctl
+## Userspace Tool: gpio-leds-ctl
 
-A command-line tool built on top of `libled`. Default LED device name is `"custom-led"`.
+A command-line tool built on top of `libled`. Default LED device name is `"gpio-led"`.
 
 ### Options
 
@@ -126,16 +126,16 @@ A command-line tool built on top of `libled`. Default LED device name is `"custo
 ### Commands
 
 ```
-gpio-led-ctl on                                # Turn LED on
-gpio-led-ctl off                               # Turn LED off
-gpio-led-ctl set <brightness>                  # Set brightness (0 to max)
-gpio-led-ctl get                               # Get current brightness
-gpio-led-ctl trigger [name]                    # Get or set trigger
-gpio-led-ctl blink [count] [delay_ms]          # Blink (default: 10 times, 500ms)
-gpio-led-ctl timer [on_ms] [off_ms]            # Set timer trigger (default: 500/500ms)
-gpio-led-ctl pulse [duration_ms] [steps]       # Fade in/out (default: 3000ms, 50 steps)
-gpio-led-ctl list                              # List available LED devices
-gpio-led-ctl info                              # Show LED device information
+gpio-leds-ctl on                               # Turn LED on
+gpio-leds-ctl off                              # Turn LED off
+gpio-leds-ctl set <brightness>                 # Set brightness (0 to max)
+gpio-leds-ctl get                              # Get current brightness
+gpio-leds-ctl trigger [name]                   # Get or set trigger
+gpio-leds-ctl blink [count] [delay_ms]         # Blink (default: 10 times, 500ms)
+gpio-leds-ctl timer [on_ms] [off_ms]           # Set timer trigger (default: 500/500ms)
+gpio-leds-ctl pulse [duration_ms] [steps]      # Fade in/out (default: 3000ms, 50 steps)
+gpio-leds-ctl list                             # List available LED devices
+gpio-leds-ctl info                             # Show LED device information
 ```
 
 ## Build
