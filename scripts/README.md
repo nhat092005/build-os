@@ -17,6 +17,7 @@ scripts/
 ├── remove-overlays.sh
 ├── remove-toolchains.sh
 ├── remove-tools.sh
+├── setup-rust.sh
 └── stage-output.sh
 ```
 
@@ -28,12 +29,13 @@ scripts/
 | `stage-output`       | Yes           | Extract boot and rootfs from Buildroot     |
 | `identify-sdcard`    | No            | List block devices and detect SD cards     |
 | `deploy-sdcard`      | Yes           | Flash and deploy to SD card                |
+| `setup-rust.sh`      | No            | Verify and configure Rust toolchain        |
 | `install-overlays`   | Yes           | Copy DT overlays to staged boot partition  |
 | `remove-overlays`    | Yes           | Remove DT overlays from staged boot        |
-| `install-modules`    | No            | Copy kernel modules to staged rootfs       |
-| `remove-modules`     | No            | Remove kernel modules from staged rootfs   |
-| `install-tools`      | No            | Copy userspace tools to staged rootfs      |
-| `remove-tools`       | No            | Remove userspace tools from staged rootfs  |
+| `install-modules`    | Yes           | Copy kernel modules to staged rootfs       |
+| `remove-modules`     | Yes           | Remove kernel modules from staged rootfs   |
+| `install-tools`      | Yes           | Copy userspace tools to staged rootfs      |
+| `remove-tools`       | Yes           | Remove userspace tools from staged rootfs  |
 | `install-toolchains` | No            | Extract and install Buildroot SDK          |
 | `remove-toolchains`  | No            | Delete installed toolchain directory       |
 
@@ -51,17 +53,7 @@ Lists all block devices using `lsblk` and detects removable devices (USB drives)
 
 ### deploy-sdcard.sh
 
-Deploys the complete system to an SD card. The process:
-
-1. Verifies `sdcard.img` and staged output exist.
-2. Validates the target device is a block device and is not the system disk.
-3. Prompts for user confirmation.
-4. Flashes the base `sdcard.img` using `dd`.
-5. Expands the rootfs partition to fill the SD card using `sfdisk` and `resize2fs`.
-6. Mounts and replaces boot partition contents from `output/BOOT/`.
-7. Mounts and replaces rootfs contents from `output/rootfs/`.
-
-Handles partition naming for both `/dev/sdX` and `/dev/mmcblkX` style devices. Includes a cleanup trap for error handling. Requires root.
+Deploys the complete system to an SD card. Handles partition naming for both `/dev/sdX` and `/dev/mmcblkX` style devices. Includes a cleanup trap for error handling. Requires root.
 
 ### install-modules.sh
 
@@ -94,3 +86,7 @@ Builds the Buildroot SDK (if the tarball does not already exist), extracts the `
 ### remove-toolchains.sh
 
 Deletes the entire `toolchains/` directory.
+
+### setup-rust.sh
+
+Verifies and configures the Rust toolchain required for building kernel Rust modules. Checks that `rustc` and `bindgen` meet minimum version requirements (`rustc >= 1.78.0`, `bindgen >= 0.65.1`), installs missing components (`rust-src`, `aarch64-unknown-none` target) via `rustup` if needed, and validates that `libclang-dev` is present. Optionally cross-checks version requirements against the kernel's own `min-tool-version.sh` script. Prints an environment summary on success.

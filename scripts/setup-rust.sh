@@ -6,14 +6,26 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 KERNEL_DIR="$PROJECT_ROOT/kernel"
 
+# Add rustup/cargo toolchain to PATH for non-interactive (non-login) shells
+if [ -f "$HOME/.cargo/env" ]; then
+    source "$HOME/.cargo/env"
+elif [ -d "$HOME/.cargo/bin" ]; then
+    export PATH="$HOME/.cargo/bin:$PATH"
+fi
+
 MIN_RUSTC_VERSION="1.78.0"
 MIN_BINDGEN_VERSION="0.65.1"
 
 # Convert version string to canonical number for comparison
 get_canonical_version() {
-    IFS='.'
-    set -- $1
-    echo $(( 100000 * $1 + 100 * $2 + $3 ))
+    local IFS='.'
+    local ver="$1"
+    if [ -z "$ver" ]; then
+        echo 0
+        return
+    fi
+    set -- $ver
+    echo $(( 100000 * ${1:-0} + 100 * ${2:-0} + ${3:-0} ))
 }
 
 check_rustc() {
@@ -58,13 +70,20 @@ check_rust_src() {
 }
 
 check_aarch64_target() {
-    if ! rustup target list --installed | grep -q "aarch64-unknown-none"; then
+    if ! rustup target list --installed | grep -q "aarch64-unknown-none$"; then
         echo "Warning: aarch64-unknown-none not installed."
         rustup target add aarch64-unknown-none
         echo "aarch64-unknown-none target added."
     fi
-
     echo "  aarch64-unknown-none target is available"
+
+    # The Linux kernel uses aarch64-unknown-none-softfloat for Rust modules
+    if ! rustup target list --installed | grep -q "aarch64-unknown-none-softfloat"; then
+        echo "Warning: aarch64-unknown-none-softfloat not installed."
+        rustup target add aarch64-unknown-none-softfloat
+        echo "aarch64-unknown-none-softfloat target added."
+    fi
+    echo "  aarch64-unknown-none-softfloat target is available"
 }
 
 check_bindgen() {
@@ -120,6 +139,60 @@ verify_kernel_rust() {
     echo "  Kernel Rust toolchain check passed"
 }
 
+# Invalidate Buildroot kernel configuration and build stamps so that the
+# next 'make build-all' reconfigures the kernel with RUSTC in the environment.
+# This guarantees CONFIG_RUST=y is applied from linux-rust.config.
+# Root cause: Buildroot's syncconfig silently drops CONFIG_RUST=y when the
+# RUSTC env variable is absent at configuration time (e.g. first setup or
+# after rustup is upgraded).  Removing the stamps forces a clean reconfigure.
+invalidate_kernel_stamps() {
+    local br_build="$PROJECT_ROOT/buildroot/output/build/linux-custom"
+    if [ ! -d "$br_build" ]; then
+        # Kernel has never been built — nothing to invalidate.
+        return 0
+    fi
+
+    local needs_invalidation=0
+
+    # Detect if kernel was configured without CONFIG_RUST=y
+    if [ -f "$br_build/.config" ]; then
+        if ! grep -q '^CONFIG_RUST=y' "$br_build/.config"; then
+            echo "  Warning: kernel .config is missing CONFIG_RUST=y"
+            needs_invalidation=1
+        fi
+    fi
+
+    # Detect if the stored RUSTC version differs from the current rustc
+    if [ -f "$br_build/.config" ]; then
+        local current_version_num
+        local rustc_ver
+        rustc_ver=$(rustc --version | sed -nE 's/.*rustc ([0-9]+)\.([0-9]+)\.([0-9]+).*/\1 \2 \3/p')
+        local maj min patch
+        read -r maj min patch <<< "$rustc_ver"
+        current_version_num=$(( maj * 100000 + min * 100 + patch ))
+        local stored_version_num
+        stored_version_num=$(grep '^CONFIG_RUSTC_VERSION=' "$br_build/.config" | cut -d= -f2)
+        if [ -n "$stored_version_num" ] && [ "$current_version_num" -ne "$stored_version_num" ]; then
+            echo "  Warning: kernel was configured with rustc $stored_version_num, current is $current_version_num"
+            needs_invalidation=1
+        fi
+    fi
+
+    if [ "$needs_invalidation" -eq 1 ]; then
+        echo "  Invalidating kernel configuration and build stamps for fresh rebuild..."
+        rm -f "$br_build"/.stamp_configured \
+               "$br_build"/.stamp_kconfig_fixup_done \
+               "$br_build"/.stamp_dotconfig \
+               "$br_build"/.stamp_built \
+               "$br_build"/.stamp_target_installed \
+               "$br_build"/.stamp_images_installed \
+               "$br_build"/.stamp_installed
+        echo "  Done. Run 'make build-all' to rebuild the kernel with Rust support."
+    else
+        echo "  Kernel CONFIG_RUST=y is present and rustc version matches — no rebuild needed."
+    fi
+}
+
 print_summary() {
     echo "Environment summary:"
     echo "  rustc:   $(rustc --version 2>/dev/null || echo 'NOT FOUND')"
@@ -146,6 +219,7 @@ main() {
     fi
 
     verify_kernel_rust || failed=1
+    invalidate_kernel_stamps
 
     print_summary
 }

@@ -75,12 +75,20 @@ install-modules:
 		echo "Error: install-modules.sh not found"; \
 		exit 1; \
 	fi
+	if [ "$$(id -u)" -ne 0 ]; then \
+		echo "Error: Installing modules requires root privileges"; \
+		exit 1; \
+	fi
 	bash $(SCRIPTS_DIR)/install-modules.sh
 
 # Remove kernel modules from rootfs
 remove-modules:
 	@if [ ! -f "$(SCRIPTS_DIR)/remove-modules.sh" ]; then \
 		echo "Error: remove-modules.sh not found"; \
+		exit 1; \
+	fi
+	if [ "$$(id -u)" -ne 0 ]; then \
+		echo "Error: Removing modules requires root privileges"; \
 		exit 1; \
 	fi
 	bash $(SCRIPTS_DIR)/remove-modules.sh
@@ -92,12 +100,20 @@ install-tools:
 		echo "Error: install-tools.sh not found"; \
 		exit 1; \
 	fi
+	@if [ "$$(id -u)" -ne 0 ]; then \
+		echo "Error: Installing tools requires root privileges"; \
+		exit 1; \
+	fi
 	bash $(SCRIPTS_DIR)/install-tools.sh
 
 # Remove userspace tools from root filesystem
 remove-tools:
 	@if [ ! -f "$(SCRIPTS_DIR)/remove-tools.sh" ]; then \
 		echo "Error: remove-tools.sh not found"; \
+		exit 1; \
+	fi
+	@if [ "$$(id -u)" -ne 0 ]; then \
+		echo "Error: Removing tools requires root privileges"; \
 		exit 1; \
 	fi
 	bash $(SCRIPTS_DIR)/remove-tools.sh
@@ -119,14 +135,14 @@ remove-toolchains:
 	fi
 	bash $(SCRIPTS_DIR)/remove-toolchains.sh
 
-.PHONY: setup-rust-kernel
+.PHONY: setup-rust
 # Setup Rust for kernel development
-setup-rust-kernel:
-	@if [ ! -f "$(SCRIPTS_DIR)/setup-rust-kernel.sh" ]; then \
-		echo "Error: setup-rust-kernel.sh not found"; \
+setup-rust:
+	@if [ ! -f "$(SCRIPTS_DIR)/setup-rust.sh" ]; then \
+		echo "Error: setup-rust.sh not found"; \
 		exit 1; \
 	fi
-	bash $(SCRIPTS_DIR)/setup-rust-kernel.sh
+	bash $(SCRIPTS_DIR)/setup-rust.sh
 
 .PHONY: help
 # Help
@@ -141,7 +157,7 @@ help:
 	@echo "  install-modules         Install kernel modules to rootfs"
 	@echo "  install-tools           Install userspace tools to rootfs"
 	@echo "  install-toolchains      Install toolchains to project"
-	@echo "  setup-rust-kernel       Setup Rust for kernel development"
+	@echo "  setup-rust              Setup Rust for kernel development"
 	@echo "Remove:"
 	@echo "  remove-overlays         Remove Device Tree overlays from system(requires root)"
 	@echo "  remove-modules          Remove kernel modules from rootfs"
