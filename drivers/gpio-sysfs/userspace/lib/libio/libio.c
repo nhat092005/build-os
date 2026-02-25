@@ -54,8 +54,7 @@ int gpio_open(gpio_sysfs_device_t *gpio, const char *gpio_pin)
 	if (!gpio || !gpio_pin)
 		return -EINVAL;
 
-	strncpy(gpio->gpio_pin, gpio_pin, sizeof(gpio->gpio_pin) - 1);
-	gpio->gpio_pin[sizeof(gpio->gpio_pin) - 1] = '\0';
+	snprintf(gpio->gpio_pin, sizeof(gpio->gpio_pin), "%s", gpio_pin);
 
 	snprintf(gpio->base_path, sizeof(gpio->base_path),
 			 "%s/gpio%s", GPIO_SYSFS_PATH, gpio_pin);
@@ -155,8 +154,7 @@ int gpio_get_info(gpio_sysfs_device_t *gpio, gpio_sysfs_info_t *info)
 	if (!gpio || !info)
 		return -EINVAL;
 
-	strncpy(info->gpio_pin, gpio->gpio_pin, sizeof(info->gpio_pin) - 1);
-	info->gpio_pin[sizeof(info->gpio_pin) - 1] = '\0';
+	snprintf(info->gpio_pin, sizeof(info->gpio_pin), "%s", gpio->gpio_pin);
 
 	ret = gpio_get_direction(gpio, info->direction, sizeof(info->direction));
 	if (ret < 0)

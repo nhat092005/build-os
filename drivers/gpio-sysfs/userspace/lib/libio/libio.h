@@ -8,8 +8,8 @@
  * with sysfs directly.
  */
 
-#ifndef _LIBIO_H
-#define _LIBIO_H
+#ifndef _LIB_IO_H
+#define _LIB_IO_H
 
 #include <stddef.h>
 
@@ -178,4 +178,4 @@ const char *gpio_strerror(int errnum);
  */
 int parse_int(const char *str, int *result);
 
-#endif /* _LIBIO_H */
+#endif /* _LIB_IO_H */

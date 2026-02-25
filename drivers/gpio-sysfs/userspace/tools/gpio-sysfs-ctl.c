@@ -164,9 +164,6 @@ int main(int argc, char *argv[])
 	 * kernel 4.x.  Prefer the character-device interface (/dev/gpiochipN)
 	 * via libgpiod or the gpio-chardev driver for new development.
 	 */
-	fprintf(stderr,
-			"WARNING: /sys/class/gpio is deprecated and may be removed in a future kernel.\n"
-			"         Consider migrating to the gpiochip character device API (libgpiod).\n");
 
 	cmd = argv[1];
 
@@ -269,8 +266,8 @@ static void print_error(const char *fmt, ...)
 
 static void usage(const char *progname)
 {
-	printf("GPIO Sysfs Control Tool\n\n");
-	printf("Usage: %s <command> [args...]\n\n", progname);
+	printf("GPIO Sysfs Control Tool\n");
+	printf("Usage: %s <command> [args...]\n", progname);
 	printf("Commands:\n");
 	printf("  list\n");
 	printf("  export <pin>\n");
@@ -285,12 +282,6 @@ static void usage(const char *progname)
 	printf("  <pin> get active_low\n");
 	printf("  <pin> blink <count> <delay_ms>\n");
 	printf("  <pin> info\n");
-	printf("\nExamples:\n");
-	printf("  %s export 22\n", progname);
-	printf("  %s 22 set direction out\n", progname);
-	printf("  %s 22 set value 1\n", progname);
-	printf("  %s 22 blink 5 500\n", progname);
-	printf("  %s list\n", progname);
 }
 
 static int cmd_export(int argc, char *argv[])
@@ -418,6 +409,19 @@ static int cmd_set_value(gpio_sysfs_device_t *gpio, int argc, char *argv[])
 		print_error("Failed to set value: %s", gpio_strerror(ret));
 		return 1;
 	}
+
+	gpio_sysfs_info_t info;
+	ret = gpio_get_info(gpio, &info);
+	if (ret < 0)
+	{
+		print_error("Failed to get GPIO info: %s", gpio_strerror(ret));
+		return 1;
+	}
+
+	if (info.active_low)
+	{
+		value = !value; /* Invert value for active_low */
+	}
 	printf("GPIO %d: %s\n", gpio_pin_to_offset(gpio), value ? "ON" : "OFF");
 	return 0;
 }
@@ -431,6 +435,19 @@ static int cmd_get_value(gpio_sysfs_device_t *gpio)
 	{
 		print_error("Failed to get value: %s", gpio_strerror(ret));
 		return 1;
+	}
+
+	gpio_sysfs_info_t info;
+	ret = gpio_get_info(gpio, &info);
+	if (ret < 0)
+	{
+		print_error("Failed to get GPIO info: %s", gpio_strerror(ret));
+		return 1;
+	}
+
+	if (info.active_low)
+	{
+		value = !value; /* Invert value for active_low */
 	}
 	printf("GPIO %d: value = %s\n", gpio_pin_to_offset(gpio), value ? "ON" : "OFF");
 	return 0;
@@ -496,8 +513,8 @@ static int cmd_set_edge(gpio_sysfs_device_t *gpio, int argc, char *argv[])
 	}
 	printf("GPIO %d: %s\n", gpio_pin_to_offset(gpio),
 		   strcmp(argv[0], "none") == 0 ? "NONE" : strcmp(argv[0], "rising") == 0 ? "RISING"
-									: strcmp(argv[0], "falling") == 0	? "FALLING"
-															: "BOTH");
+											   : strcmp(argv[0], "falling") == 0  ? "FALLING"
+																				  : "BOTH");
 	return 0;
 }
 
@@ -514,8 +531,8 @@ static int cmd_get_edge(gpio_sysfs_device_t *gpio)
 	}
 	printf("GPIO %d: edge = %s\n", gpio_pin_to_offset(gpio),
 		   strcmp(buffer, "none") == 0 ? "NONE" : strcmp(buffer, "rising") == 0 ? "RISING"
-								   : strcmp(buffer, "falling") == 0  ? "FALLING"
-														  : "BOTH");
+											  : strcmp(buffer, "falling") == 0	? "FALLING"
+																				: "BOTH");
 	return 0;
 }
 
@@ -604,11 +621,11 @@ static int cmd_info(gpio_sysfs_device_t *gpio)
 
 	printf("GPIO:       %s\n", info.gpio_pin);
 	printf("Direction:  %s\n", strcmp(info.direction, "in") == 0 ? "INPUT" : "OUTPUT");
-	printf("Edge:       %s\n", strcmp(info.edge, "none") == 0		? "NONE"
-							   : strcmp(info.edge, "rising") == 0	? "RISING"
+	printf("Edge:       %s\n", strcmp(info.edge, "none") == 0	   ? "NONE"
+							   : strcmp(info.edge, "rising") == 0  ? "RISING"
 							   : strcmp(info.edge, "falling") == 0 ? "FALLING"
-														: "BOTH");
-	printf("Value:      %s\n", info.value ? "ON" : "OFF");
+																   : "BOTH");
+	printf("Value:      %d\n", info.value);
 	printf("Active Low: %s\n", info.active_low ? "ACTIVE_LOW" : "ACTIVE_HIGH");
 	return 0;
 }
