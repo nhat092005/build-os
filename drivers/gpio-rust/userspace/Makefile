@@ -13,7 +13,7 @@ LDFLAGS         :=
 
 # Directory Configuration
 USERSPACE_DIR   := $(shell pwd)
-LIB_DIR         := $(USERSPACE_DIR)/lib/libgpio-rust
+LIB_DIR         := $(USERSPACE_DIR)/lib/
 TOOLS_DIR       := $(USERSPACE_DIR)/tools
 BUILD_DIR       := $(USERSPACE_DIR)/../build/tools
 

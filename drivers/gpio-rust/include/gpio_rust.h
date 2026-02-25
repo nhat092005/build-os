@@ -10,7 +10,7 @@
 #define _GPIO_RUST_H
 
 #ifdef __KERNEL__
-#include "uapi/gpio-rust.h"
+#include "uapi/gpio_rust.h"
 
 /* Prototypes for C helper functions called from Rust via FFI.
  * Declaring them here satisfies -Wmissing-prototypes in gpio_helpers.c
@@ -39,7 +39,7 @@ void rust_helper_misc_deregister(void);
 #define GPIO_RUST_DRIVER_VERSION "1.0.0"
 
 /* Default GPIO configuration */
-#define GPIO_RUST_DEFAULT_PIN 22
+#define GPIO_RUST_DEFAULT_PIN 16
 
 /* GPIO base number for sysfs (gpiochip0 on Raspberry Pi, kernel 6.x) */
 #define GPIO_RUST_BASE 512

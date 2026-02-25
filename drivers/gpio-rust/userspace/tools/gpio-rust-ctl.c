@@ -150,8 +150,8 @@ int main(int argc, char *argv[])
 
 static void print_usage(const char *prog)
 {
-	printf("GPIO Rust Driver Control Tool\n\n");
-	printf("Usage: %s <command> [options]\n\n", prog);
+	printf("GPIO Rust Driver Control Tool\n");
+	printf("Usage: %s <command> [options]\n", prog);
 	printf("Commands:\n");
 	printf("  on                          Turn LED on (GPIO HIGH)\n");
 	printf("  off                         Turn LED off (GPIO LOW)\n");
@@ -162,11 +162,6 @@ static void print_usage(const char *prog)
 	printf("  help                        Show this help\n");
 	printf("\nGPIO Pin: %d (device: %s)\n",
 		   GPIO_RUST_DEFAULT_PIN, GPIO_RUST_DEV_PATH);
-	printf("\nExamples:\n");
-	printf("  %s on                       # Turn LED on\n", prog);
-	printf("  %s off                      # Turn LED off\n", prog);
-	printf("  %s blink 5 500              # Blink 5 times, 500ms interval\n", prog);
-	printf("  %s status                   # Show current state\n", prog);
 }
 
 static int cmd_on(gpio_rust_device_t *dev)
@@ -291,7 +286,7 @@ static int cmd_status(gpio_rust_device_t *dev)
 		return 1;
 	}
 
-	printf("  Driver:     gpio-rust (Rust kernel module)\n");
+	printf("  Driver:     %s\n", GPIO_RUST_DRIVER_NAME);
 	printf("  GPIO Pin:   %d\n", info.gpio_pin);
 	printf("  Direction:  %s\n", info.direction);
 	printf("  Value:      %d (%s)\n", info.value,

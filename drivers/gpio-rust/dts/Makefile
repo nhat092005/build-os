@@ -9,7 +9,7 @@ DTC_FLAGS   ?= -@ -I dts -O dtb -Wno-unit_address_vs_reg -Wno-label_is_string
 DTS := gpio-rust-overlay.dts
 
 # Output file
-DTBO := gpio-rust.dtbo
+DTBO_OUT := gpio-rust.dtbo
 
 .PHONY: all dtbo clean dtbo-clean help
 
@@ -17,14 +17,14 @@ DTBO := gpio-rust.dtbo
 all: dtbo
 
 # Build Device Tree overlay
-dtbo: $(BUILD_DIR) $(DTBO)
+dtbo: $(BUILD_DIR) $(DTBO_OUT)
 
 # Create build directory
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 # Compile DTS to DTBO
-$(DTBO): $(DTS)
+$(DTBO_OUT): $(DTS)
 	@echo "Compiling Device Tree Overlay: $< -> $@"
 	$(DTC) $(DTC_FLAGS) -o $(BUILD_DIR)/$@ $<
 

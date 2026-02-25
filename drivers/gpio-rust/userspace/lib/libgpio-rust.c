@@ -103,8 +103,7 @@ int gpio_rust_get_info(gpio_rust_device_t *dev, gpio_rust_info_t *info)
 	info->gpio_pin = (int)gpio_pin;
 
 	/* Direction is always "out" for this driver */
-	strncpy(info->direction, "out", sizeof(info->direction) - 1);
-	info->direction[sizeof(info->direction) - 1] = '\0';
+	snprintf(info->direction, sizeof(info->direction), "out");
 
 	/* Get current value */
 	ret = gpio_rust_get_value(dev, &info->value);

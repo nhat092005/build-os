@@ -89,12 +89,6 @@ impl GpioPin {
         Ok(GpioPin { pin })
     }
 
-    /// Drives the pin high.
-    fn set_high(&self) {
-        // SAFETY: `self.pin` is valid for the lifetime of `self` per the type invariant.
-        unsafe { rust_helper_gpio_set_value(self.pin, 1) }
-    }
-
     /// Drives the pin low.
     fn set_low(&self) {
         // SAFETY: `self.pin` is valid for the lifetime of `self` per the type invariant.
@@ -164,8 +158,7 @@ impl kernel::Module for GpioRustModule {
             return Err(kernel::error::code::EIO);
         }
         pr_info!("gpio_rust: /dev/gpio-rust created\n");
-        led.set_high();
-        pr_info!("gpio_rust: LED on GPIO {} is ON\n", hw_pin);
+        pr_info!("gpio_rust: LED on GPIO {} is OFF\n", hw_pin);
         pr_info!("gpio_rust: module loaded\n");
         Ok(GpioRustModule { led })
     }

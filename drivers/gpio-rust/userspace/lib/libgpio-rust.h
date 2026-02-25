@@ -14,29 +14,14 @@
 #include <stdint.h>
 #include <sys/ioctl.h>
 
+#include "../../include/uapi/gpio_rust.h"
+#include "../../include/gpio_rust.h"
+
 /** Buffer size for internal operations */
 #define GPIO_RUST_BUFFER_SIZE 64
 
-/** Default GPIO pin number (matching gpio-rust kernel module) */
-#define GPIO_RUST_DEFAULT_PIN 22
-
-/** GPIO base number for sysfs (gpiochip0 on Raspberry Pi) */
-#define GPIO_RUST_BASE 512
-
 /** Computed sysfs GPIO number (pin + base) */
 #define GPIO_RUST_SYSFS_PIN (GPIO_RUST_DEFAULT_PIN + GPIO_RUST_BASE)
-
-/** Device path */
-#define GPIO_RUST_DEV_PATH "/dev/gpio-rust"
-
-/*
- * IOCTL definitions (must match kernel uapi/gpio-rust.h)
- */
-#define GPIO_RUST_IOC_MAGIC     'R'
-#define GPIO_RUST_IOC_SET_STATE _IOW(GPIO_RUST_IOC_MAGIC, 1, uint32_t)
-#define GPIO_RUST_IOC_GET_STATE _IOR(GPIO_RUST_IOC_MAGIC, 2, uint32_t)
-#define GPIO_RUST_IOC_TOGGLE    _IO(GPIO_RUST_IOC_MAGIC, 3)
-#define GPIO_RUST_IOC_GET_GPIO  _IOR(GPIO_RUST_IOC_MAGIC, 4, uint32_t)
 
 /**
  * struct gpio_rust_device - GPIO Rust device handle

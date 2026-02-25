@@ -14,8 +14,8 @@
 #include <linux/uaccess.h>
 #include <linux/mutex.h>
 
-#include "../include/uapi/gpio-rust.h"
-#include "../include/gpio-rust.h"
+#include "../include/uapi/gpio_rust.h"
+#include "../include/gpio_rust.h"
 
 /* GPIO API wrappers for Rust Layer 3 */
 
@@ -84,11 +84,17 @@ int rust_helper_gpio_get_value(unsigned int gpio)
 /* Configurable GPIO pin via module parameter (because Rust module_param
  * bindings are not available in kernel 6.12).  The Rust init code calls
  * rust_helper_get_gpio_pin() to obtain the resolved global GPIO number.
+ *
+ * The DTS overlay (gpio-rust.dtbo) configures the same pin in pinctrl so the
+ * kernel knows the pin is claimed as an output.  The DTS pin number and this
+ * default MUST stay in sync: both use GPIO_RUST_DEFAULT_PIN (currently 16).
+ * devm_gpiod_get() is NOT used because Rust bindings for that API are not
+ * available in kernel 6.12; module_param is the only mechanism to pass the
+ * hardware pin number from board configuration to the Rust driver.
  */
 static unsigned int gpio_pin = GPIO_RUST_DEFAULT_PIN;
 module_param(gpio_pin, uint, 0444);
-MODULE_PARM_DESC(gpio_pin, "BCM GPIO pin number (default: 22)");
-
+MODULE_PARM_DESC(gpio_pin, "BCM GPIO pin number (default: " __stringify(GPIO_RUST_DEFAULT_PIN) ")");
 /**
  * rust_helper_get_gpio_pin - Return the resolved global GPIO number
  *
@@ -207,8 +213,7 @@ static long gpio_rust_dev_ioctl(struct file *filp, unsigned int cmd,
 {
 	__u32 value;
 
-	switch (cmd)
-	{
+	switch (cmd) {
 	case GPIO_RUST_IOC_SET_STATE:
 		if (copy_from_user(&value, (__u32 __user *)arg, sizeof(value)))
 			return -EFAULT;
@@ -255,6 +260,7 @@ static const struct file_operations gpio_rust_dev_fops = {
 	.read = gpio_rust_dev_read,
 	.write = gpio_rust_dev_write,
 	.unlocked_ioctl = gpio_rust_dev_ioctl,
+	.llseek = noop_llseek,
 };
 
 static struct miscdevice gpio_rust_miscdev = {
@@ -283,3 +289,4 @@ void rust_helper_misc_deregister(void)
 MODULE_AUTHOR("nhat092005");
 MODULE_DESCRIPTION("GPIO Rust Driver - C Helper Functions");
 MODULE_LICENSE("GPL");
+MODULE_VERSION(GPIO_RUST_DRIVER_VERSION);

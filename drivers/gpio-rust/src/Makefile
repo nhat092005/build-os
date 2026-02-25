@@ -13,6 +13,10 @@ CROSS_COMPILE	?= $(TOOLCHAIN_DIR)/bin/aarch64-linux-
 # Kernel directory (Buildroot kernel only)
 KERNEL_DIR		?= $(BUILDROOT_DIR)/output/build/linux-custom
 
+# Rust toolchain (may be set via environment from parent make, or default to ~/.cargo/bin)
+RUSTC		?= $(HOME)/.cargo/bin/rustc
+BINDGEN		?= $(HOME)/.cargo/bin/bindgen
+
 # Build output directory (where install scripts look for .ko)
 BUILD_DIR := $(CURDIR)/../build/module
 
@@ -30,6 +34,8 @@ modules:
 		M=$(CURDIR) \
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
+		RUSTC=$(RUSTC) \
+		BINDGEN=$(BINDGEN) \
 		modules
 	cp -f $(CURDIR)/gpio_rust.ko $(BUILD_DIR)/gpio_rust.ko
 
