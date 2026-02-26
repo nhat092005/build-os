@@ -1,3 +1,3 @@
 # Auto-load GPIO Character Device kernel module at boot
 # This file is installed to /etc/modules-load.d/gpio-chardev.conf
-gpio-chardev
+gpio_chardev
