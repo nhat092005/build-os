@@ -43,8 +43,8 @@ define GPIO_LEDS_DRIVER_INSTALL_TARGET_CMDS
 		$(TARGET_DIR)/etc/modules-load.d/gpio-leds.conf
 	
 	# Install UAPI header for userspace applications
-	$(INSTALL) -D -m 0644 $(@D)/include/uapi/gpio-leds.h \
-		$(STAGING_DIR)/usr/include/linux/gpio-leds.h
+	$(INSTALL) -D -m 0644 $(@D)/include/uapi/gpio_leds.h \
+		$(STAGING_DIR)/usr/include/linux/gpio_leds.h
 	
 	# Install userspace tools to /usr/bin
 	if [ -d $(@D)/build/tools ]; then \
@@ -61,18 +61,6 @@ define GPIO_LEDS_DRIVER_INSTALL_TARGET_CMDS
 		$(INSTALL) -D -m 0644 $(@D)/build/dtbo/gpio-leds.dtbo \
 			$(BINARIES_DIR)/rpi-firmware/overlays/gpio-leds.dtbo; \
 	fi
-	
-	# Install documentation if available
-	if [ -f $(@D)/docs/README.md ]; then \
-		$(INSTALL) -D -m 0644 $(@D)/docs/README.md \
-			$(TARGET_DIR)/usr/share/doc/gpio-leds-driver/README.md; \
-	fi
-	
-	# Install module configuration files (for reference)
-	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_NHAT092005_PATH)/package/gpio-leds-driver/gpio-leds.modules-load \
-		$(TARGET_DIR)/usr/share/doc/gpio-leds-driver/gpio-leds.modules-load
-	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_NHAT092005_PATH)/package/gpio-leds-driver/gpio-leds.modprobe \
-		$(TARGET_DIR)/usr/share/doc/gpio-leds-driver/gpio-leds.modprobe
 endef
 
 # Build Device Tree overlay

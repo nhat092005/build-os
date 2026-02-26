@@ -1,4 +1,4 @@
 # Auto-load LED GPIO Custom kernel module at boot
 # This file is installed to /etc/modules-load.d/gpio-leds.conf
 # Note: Module will be loaded automatically even with Device Tree overlay
-gpio-leds
+gpio_leds
