@@ -7,6 +7,10 @@ GPIO_RUST_DRIVER_LICENSE = GPL-2.0
 # This is a kernel module package
 $(eval $(kernel-module))
 
+# Rust toolchain paths (installed via rustup in ~/.cargo/bin)
+RUSTC_PATH ?= $(HOME)/.cargo/bin/rustc
+BINDGEN_PATH ?= $(HOME)/.cargo/bin/bindgen
+
 # Define build commands for the Rust kernel module
 define GPIO_RUST_DRIVER_BUILD_CMDS
 	$(MAKE) -C $(LINUX_DIR) \
@@ -14,6 +18,8 @@ define GPIO_RUST_DRIVER_BUILD_CMDS
 		$(LINUX_MAKE_FLAGS) \
 		ARCH=$(KERNEL_ARCH) \
 		CROSS_COMPILE=$(TARGET_CROSS) \
+		RUSTC=$(RUSTC_PATH) \
+		BINDGEN=$(BINDGEN_PATH) \
 		modules
 
 	# Build userspace tools
@@ -34,12 +40,18 @@ define GPIO_RUST_DRIVER_INSTALL_TARGET_CMDS
 		$(LINUX_MAKE_FLAGS) \
 		ARCH=$(KERNEL_ARCH) \
 		CROSS_COMPILE=$(TARGET_CROSS) \
+		RUSTC=$(RUSTC_PATH) \
+		BINDGEN=$(BINDGEN_PATH) \
 		INSTALL_MOD_PATH=$(TARGET_DIR) \
 		modules_install
 
 	# Install module auto-load configuration
 	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_NHAT092005_PATH)/package/gpio-rust-driver/gpio-rust.modules-load \
 		$(TARGET_DIR)/etc/modules-load.d/gpio-rust.conf
+
+	# Install UAPI header for userspace applications
+	$(INSTALL) -D -m 0644 $(@D)/include/uapi/gpio_rust.h \
+		$(STAGING_DIR)/usr/include/linux/gpio_rust.h
 
 	# Install userspace tools to /usr/bin
 	if [ -d $(@D)/build/tools ]; then \

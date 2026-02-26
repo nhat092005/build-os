@@ -1,4 +1,4 @@
 # Auto-load GPIO Rust kernel module at boot
 # This file is installed to /etc/modules-load.d/gpio-rust.conf
 # Note: Module will be loaded automatically
-gpio-rust
+gpio_rust
