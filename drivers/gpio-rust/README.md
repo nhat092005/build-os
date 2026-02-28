@@ -61,12 +61,3 @@ gpio-rust-ctl off                 # Turn LED off
 gpio-rust-ctl toggle              # Toggle LED state
 gpio-rust-ctl blink <cnt> <ms>    # Blink LED a specific number of times
 ```
-
-## Build
-
-```bash
-make modules   # Build the Rust kernel module (.ko)  
-make tools     # Build the CLI application
-make dtbo      # Optional: Compile DT overaly
-make clean     # Clean all build outputs
-```
