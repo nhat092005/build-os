@@ -25,6 +25,9 @@
 
 #include "../include/gpio_chardev.h"
 
+/* Module-level class — created once at module load, destroyed at module exit */
+static struct class *gpio_chardev_class;
+
 /**
  * gpio_chardev_blink_work_fn - Delayed work function for blinking LED
  * @work: Pointer to delayed_work embedded in gpio_chardev_dev
@@ -35,28 +38,23 @@
  */
 static void gpio_chardev_blink_work_fn(struct work_struct *work)
 {
-	struct gpio_chardev_dev *dev = container_of(work,
-												struct gpio_chardev_dev,
-												blink_work.work);
+	struct gpio_chardev_dev *dev =
+		container_of(work, struct gpio_chardev_dev, blink_work.work);
 	__u32 delay_ms;
 
 	mutex_lock(&dev->lock);
 
-	if (!dev->blink_active)
-	{
+	if (!dev->blink_active) {
 		mutex_unlock(&dev->lock);
 		return;
 	}
 
-	if (dev->blink_phase == 0)
-	{
+	if (dev->blink_phase == 0) {
 		/* Off -> On transition */
 		gpiod_set_value(dev->gpio_desc, 1);
 		dev->blink_phase = 1;
 		delay_ms = dev->blink_delay_on;
-	}
-	else
-	{
+	} else {
 		/* On -> Off transition */
 		gpiod_set_value(dev->gpio_desc, 0);
 		dev->blink_phase = 0;
@@ -64,8 +62,7 @@ static void gpio_chardev_blink_work_fn(struct work_struct *work)
 
 		/* Check if we reached the target count */
 		if (dev->blink_total != 0 &&
-			dev->blink_count >= dev->blink_total)
-		{
+		    dev->blink_count >= dev->blink_total) {
 			dev->blink_active = false;
 			mutex_unlock(&dev->lock);
 			return;
@@ -75,8 +72,7 @@ static void gpio_chardev_blink_work_fn(struct work_struct *work)
 
 	mutex_unlock(&dev->lock);
 
-	schedule_delayed_work(&dev->blink_work,
-						  msecs_to_jiffies(delay_ms));
+	schedule_delayed_work(&dev->blink_work, msecs_to_jiffies(delay_ms));
 }
 
 /**
@@ -114,7 +110,7 @@ static int gpio_chardev_release(struct inode *inode, struct file *filp)
  * Return: Number of bytes read or negative error code
  */
 static ssize_t gpio_chardev_read(struct file *filp, char __user *buf,
-								 size_t count, loff_t *f_pos)
+				 size_t count, loff_t *f_pos)
 {
 	struct gpio_chardev_dev *dev = filp->private_data;
 	char kbuf[GPIO_CHARDEV_MAX_BUFFER];
@@ -151,7 +147,7 @@ static ssize_t gpio_chardev_read(struct file *filp, char __user *buf,
  * Return: Number of bytes written or negative error code
  */
 static ssize_t gpio_chardev_write(struct file *filp, const char __user *buf,
-								  size_t count, loff_t *f_pos)
+				  size_t count, loff_t *f_pos)
 {
 	struct gpio_chardev_dev *dev = filp->private_data;
 	char kbuf[GPIO_CHARDEV_MAX_BUFFER];
@@ -190,15 +186,14 @@ static ssize_t gpio_chardev_write(struct file *filp, const char __user *buf,
  * Return: 0 on success or negative error code
  */
 static long gpio_chardev_ioctl(struct file *filp, unsigned int cmd,
-							   unsigned long arg)
+			       unsigned long arg)
 {
 	struct gpio_chardev_dev *dev = filp->private_data;
 	struct gpio_chardev_blink blink_params;
 	__u32 value;
 	int ret = 0;
 
-	switch (cmd)
-	{
+	switch (cmd) {
 	case GPIO_CHARDEV_IOC_SET_STATE:
 		if (copy_from_user(&value, (__u32 __user *)arg, sizeof(value)))
 			return -EFAULT;
@@ -226,8 +221,7 @@ static long gpio_chardev_ioctl(struct file *filp, unsigned int cmd,
 		if (mutex_lock_interruptible(&dev->lock))
 			return -ERESTARTSYS;
 		ret = gpiod_get_value(dev->gpio_desc);
-		if (ret < 0)
-		{
+		if (ret < 0) {
 			mutex_unlock(&dev->lock);
 			return ret;
 		}
@@ -243,8 +237,8 @@ static long gpio_chardev_ioctl(struct file *filp, unsigned int cmd,
 
 	case GPIO_CHARDEV_IOC_BLINK:
 		if (copy_from_user(&blink_params,
-						   (struct gpio_chardev_blink __user *)arg,
-						   sizeof(blink_params)))
+				   (struct gpio_chardev_blink __user *)arg,
+				   sizeof(blink_params)))
 			return -EFAULT;
 
 		if (blink_params.delay_on == 0 || blink_params.delay_off == 0)
@@ -290,8 +284,9 @@ static const struct file_operations gpio_chardev_fops = {
 };
 
 static const struct of_device_id gpio_chardev_of_match[] = {
-	{.compatible = "gpio-chardev"},
-	{}};
+	{ .compatible = "gpio-chardev" },
+	{}
+};
 MODULE_DEVICE_TABLE(of, gpio_chardev_of_match);
 
 /**
@@ -305,82 +300,69 @@ MODULE_DEVICE_TABLE(of, gpio_chardev_of_match);
  */
 static int gpio_chardev_probe(struct platform_device *pdev)
 {
-	struct gpio_chardev_dev *dev;
+	struct gpio_chardev_dev *priv;
 	int ret;
 
-	dev = devm_kzalloc(&pdev->dev, sizeof(*dev), GFP_KERNEL);
-	if (!dev)
+	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv)
 		return -ENOMEM;
 
-	mutex_init(&dev->lock);
-	INIT_DELAYED_WORK(&dev->blink_work, gpio_chardev_blink_work_fn);
-	dev->blink_active = false;
+	ret = devm_mutex_init(&pdev->dev, &priv->lock);
+	if (ret)
+		return ret;
+	INIT_DELAYED_WORK(&priv->blink_work, gpio_chardev_blink_work_fn);
+	priv->blink_active = false;
 
 	/*
 	 * Acquire the GPIO from the DT `gpios` property (NULL con_id).
 	 * Initial state OUT_LOW keeps the LED off until explicitly enabled.
 	 */
-	dev->gpio_desc = devm_gpiod_get(&pdev->dev, NULL, GPIOD_OUT_LOW);
-	if (IS_ERR(dev->gpio_desc))
-		return dev_err_probe(&pdev->dev, PTR_ERR(dev->gpio_desc),
-							 "failed to get GPIO\n");
+	priv->gpio_desc = devm_gpiod_get(&pdev->dev, NULL, GPIOD_OUT_LOW);
+	if (IS_ERR(priv->gpio_desc))
+		return dev_err_probe(&pdev->dev, PTR_ERR(priv->gpio_desc),
+				     "failed to get GPIO\n");
 
 	/*
 	 * Populate gpio_pin for the GPIO_CHARDEV_IOC_GET_GPIO ioctl so that
 	 * userspace can discover which hardware pin is in use.
 	 */
-	dev->gpio_pin = desc_to_gpio(dev->gpio_desc);
+	priv->gpio_pin = desc_to_gpio(priv->gpio_desc);
 
-	ret = alloc_chrdev_region(&dev->dev_num, 0, 1, GPIO_CHARDEV_DRIVER_NAME);
-	if (ret < 0)
-	{
+	ret = alloc_chrdev_region(&priv->dev_num, 0, 1,
+				  GPIO_CHARDEV_DRIVER_NAME);
+	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to allocate chrdev region: %d\n",
-				ret);
-		goto err_mutex_destroy;
+			ret);
+		return ret;
 	}
 
-	cdev_init(&dev->cdev, &gpio_chardev_fops);
-	dev->cdev.owner = THIS_MODULE;
+	cdev_init(&priv->cdev, &gpio_chardev_fops);
+	priv->cdev.owner = THIS_MODULE;
 
-	ret = cdev_add(&dev->cdev, dev->dev_num, 1);
-	if (ret < 0)
-	{
-		dev_err(&pdev->dev, "failed to add cdev: %d\n", ret);
+	/* Initialise the embedded device and link it to the class */
+	device_initialize(&priv->dev);
+	priv->dev.devt = priv->dev_num;
+	priv->dev.class = gpio_chardev_class;
+	priv->dev.parent = &pdev->dev;
+	dev_set_name(&priv->dev, GPIO_CHARDEV_DRIVER_NAME);
+
+	/* Atomic cdev + sysfs device creation — avoids race between add steps */
+	ret = cdev_device_add(&priv->cdev, &priv->dev);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "cdev_device_add failed: %d\n", ret);
 		goto err_unregister_chrdev;
 	}
 
-	dev->class = class_create(GPIO_CHARDEV_CLASS_NAME);
-	if (IS_ERR(dev->class))
-	{
-		ret = PTR_ERR(dev->class);
-		dev_err(&pdev->dev, "failed to create class: %d\n", ret);
-		goto err_del_cdev;
-	}
-
-	dev->device = device_create(dev->class, &pdev->dev, dev->dev_num,
-								NULL, GPIO_CHARDEV_DRIVER_NAME);
-	if (IS_ERR(dev->device))
-	{
-		ret = PTR_ERR(dev->device);
-		dev_err(&pdev->dev, "failed to create device: %d\n", ret);
-		goto err_destroy_class;
-	}
-
-	platform_set_drvdata(pdev, dev);
+	platform_set_drvdata(pdev, priv);
 
 	dev_info(&pdev->dev, "device /dev/%s created (GPIO%d)\n",
-			 GPIO_CHARDEV_DRIVER_NAME, dev->gpio_pin);
+		 GPIO_CHARDEV_DRIVER_NAME, priv->gpio_pin);
 
 	return 0;
 
-err_destroy_class:
-	class_destroy(dev->class);
-err_del_cdev:
-	cdev_del(&dev->cdev);
 err_unregister_chrdev:
-	unregister_chrdev_region(dev->dev_num, 1);
-err_mutex_destroy:
-	mutex_destroy(&dev->lock);
+	put_device(&priv->dev);
+	unregister_chrdev_region(priv->dev_num, 1);
 	return ret;
 }
 
@@ -393,24 +375,22 @@ err_mutex_destroy:
  */
 static void gpio_chardev_remove(struct platform_device *pdev)
 {
-	struct gpio_chardev_dev *dev = platform_get_drvdata(pdev);
+	struct gpio_chardev_dev *priv = platform_get_drvdata(pdev);
 
 	/* Stop blink — set flag under lock to prevent a new reschedule */
-	mutex_lock(&dev->lock);
-	dev->blink_active = false;
-	mutex_unlock(&dev->lock);
-	cancel_delayed_work_sync(&dev->blink_work);
+	mutex_lock(&priv->lock);
+	priv->blink_active = false;
+	mutex_unlock(&priv->lock);
+	cancel_delayed_work_sync(&priv->blink_work);
 
 	/* Turn LED off under lock to serialise with in-flight file_ops */
-	mutex_lock(&dev->lock);
-	gpiod_set_value(dev->gpio_desc, 0);
-	mutex_unlock(&dev->lock);
+	mutex_lock(&priv->lock);
+	gpiod_set_value(priv->gpio_desc, 0);
+	mutex_unlock(&priv->lock);
 
-	device_destroy(dev->class, dev->dev_num);
-	class_destroy(dev->class);
-	cdev_del(&dev->cdev);
-	unregister_chrdev_region(dev->dev_num, 1);
-	mutex_destroy(&dev->lock);
+	cdev_device_del(&priv->cdev, &priv->dev);
+	put_device(&priv->dev);
+	unregister_chrdev_region(priv->dev_num, 1);
 
 	dev_info(&pdev->dev, "driver removed\n");
 }
@@ -420,12 +400,27 @@ static struct platform_driver gpio_chardev_driver = {
 	.remove = gpio_chardev_remove,
 	.driver = {
 		.name = GPIO_CHARDEV_DRIVER_NAME,
-		.owner = THIS_MODULE,
 		.of_match_table = gpio_chardev_of_match,
 	},
 };
 
-module_platform_driver(gpio_chardev_driver);
+static int __init gpio_chardev_init(void)
+{
+	gpio_chardev_class = class_create(GPIO_CHARDEV_CLASS_NAME);
+	if (IS_ERR(gpio_chardev_class))
+		return PTR_ERR(gpio_chardev_class);
+
+	return platform_driver_register(&gpio_chardev_driver);
+}
+
+static void __exit gpio_chardev_exit(void)
+{
+	platform_driver_unregister(&gpio_chardev_driver);
+	class_destroy(gpio_chardev_class);
+}
+
+module_init(gpio_chardev_init);
+module_exit(gpio_chardev_exit);
 
 MODULE_AUTHOR("nhat092005");
 MODULE_DESCRIPTION("GPIO LED Character Device Driver");

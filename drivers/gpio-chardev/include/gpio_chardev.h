@@ -33,8 +33,7 @@
  * struct gpio_chardev_dev - GPIO character device structure
  * @dev_num:         Device number (major:minor)
  * @cdev:            Character device structure
- * @class:           Device class pointer
- * @device:          Device pointer
+ * @dev:             Embedded device (owned by cdev layer via cdev_device_add)
  * @lock:            Mutex serialising GPIO access (state reads/writes)
  * @gpio_pin:        GPIO pin number (populated from DT via desc_to_gpio())
  * @gpio_desc:       GPIO descriptor (managed by devres)
@@ -49,9 +48,8 @@
 struct gpio_chardev_dev {
 	dev_t dev_num;
 	struct cdev cdev;
-	struct class *class;
-	struct device *device;
-	struct mutex lock;		/* serialises GPIO access across all file_ops */
+	struct device dev;
+	struct mutex lock; /* serialises GPIO access across all file_ops */
 	int gpio_pin;
 	struct gpio_desc *gpio_desc;
 

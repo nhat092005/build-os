@@ -30,7 +30,8 @@
 #define GPIO_CHARDEV_IOC_GET_GPIO _IOR(GPIO_CHARDEV_IOC_MAGIC, 4, __u32)
 
 /* Blink GPIO (parameter: count, 0 = infinite) */
-#define GPIO_CHARDEV_IOC_BLINK _IOW(GPIO_CHARDEV_IOC_MAGIC, 5, struct gpio_chardev_blink)
+#define GPIO_CHARDEV_IOC_BLINK \
+	_IOW(GPIO_CHARDEV_IOC_MAGIC, 5, struct gpio_chardev_blink)
 
 /*
  * GPIO states
@@ -42,8 +43,8 @@
  * Blink configuration structure
  */
 struct gpio_chardev_blink {
-	__u32 count;	 /* Number of blinks, 0 = infinite */
-	__u32 delay_on;	 /* ON duration in milliseconds */
+	__u32 count; /* Number of blinks, 0 = infinite */
+	__u32 delay_on; /* ON duration in milliseconds */
 	__u32 delay_off; /* OFF duration in milliseconds */
 };
 
