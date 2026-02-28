@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
-# Makefile for GPIO LEDS Driver Userspace Tool and Library
+# Makefile for GPIO LEDS Userspace Tool and Library
 
 CROSS_COMPILE ?= aarch64-linux-
 CC := $(CROSS_COMPILE)gcc

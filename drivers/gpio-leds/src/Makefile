@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
-# Makefile for GPIO LEDS Driver Kernel Module
+# Makefile for GPIO LEDS Kernel Module
 
 ARCH ?= arm64
 
