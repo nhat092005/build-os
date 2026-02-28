@@ -137,13 +137,3 @@ gpio-leds-ctl pulse [duration_ms] [steps]      # Fade in/out (default: 3000ms, 5
 gpio-leds-ctl list                             # List available LED devices
 gpio-leds-ctl info                             # Show LED device information
 ```
-
-## Build
-
-```
-make all             # Build device tree overlay, kernel module, and userspace tools
-make dtbo            # Build device tree overlay only
-make modules         # Build kernel module only
-make tools           # Build userspace tool and library only
-make clean           # Clean all build artifacts
-```
