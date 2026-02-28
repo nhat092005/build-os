@@ -66,7 +66,8 @@ int led_open(led_device_t *led, const char *name)
 	snprintf(led->name, LED_BUFFER_SIZE, "%s", name);
 
 	/* Build base path with return value check */
-	ret = snprintf(led->path, LED_BUFFER_SIZE, "%s/%s", LED_BASE_PATH, name);
+	ret = snprintf(led->path, LED_BUFFER_SIZE, "%s/%s", LED_BASE_PATH,
+		       name);
 	if (ret < 0 || ret >= LED_BUFFER_SIZE)
 		return -ENAMETOOLONG;
 
@@ -75,33 +76,33 @@ int led_open(led_device_t *led, const char *name)
 		return -ENOENT;
 
 	/* Build all sysfs paths with return value checks */
-	ret = snprintf(led->brightness_path, LED_BUFFER_SIZE,
-				   "%s/brightness", led->path);
+	ret = snprintf(led->brightness_path, LED_BUFFER_SIZE, "%s/brightness",
+		       led->path);
 	if (ret < 0 || ret >= LED_BUFFER_SIZE)
 		return -ENAMETOOLONG;
 
-	ret = snprintf(led->trigger_path, LED_BUFFER_SIZE,
-				   "%s/trigger", led->path);
+	ret = snprintf(led->trigger_path, LED_BUFFER_SIZE, "%s/trigger",
+		       led->path);
 	if (ret < 0 || ret >= LED_BUFFER_SIZE)
 		return -ENAMETOOLONG;
 
 	ret = snprintf(led->max_brightness_path, LED_BUFFER_SIZE,
-				   "%s/max_brightness", led->path);
+		       "%s/max_brightness", led->path);
 	if (ret < 0 || ret >= LED_BUFFER_SIZE)
 		return -ENAMETOOLONG;
 
-	ret = snprintf(led->delay_on_path, LED_BUFFER_SIZE,
-				   "%s/delay_on", led->path);
+	ret = snprintf(led->delay_on_path, LED_BUFFER_SIZE, "%s/delay_on",
+		       led->path);
 	if (ret < 0 || ret >= LED_BUFFER_SIZE)
 		return -ENAMETOOLONG;
 
-	ret = snprintf(led->delay_off_path, LED_BUFFER_SIZE,
-				   "%s/delay_off", led->path);
+	ret = snprintf(led->delay_off_path, LED_BUFFER_SIZE, "%s/delay_off",
+		       led->path);
 	if (ret < 0 || ret >= LED_BUFFER_SIZE)
 		return -ENAMETOOLONG;
 
-	ret = snprintf(led->gpio_pin_path, LED_BUFFER_SIZE,
-				   "%s/gpio_pin", led->path);
+	ret = snprintf(led->gpio_pin_path, LED_BUFFER_SIZE, "%s/gpio_pin",
+		       led->path);
 	if (ret < 0 || ret >= LED_BUFFER_SIZE)
 		return -ENAMETOOLONG;
 
@@ -249,8 +250,7 @@ int led_blink(led_device_t *led, int count, int delay_ms)
 		max_brightness = 255;
 
 	/* Blink loop */
-	for (i = 0; count == 0 || i < count; i++)
-	{
+	for (i = 0; count == 0 || i < count; i++) {
 		/* Turn on */
 		ret = led_set_brightness(led, max_brightness);
 		if (ret < 0)
@@ -286,11 +286,11 @@ int led_pulse(led_device_t *led, int duration_ms, int steps)
 	if (max_brightness < 0)
 		max_brightness = 255;
 
-	step_delay = (duration_ms * 1000) / (steps * 2); /* Microseconds per step */
+	step_delay =
+		(duration_ms * 1000) / (steps * 2); /* Microseconds per step */
 
 	/* Fade in */
-	for (i = 0; i <= steps; i++)
-	{
+	for (i = 0; i <= steps; i++) {
 		brightness = (max_brightness * i) / steps;
 		ret = led_set_brightness(led, brightness);
 		if (ret < 0)
@@ -299,8 +299,7 @@ int led_pulse(led_device_t *led, int duration_ms, int steps)
 	}
 
 	/* Fade out */
-	for (i = steps; i >= 0; i--)
-	{
+	for (i = steps; i >= 0; i--) {
 		brightness = (max_brightness * i) / steps;
 		ret = led_set_brightness(led, brightness);
 		if (ret < 0)
@@ -325,16 +324,14 @@ int led_list(led_list_callback_t callback, void *user_data)
 	if (!dir)
 		return -errno;
 
-	while ((entry = readdir(dir)) != NULL)
-	{
+	while ((entry = readdir(dir)) != NULL) {
 		/* Skip hidden files and "." ".." */
 		if (entry->d_name[0] == '.')
 			continue;
 
 		count++;
 		ret = callback(entry->d_name, user_data);
-		if (ret != 0)
-		{
+		if (ret != 0) {
 			closedir(dir);
 			return count;
 		}
@@ -445,8 +442,7 @@ static int write_sysfs(const char *path, const char *value)
 
 	len = strlen(value);
 	ret = write(fd, value, len);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		ret = -errno;
 		close(fd);
 		return ret;
@@ -465,8 +461,7 @@ static int read_sysfs(const char *path, char *buffer, size_t size)
 		return -errno;
 
 	ret = read(fd, buffer, size - 1);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		ret = -errno;
 		close(fd);
 		return ret;

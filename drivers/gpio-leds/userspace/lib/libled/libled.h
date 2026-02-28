@@ -29,16 +29,15 @@
  * @delay_off_path: Path to delay_off attribute (timer trigger)
  * @gpio_pin_path: Path to gpio_pin attribute (hardware GPIO number)
  */
-typedef struct led_device
-{
-    char name[LED_BUFFER_SIZE];
-    char path[LED_BUFFER_SIZE];
-    char brightness_path[LED_BUFFER_SIZE];
-    char trigger_path[LED_BUFFER_SIZE];
-    char max_brightness_path[LED_BUFFER_SIZE];
-    char delay_on_path[LED_BUFFER_SIZE];
-    char delay_off_path[LED_BUFFER_SIZE];
-    char gpio_pin_path[LED_BUFFER_SIZE];
+typedef struct led_device {
+	char name[LED_BUFFER_SIZE];
+	char path[LED_BUFFER_SIZE];
+	char brightness_path[LED_BUFFER_SIZE];
+	char trigger_path[LED_BUFFER_SIZE];
+	char max_brightness_path[LED_BUFFER_SIZE];
+	char delay_on_path[LED_BUFFER_SIZE];
+	char delay_off_path[LED_BUFFER_SIZE];
+	char gpio_pin_path[LED_BUFFER_SIZE];
 } led_device_t;
 
 /**
@@ -49,13 +48,12 @@ typedef struct led_device
  * @trigger: Current trigger name
  * @gpio_pin: Hardware GPIO pin number (-1 if unavailable)
  */
-typedef struct led_info
-{
-    char name[LED_BUFFER_SIZE];
-    int brightness;
-    int max_brightness;
-    char trigger[LED_BUFFER_SIZE];
-    int gpio_pin;
+typedef struct led_info {
+	char name[LED_BUFFER_SIZE];
+	int brightness;
+	int max_brightness;
+	char trigger[LED_BUFFER_SIZE];
+	int gpio_pin;
 } led_info_t;
 
 /**

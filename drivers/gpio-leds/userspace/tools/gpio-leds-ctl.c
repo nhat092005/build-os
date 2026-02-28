@@ -28,8 +28,7 @@ typedef int (*cmd_handler_t)(led_device_t *led, int argc, char *argv[]);
  * @args: Argument description for usage
  * @description: Brief description of the command
  */
-struct command
-{
+struct command {
 	const char *name;
 	cmd_handler_t handler;
 	const char *args;
@@ -137,7 +136,6 @@ static int cmd_pulse(led_device_t *led, int argc, char *argv[]);
  */
 static int cmd_info(led_device_t *led, int argc, char *argv[]);
 
-
 /**
  * parse_int - Safely parse a string to int
  * @str: NUL-terminated string
@@ -148,16 +146,17 @@ static int parse_int(const char *str, int *result);
 
 /* Command table */
 static struct command commands[] = {
-	{"on", cmd_on, "", "Turn LED on"},
-	{"off", cmd_off, "", "Turn LED off"},
-	{"set", cmd_set, "<brightness>", "Set brightness (0-max)"},
-	{"get", cmd_get, "", "Get current brightness"},
-	{"trigger", cmd_trigger, "[name]", "Set or get trigger"},
-	{"blink", cmd_blink, "[count] [delay_ms]", "Blink LED"},
-	{"timer", cmd_timer, "[on_ms] [off_ms]", "Set timer trigger"},
-	{"pulse", cmd_pulse, "[duration] [steps]", "Pulse LED (fade)"},
-	{"info", cmd_info, "", "Show LED information"},
-	{NULL, NULL, NULL, NULL}};
+	{ "on", cmd_on, "", "Turn LED on" },
+	{ "off", cmd_off, "", "Turn LED off" },
+	{ "set", cmd_set, "<brightness>", "Set brightness (0-max)" },
+	{ "get", cmd_get, "", "Get current brightness" },
+	{ "trigger", cmd_trigger, "[name]", "Set or get trigger" },
+	{ "blink", cmd_blink, "[count] [delay_ms]", "Blink LED" },
+	{ "timer", cmd_timer, "[on_ms] [off_ms]", "Set timer trigger" },
+	{ "pulse", cmd_pulse, "[duration] [steps]", "Pulse LED (fade)" },
+	{ "info", cmd_info, "", "Show LED information" },
+	{ NULL, NULL, NULL, NULL }
+};
 
 /* Main */
 int main(int argc, char *argv[])
@@ -167,16 +166,15 @@ int main(int argc, char *argv[])
 	const char *cmd_name;
 	int opt, ret, i;
 
-	static struct option long_options[] = {
-		{"device", required_argument, 0, 'd'},
-		{"help", no_argument, 0, 'h'},
-		{0, 0, 0, 0}};
+	static struct option long_options[] = { { "device", required_argument,
+						  0, 'd' },
+						{ "help", no_argument, 0, 'h' },
+						{ 0, 0, 0, 0 } };
 
 	/* Parse options */
-	while ((opt = getopt_long(argc, argv, "d:h", long_options, NULL)) != -1)
-	{
-		switch (opt)
-		{
+	while ((opt = getopt_long(argc, argv, "d:h", long_options, NULL)) !=
+	       -1) {
+		switch (opt) {
 		case 'd':
 			led_name = optarg;
 			break;
@@ -190,8 +188,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Check for command */
-	if (optind >= argc)
-	{
+	if (optind >= argc) {
 		print_error("No command specified");
 		usage(argv[0]);
 		return 1;
@@ -201,21 +198,17 @@ int main(int argc, char *argv[])
 
 	/* Open LED device */
 	ret = led_open(&led, led_name);
-	if (ret < 0)
-	{
-		print_error("Failed to open LED '%s': %s",
-					led_name, led_strerror(ret));
+	if (ret < 0) {
+		print_error("Failed to open LED '%s': %s", led_name,
+			    led_strerror(ret));
 		return 1;
 	}
 
 	/* Find and execute command */
-	for (i = 0; commands[i].name != NULL; i++)
-	{
-		if (strcmp(cmd_name, commands[i].name) == 0)
-		{
-			ret = commands[i].handler(&led,
-									  argc - optind - 1,
-									  argv + optind + 1);
+	for (i = 0; commands[i].name != NULL; i++) {
+		if (strcmp(cmd_name, commands[i].name) == 0) {
+			ret = commands[i].handler(&led, argc - optind - 1,
+						  argv + optind + 1);
 			led_close(&led);
 			return ret;
 		}
@@ -238,12 +231,9 @@ static void usage(const char *progname)
 	printf("  -h, --help           Show this help message\n");
 	printf("Commands:\n");
 
-	for (i = 0; commands[i].name != NULL; i++)
-	{
-		printf("  %-8s %-20s %s\n",
-			   commands[i].name,
-			   commands[i].args,
-			   commands[i].description);
+	for (i = 0; commands[i].name != NULL; i++) {
+		printf("  %-8s %-20s %s\n", commands[i].name, commands[i].args,
+		       commands[i].description);
 	}
 }
 
@@ -259,34 +249,34 @@ static void print_error(const char *fmt, ...)
 
 /* Command implementations */
 static int cmd_on(led_device_t *led, int argc __attribute__((unused)),
-				  char *argv[] __attribute__((unused)))
+		  char *argv[] __attribute__((unused)))
 {
 	int ret;
 
 	ret = led_on(led);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to turn LED on: %s", led_strerror(ret));
 		return 1;
 	}
 
-	printf("GPIO %d (%s): ON\n", led_get_gpio_pin(led) - GPIO_BASE, led->name);
+	printf("GPIO %d (%s): ON\n", led_get_gpio_pin(led) - GPIO_BASE,
+	       led->name);
 	return 0;
 }
 
 static int cmd_off(led_device_t *led, int argc __attribute__((unused)),
-				   char *argv[] __attribute__((unused)))
+		   char *argv[] __attribute__((unused)))
 {
 	int ret;
 
 	ret = led_off(led);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to turn LED off: %s", led_strerror(ret));
 		return 1;
 	}
 
-	printf("GPIO %d (%s): OFF\n", led_get_gpio_pin(led) - GPIO_BASE, led->name);
+	printf("GPIO %d (%s): OFF\n", led_get_gpio_pin(led) - GPIO_BASE,
+	       led->name);
 	return 0;
 }
 
@@ -294,42 +284,41 @@ static int cmd_set(led_device_t *led, int argc, char *argv[])
 {
 	int brightness, ret;
 
-	if (argc < 1)
-	{
+	if (argc < 1) {
 		print_error("Missing brightness value");
 		return 1;
 	}
 
-	if (parse_int(argv[0], &brightness) != 0)
-	{
+	if (parse_int(argv[0], &brightness) != 0) {
 		print_error("Invalid brightness value: %s", argv[0]);
 		return 1;
 	}
 
 	ret = led_set_brightness(led, brightness);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to set brightness: %s", led_strerror(ret));
 		return 1;
 	}
 
-	printf("GPIO %d (%s): brightness set to %d\n", led_get_gpio_pin(led) - GPIO_BASE, led->name, brightness);
+	printf("GPIO %d (%s): brightness set to %d\n",
+	       led_get_gpio_pin(led) - GPIO_BASE, led->name, brightness);
 	return 0;
 }
 
 static int cmd_get(led_device_t *led, int argc __attribute__((unused)),
-				   char *argv[] __attribute__((unused)))
+		   char *argv[] __attribute__((unused)))
 {
 	int brightness;
 
 	brightness = led_get_brightness(led);
-	if (brightness < 0)
-	{
-		print_error("Failed to get brightness: %s", led_strerror(brightness));
+	if (brightness < 0) {
+		print_error("Failed to get brightness: %s",
+			    led_strerror(brightness));
 		return 1;
 	}
 
-	printf("GPIO %d (%s): brightness=%d\n", led_get_gpio_pin(led) - GPIO_BASE, led->name, brightness);
+	printf("GPIO %d (%s): brightness=%d\n",
+	       led_get_gpio_pin(led) - GPIO_BASE, led->name, brightness);
 	return 0;
 }
 
@@ -338,27 +327,26 @@ static int cmd_trigger(led_device_t *led, int argc, char *argv[])
 	char buffer[LED_BUFFER_SIZE];
 	int ret;
 
-	if (argc < 1)
-	{
+	if (argc < 1) {
 		/* Get current trigger */
 		ret = led_get_trigger(led, buffer, sizeof(buffer));
-		if (ret < 0)
-		{
-			print_error("Failed to get trigger: %s", led_strerror(ret));
+		if (ret < 0) {
+			print_error("Failed to get trigger: %s",
+				    led_strerror(ret));
 			return 1;
 		}
-		printf("GPIO %d (%s): trigger=%s\n", led_get_gpio_pin(led) - GPIO_BASE, led->name, buffer);
-	}
-	else
-	{
+		printf("GPIO %d (%s): trigger=%s\n",
+		       led_get_gpio_pin(led) - GPIO_BASE, led->name, buffer);
+	} else {
 		/* Set trigger */
 		ret = led_set_trigger(led, argv[0]);
-		if (ret < 0)
-		{
-			print_error("Failed to set trigger: %s", led_strerror(ret));
+		if (ret < 0) {
+			print_error("Failed to set trigger: %s",
+				    led_strerror(ret));
 			return 1;
 		}
-		printf("GPIO %d (%s): trigger set to '%s'\n", led_get_gpio_pin(led) - GPIO_BASE, led->name, argv[0]);
+		printf("GPIO %d (%s): trigger set to '%s'\n",
+		       led_get_gpio_pin(led) - GPIO_BASE, led->name, argv[0]);
 	}
 
 	return 0;
@@ -366,97 +354,91 @@ static int cmd_trigger(led_device_t *led, int argc, char *argv[])
 
 static int cmd_blink(led_device_t *led, int argc, char *argv[])
 {
-	int count = 10;		/* Default: 10 blinks */
+	int count = 10; /* Default: 10 blinks */
 	int delay_ms = 500; /* Default: 500ms */
 	int ret;
 
-	if (argc >= 1 && parse_int(argv[0], &count) != 0)
-	{
+	if (argc >= 1 && parse_int(argv[0], &count) != 0) {
 		print_error("Invalid count value: %s", argv[0]);
 		return 1;
 	}
-	if (argc >= 2 && parse_int(argv[1], &delay_ms) != 0)
-	{
+	if (argc >= 2 && parse_int(argv[1], &delay_ms) != 0) {
 		print_error("Invalid delay value: %s", argv[1]);
 		return 1;
 	}
 
 	ret = led_blink(led, count, delay_ms);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to blink LED: %s", led_strerror(ret));
 		return 1;
 	}
 
-	printf("GPIO %d (%s): blinked %d times with %dms delay\n", led_get_gpio_pin(led) - GPIO_BASE, led->name, count, delay_ms);
+	printf("GPIO %d (%s): blinked %d times with %dms delay\n",
+	       led_get_gpio_pin(led) - GPIO_BASE, led->name, count, delay_ms);
 	return 0;
 }
 
 static int cmd_timer(led_device_t *led, int argc, char *argv[])
 {
-	int delay_on = 500;	 /* Default: 500ms on */
+	int delay_on = 500; /* Default: 500ms on */
 	int delay_off = 500; /* Default: 500ms off */
 	int ret;
 
-	if (argc >= 1 && parse_int(argv[0], &delay_on) != 0)
-	{
+	if (argc >= 1 && parse_int(argv[0], &delay_on) != 0) {
 		print_error("Invalid delay_on value: %s", argv[0]);
 		return 1;
 	}
-	if (argc >= 2 && parse_int(argv[1], &delay_off) != 0)
-	{
+	if (argc >= 2 && parse_int(argv[1], &delay_off) != 0) {
 		print_error("Invalid delay_off value: %s", argv[1]);
 		return 1;
 	}
 
 	ret = led_set_timer(led, delay_on, delay_off);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to set timer: %s", led_strerror(ret));
 		return 1;
 	}
 
-	printf("GPIO %d (%s): timer set %dms on, %dms off\n", led_get_gpio_pin(led) - GPIO_BASE, led->name, delay_on, delay_off);
+	printf("GPIO %d (%s): timer set %dms on, %dms off\n",
+	       led_get_gpio_pin(led) - GPIO_BASE, led->name, delay_on,
+	       delay_off);
 	return 0;
 }
 
 static int cmd_pulse(led_device_t *led, int argc, char *argv[])
 {
 	int duration = 3000; /* Default: 3 seconds */
-	int steps = 50;		 /* Default: 50 steps */
+	int steps = 50; /* Default: 50 steps */
 	int ret;
 
-	if (argc >= 1 && parse_int(argv[0], &duration) != 0)
-	{
+	if (argc >= 1 && parse_int(argv[0], &duration) != 0) {
 		print_error("Invalid duration value: %s", argv[0]);
 		return 1;
 	}
-	if (argc >= 2 && parse_int(argv[1], &steps) != 0)
-	{
+	if (argc >= 2 && parse_int(argv[1], &steps) != 0) {
 		print_error("Invalid steps value: %s", argv[1]);
 		return 1;
 	}
 
 	ret = led_pulse(led, duration, steps);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to pulse LED: %s", led_strerror(ret));
 		return 1;
 	}
 
-	printf("GPIO %d (%s): pulsed for %dms with %d steps\n", led_get_gpio_pin(led) - GPIO_BASE, led->name, duration, steps);
+	printf("GPIO %d (%s): pulsed for %dms with %d steps\n",
+	       led_get_gpio_pin(led) - GPIO_BASE, led->name, duration, steps);
 	return 0;
 }
 
 static int cmd_info(led_device_t *led, int argc __attribute__((unused)),
-					char *argv[] __attribute__((unused)))
+		    char *argv[] __attribute__((unused)))
 {
 	led_info_t info;
 	int ret;
 
 	ret = led_get_info(led, &info);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to get LED info: %s", led_strerror(ret));
 		return 1;
 	}
