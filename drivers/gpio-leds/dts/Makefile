@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
-# Makefile for GPIO LEDS Device DTS Overlay
+# Makefile for GPIO LEDS Device Tree Overlay
 
 DTC ?= dtc
 DTC_FLAGS ?= -@ -I dts -O dtb -Wno-unit_address_vs_reg
