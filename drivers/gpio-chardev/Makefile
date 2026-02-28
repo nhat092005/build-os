@@ -17,9 +17,6 @@ all: dtbo modules tools
 dtbo:
 	$(MAKE) -C dts dtbo
 
-dtbo-clean:
-	$(MAKE) -C dts dtbo-clean
-
 modules:
 	$(MAKE) -C src modules
 
@@ -27,6 +24,9 @@ tools:
 	$(MAKE) -C userspace tools
 
 clean: dtbo-clean modules-clean tools-clean
+
+dtbo-clean:
+	$(MAKE) -C dts dtbo-clean
 
 modules-clean:
 	$(MAKE) -C src modules-clean
