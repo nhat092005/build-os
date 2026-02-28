@@ -32,6 +32,11 @@ unsigned int rust_helper_get_hw_pin_param(void);
 int rust_helper_misc_register(void);
 void rust_helper_misc_deregister(void);
 
+/* Rust-exported callbacks called from C file_operations */
+int rust_gpio_handle_get_value(void);
+void rust_gpio_handle_set_value(int value);
+unsigned int rust_gpio_handle_get_hw_pin(void);
+
 #endif /* __KERNEL__ */
 
 /* Driver information */

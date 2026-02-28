@@ -97,8 +97,7 @@ int main(int argc, char *argv[])
 	const char *cmd;
 	int ret;
 
-	if (argc < 2)
-	{
+	if (argc < 2) {
 		print_usage(argv[0]);
 		return 1;
 	}
@@ -107,20 +106,18 @@ int main(int argc, char *argv[])
 
 	/* Handle help before anything else */
 	if (strcmp(cmd, "help") == 0 || strcmp(cmd, "--help") == 0 ||
-		strcmp(cmd, "-h") == 0)
-	{
+	    strcmp(cmd, "-h") == 0) {
 		print_usage(argv[0]);
 		return 0;
 	}
 
 	/* Open the char device /dev/gpio-rust */
 	ret = gpio_rust_open(&dev);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		fprintf(stderr, "Error: failed to open %s: %s\n",
-				GPIO_RUST_DEV_PATH, gpio_rust_strerror(ret));
+			GPIO_RUST_DEV_PATH, gpio_rust_strerror(ret));
 		fprintf(stderr, "Make sure gpio_rust module is loaded: "
-						"insmod gpio_rust.ko\n");
+				"insmod gpio_rust.ko\n");
 		return 1;
 	}
 
@@ -137,8 +134,7 @@ int main(int argc, char *argv[])
 		ret = cmd_blink(&dev, argc - 2, argv + 2);
 	else if (strcmp(cmd, "status") == 0)
 		ret = cmd_status(&dev);
-	else
-	{
+	else {
 		fprintf(stderr, "Error: unknown command '%s'\n", cmd);
 		print_usage(argv[0]);
 		ret = 1;
@@ -160,8 +156,8 @@ static void print_usage(const char *prog)
 	printf("  blink <count> <delay_ms>    Blink LED\n");
 	printf("  status                      Show GPIO pin info\n");
 	printf("  help                        Show this help\n");
-	printf("\nGPIO Pin: %d (device: %s)\n",
-		   GPIO_RUST_DEFAULT_PIN, GPIO_RUST_DEV_PATH);
+	printf("\nGPIO Pin: %d (device: %s)\n", GPIO_RUST_DEFAULT_PIN,
+	       GPIO_RUST_DEV_PATH);
 }
 
 static int cmd_on(gpio_rust_device_t *dev)
@@ -169,10 +165,9 @@ static int cmd_on(gpio_rust_device_t *dev)
 	int ret;
 
 	ret = gpio_rust_set_value(dev, 1);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		fprintf(stderr, "Error: failed to turn on: %s\n",
-				gpio_rust_strerror(ret));
+			gpio_rust_strerror(ret));
 		return 1;
 	}
 	printf("GPIO %d: ON\n", GPIO_RUST_DEFAULT_PIN);
@@ -184,10 +179,9 @@ static int cmd_off(gpio_rust_device_t *dev)
 	int ret;
 
 	ret = gpio_rust_set_value(dev, 0);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		fprintf(stderr, "Error: failed to turn off: %s\n",
-				gpio_rust_strerror(ret));
+			gpio_rust_strerror(ret));
 		return 1;
 	}
 	printf("GPIO %d: OFF\n", GPIO_RUST_DEFAULT_PIN);
@@ -199,14 +193,13 @@ static int cmd_get(gpio_rust_device_t *dev)
 	int value, ret;
 
 	ret = gpio_rust_get_value(dev, &value);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		fprintf(stderr, "Error: failed to read value: %s\n",
-				gpio_rust_strerror(ret));
+			gpio_rust_strerror(ret));
 		return 1;
 	}
 	printf("GPIO %d: %s (%d)\n", GPIO_RUST_DEFAULT_PIN,
-		   value ? "ON" : "OFF", value);
+	       value ? "ON" : "OFF", value);
 	return 0;
 }
 
@@ -216,23 +209,20 @@ static int cmd_toggle(gpio_rust_device_t *dev)
 
 	/* Use ioctl toggle for atomic operation */
 	ret = gpio_rust_toggle(dev);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		fprintf(stderr, "Error: failed to toggle: %s\n",
-				gpio_rust_strerror(ret));
+			gpio_rust_strerror(ret));
 		return 1;
 	}
 
 	/* Read back to report new state */
 	ret = gpio_rust_get_value(dev, &value);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		/* Toggle succeeded, just can't report state */
 		printf("GPIO %d: toggled\n", GPIO_RUST_DEFAULT_PIN);
 		return 0;
 	}
-	printf("GPIO %d: %s\n", GPIO_RUST_DEFAULT_PIN,
-		   value ? "ON" : "OFF");
+	printf("GPIO %d: %s\n", GPIO_RUST_DEFAULT_PIN, value ? "ON" : "OFF");
 	return 0;
 }
 
@@ -240,33 +230,30 @@ static int cmd_blink(gpio_rust_device_t *dev, int argc, char *argv[])
 {
 	int count, delay_ms, ret;
 
-	if (argc < 2)
-	{
-		fprintf(stderr, "Usage: gpio-rust-ctl blink <count> <delay_ms>\n");
+	if (argc < 2) {
+		fprintf(stderr,
+			"Usage: gpio-rust-ctl blink <count> <delay_ms>\n");
 		return 1;
 	}
 
 	if (parse_int(argv[0], &count) != 0 ||
-		parse_int(argv[1], &delay_ms) != 0)
-	{
+	    parse_int(argv[1], &delay_ms) != 0) {
 		fprintf(stderr, "Error: invalid numeric argument\n");
 		return 1;
 	}
 
-	if (count <= 0 || delay_ms <= 0)
-	{
+	if (count <= 0 || delay_ms <= 0) {
 		fprintf(stderr, "Error: count and delay_ms must be positive\n");
 		return 1;
 	}
 
 	printf("Blinking GPIO %d: %d times, %dms interval\n",
-		   GPIO_RUST_DEFAULT_PIN, count, delay_ms);
+	       GPIO_RUST_DEFAULT_PIN, count, delay_ms);
 
 	ret = gpio_rust_blink(dev, count, delay_ms);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		fprintf(stderr, "Error: blink failed: %s\n",
-				gpio_rust_strerror(ret));
+			gpio_rust_strerror(ret));
 		return 1;
 	}
 	printf("Blink complete\n");
@@ -279,10 +266,9 @@ static int cmd_status(gpio_rust_device_t *dev)
 	int ret;
 
 	ret = gpio_rust_get_info(dev, &info);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		fprintf(stderr, "Error: failed to get status: %s\n",
-				gpio_rust_strerror(ret));
+			gpio_rust_strerror(ret));
 		return 1;
 	}
 
@@ -290,7 +276,7 @@ static int cmd_status(gpio_rust_device_t *dev)
 	printf("  GPIO Pin:   %d\n", info.gpio_pin);
 	printf("  Direction:  %s\n", info.direction);
 	printf("  Value:      %d (%s)\n", info.value,
-		   info.value ? "ON" : "OFF");
+	       info.value ? "ON" : "OFF");
 	printf("  Device:     %s\n", GPIO_RUST_DEV_PATH);
 	return 0;
 }
