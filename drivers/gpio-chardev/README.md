@@ -95,12 +95,3 @@ gpio-chardev-ctl get                                 # Get current state
 gpio-chardev-ctl gpio                                # Get GPIO pin number
 gpio-chardev-ctl blink <count> <on_ms> <off_ms>      # Start blinking
 ```
-
-## Build
-
-```
-make all             # Build kernel module and userspace tool
-make modules         # Build kernel module only
-make tools           # Build userspace tool only
-make clean           # Clean all build artifacts
-```
