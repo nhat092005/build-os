@@ -29,11 +29,10 @@
  * Return: 0 on success, negative error code on failure
  */
 static int gpio_led_set_brightness(struct led_classdev *cdev,
-								   enum led_brightness brightness)
+				   enum led_brightness brightness)
 {
-	struct gpio_led_data *led = container_of(cdev,
-											 struct gpio_led_data,
-											 cdev);
+	struct gpio_led_data *led =
+		container_of(cdev, struct gpio_led_data, cdev);
 	int value;
 
 	/* Convert brightness to logical GPIO value.
@@ -59,9 +58,8 @@ static int gpio_led_set_brightness(struct led_classdev *cdev,
  */
 static enum led_brightness gpio_led_get_brightness(struct led_classdev *cdev)
 {
-	struct gpio_led_data *led = container_of(cdev,
-											 struct gpio_led_data,
-											 cdev);
+	struct gpio_led_data *led =
+		container_of(cdev, struct gpio_led_data, cdev);
 	int value;
 
 	/* gpiod_get_value() returns logical value adjusted for polarity */
@@ -72,7 +70,7 @@ static enum led_brightness gpio_led_get_brightness(struct led_classdev *cdev)
 
 	if (value < 0) {
 		dev_err_ratelimited(cdev->dev->parent,
-							"Failed to read GPIO: %d\n", value);
+				    "Failed to read GPIO: %d\n", value);
 		return LED_OFF;
 	}
 
@@ -105,7 +103,8 @@ static int gpio_led_parse_dt(struct device *dev, struct gpio_led_data *led)
 	if (ret) {
 		/* Fallback to device name if no label specified */
 		label = dev_name(dev);
-		dev_dbg(dev, "No label specified, using device name: %s\n", label);
+		dev_dbg(dev, "No label specified, using device name: %s\n",
+			label);
 	}
 	led->cdev.name = devm_kstrdup(dev, label, GFP_KERNEL);
 	if (!led->cdev.name)
@@ -113,7 +112,7 @@ static int gpio_led_parse_dt(struct device *dev, struct gpio_led_data *led)
 
 	/* Get default trigger (optional) */
 	ret = device_property_read_string(dev, "linux,default-trigger",
-									  &trigger);
+					  &trigger);
 	if (!ret) {
 		led->cdev.default_trigger =
 			devm_kstrdup(dev, trigger, GFP_KERNEL);
@@ -170,12 +169,11 @@ static int gpio_led_parse_dt(struct device *dev, struct gpio_led_data *led)
  * Return: Number of bytes written to buf
  */
 static ssize_t gpio_state_show(struct device *dev,
-							   struct device_attribute *attr, char *buf)
+			       struct device_attribute *attr, char *buf)
 {
 	struct led_classdev *cdev = dev_get_drvdata(dev);
-	struct gpio_led_data *led = container_of(cdev,
-											 struct gpio_led_data,
-											 cdev);
+	struct gpio_led_data *led =
+		container_of(cdev, struct gpio_led_data, cdev);
 	int val;
 
 	if (led->can_sleep)
@@ -202,13 +200,12 @@ static DEVICE_ATTR_RO(gpio_state);
  *
  * Return: Number of bytes written to buf
  */
-static ssize_t gpio_pin_show(struct device *dev,
-			     struct device_attribute *attr, char *buf)
+static ssize_t gpio_pin_show(struct device *dev, struct device_attribute *attr,
+			     char *buf)
 {
 	struct led_classdev *cdev = dev_get_drvdata(dev);
-	struct gpio_led_data *led = container_of(cdev,
-						 struct gpio_led_data,
-						 cdev);
+	struct gpio_led_data *led =
+		container_of(cdev, struct gpio_led_data, cdev);
 
 	return sysfs_emit(buf, "%d\n", desc_to_gpio(led->gpiod));
 }
@@ -250,7 +247,8 @@ static int gpio_led_probe(struct platform_device *pdev)
 	struct gpio_led_data *led;
 	int ret;
 
-	dev_info(dev, "Probing GPIO LED driver v%s\n", GPIO_LEDS_DRIVER_VERSION);
+	dev_info(dev, "Probing GPIO LED driver v%s\n",
+		 GPIO_LEDS_DRIVER_VERSION);
 
 	/* Allocate memory for LED data */
 	led = devm_kzalloc(dev, sizeof(*led), GFP_KERNEL);
@@ -260,7 +258,8 @@ static int gpio_led_probe(struct platform_device *pdev)
 	/* Parse Device Tree properties */
 	ret = gpio_led_parse_dt(dev, led);
 	if (ret) {
-		dev_err(dev, "Failed to parse Device Tree properties: %d\n", ret);
+		dev_err(dev, "Failed to parse Device Tree properties: %d\n",
+			ret);
 		return ret;
 	}
 
@@ -271,7 +270,9 @@ static int gpio_led_probe(struct platform_device *pdev)
 	 * active-low inversion based on the DTS flags cell automatically.
 	 */
 	led->gpiod = devm_gpiod_get(dev, NULL,
-								led->default_state == LED_FULL ? GPIOD_OUT_HIGH : GPIOD_OUT_LOW);
+				    led->default_state == LED_FULL ?
+					    GPIOD_OUT_HIGH :
+					    GPIOD_OUT_LOW);
 	if (IS_ERR(led->gpiod)) {
 		ret = PTR_ERR(led->gpiod);
 		dev_err(dev, "Failed to get GPIO descriptor: %d\n", ret);
@@ -360,19 +361,24 @@ static int gpio_led_resume(struct device *dev)
 	if (!led->retain_state_suspended) {
 		ret = gpio_led_set_brightness(&led->cdev, led->cdev.brightness);
 		if (ret)
-			dev_warn(dev, "Failed to restore LED state after resume: %d\n", ret);
+			dev_warn(
+				dev,
+				"Failed to restore LED state after resume: %d\n",
+				ret);
 	}
 
 	return 0;
 }
 
 /* Power management operations */
-static DEFINE_SIMPLE_DEV_PM_OPS(gpio_led_pm_ops, gpio_led_suspend, gpio_led_resume);
+static DEFINE_SIMPLE_DEV_PM_OPS(gpio_led_pm_ops, gpio_led_suspend,
+				gpio_led_resume);
 
 /* Device Tree match table */
 static const struct of_device_id gpio_led_of_match[] = {
-	{.compatible = "custom,gpio-led"},
-	{}};
+	{ .compatible = "custom,gpio-led" },
+	{}
+};
 MODULE_DEVICE_TABLE(of, gpio_led_of_match);
 
 /* Platform driver structure */
@@ -382,7 +388,6 @@ static struct platform_driver gpio_led_driver = {
 	.driver = {
 		.name = GPIO_LEDS_DRIVER_NAME,
 		.of_match_table = gpio_led_of_match,
-		.owner = THIS_MODULE,
 		.pm = pm_sleep_ptr(&gpio_led_pm_ops),
 	},
 };
@@ -391,7 +396,8 @@ static struct platform_driver gpio_led_driver = {
 module_platform_driver(gpio_led_driver);
 
 MODULE_AUTHOR("nhat092005");
-MODULE_DESCRIPTION("GPIO LED Driver - LED Class Interface with Device Tree Support");
+MODULE_DESCRIPTION(
+	"GPIO LED Driver - LED Class Interface with Device Tree Support");
 MODULE_LICENSE("GPL");
 MODULE_VERSION(GPIO_LEDS_DRIVER_VERSION);
 MODULE_ALIAS("platform:" GPIO_LEDS_DRIVER_NAME);

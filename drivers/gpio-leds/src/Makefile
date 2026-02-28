@@ -1,29 +1,20 @@
-# Makefile for GPIO LED Driver - LED Class Interface with Device Tree Support
+# SPDX-License-Identifier: GPL-2.0
+# Makefile for GPIO LEDS Driver Kernel Module
 
-# Target platform configuration
-ARCH				?= arm64
+ARCH ?= arm64
 
-# Directory paths
-BUILDROOT_DIR		?= $(shell pwd)/../../../buildroot
-TOOLCHAIN_DIR		?= $(shell pwd)/../../../toolchains/aarch64-buildroot-linux-gnu_sdk-buildroot
+BUILDROOT_DIR ?= $(shell pwd)/../../../buildroot
+KERNEL_DIR ?= $(BUILDROOT_DIR)/output/build/linux-custom
 
-# Buildroot toolchain (must match kernel compiler)
-CROSS_COMPILE 		?= $(TOOLCHAIN_DIR)/bin/aarch64-linux-
+CROSS_COMPILE ?= aarch64-linux-
 
-# Kernel directory (Buildroot kernel only)
-KERNEL_DIR			?= $(BUILDROOT_DIR)/output/build/linux-custom
-
-# Build output directory (where install scripts look for .ko)
 BUILD_DIR := $(CURDIR)/../build/module
 
-# PHONY targets
-.PHONY: all clean help
+.PHONY: all clean
 .PHONY: modules modules-clean
 
-# Default target
 all: modules
 
-# Build kernel module
 modules:
 	mkdir -p $(BUILD_DIR)
 	$(MAKE) -C $(KERNEL_DIR) \
@@ -33,10 +24,8 @@ modules:
 		modules
 	cp -f $(CURDIR)/gpio_leds.ko $(BUILD_DIR)/gpio_leds.ko
 
-# Clean build artifacts
 clean: modules-clean
 
-# Clean Modules
 modules-clean:
 	@if [ -d "$(KERNEL_DIR)" ]; then \
 		$(MAKE) -C $(KERNEL_DIR) M=$(CURDIR) clean 2>/dev/null || true; \
@@ -48,11 +37,3 @@ modules-clean:
 	rm -f  $(CURDIR)/.module-common.o
 	rm -rf $(CURDIR)/.tmp_versions
 	rm -rf $(BUILD_DIR)
-
-# Show help information
-help:
-	@echo "Available targets:"
-	@echo "  all                Build kernel module (default)"
-	@echo "  modules            Build kernel module"
-	@echo "  clean              Clean build artifacts"
-	@echo "  modules-clean      Clean kernel module build artifacts"
