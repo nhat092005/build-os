@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
-# Makefile for GPIO Character Device Kernel Driver
+# Makefile for GPIO Character Device Kernel Module
 
 ARCH ?= arm64
 
