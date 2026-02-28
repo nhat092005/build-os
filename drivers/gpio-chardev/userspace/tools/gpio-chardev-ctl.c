@@ -53,7 +53,7 @@ static int parse_uint(const char *str, unsigned int *result)
 	return 0;
 }
 static int blink_led(int fd, unsigned int count, unsigned int on_ms,
-					 unsigned int off_ms);
+		     unsigned int off_ms);
 
 /**
  * main - Entry point of the program
@@ -63,18 +63,17 @@ int main(int argc, char *argv[])
 	int fd;
 	int ret = 0;
 
-	if (argc < 2)
-	{
+	if (argc < 2) {
 		print_usage(argv[0]);
 		return 1;
 	}
 
 	/* Open device */
 	fd = open(DEVICE_PATH, O_RDWR);
-	if (fd < 0)
-	{
+	if (fd < 0) {
 		perror("Failed to open device");
-		fprintf(stderr, "Make sure driver is loaded: insmod gpio_chardev.ko\n");
+		fprintf(stderr,
+			"Make sure driver is loaded: insmod gpio_chardev.ko\n");
 		return 1;
 	}
 
@@ -83,81 +82,64 @@ int main(int argc, char *argv[])
 
 	int gpio_pin = get_gpio_pin(fd);
 
-	if (strcmp(cmd, "on") == 0)
-	{
+	if (strcmp(cmd, "on") == 0) {
 		ret = set_led_state(fd, GPIO_CHARDEV_ON);
-		if (ret == 0)
-		{
+		if (ret == 0) {
 			printf("GPIO %d: ON\n", gpio_pin - GPIO_CHARDEV_BASE);
 		}
-	}
-	else if (strcmp(cmd, "off") == 0)
-	{
+	} else if (strcmp(cmd, "off") == 0) {
 		ret = set_led_state(fd, GPIO_CHARDEV_OFF);
-		if (ret == 0)
-		{
+		if (ret == 0) {
 			printf("GPIO %d: OFF\n", gpio_pin - GPIO_CHARDEV_BASE);
 		}
-	}
-	else if (strcmp(cmd, "toggle") == 0)
-	{
+	} else if (strcmp(cmd, "toggle") == 0) {
 		ret = toggle_led(fd);
-		if (ret == 0)
-		{
-			printf("GPIO %d: TOGGLED\n", gpio_pin - GPIO_CHARDEV_BASE);
-			printf("GPIO %d: %s\n", gpio_pin - GPIO_CHARDEV_BASE, get_led_state(fd) ? "ON" : "OFF");
+		if (ret == 0) {
+			printf("GPIO %d: TOGGLED\n",
+			       gpio_pin - GPIO_CHARDEV_BASE);
+			printf("GPIO %d: %s\n", gpio_pin - GPIO_CHARDEV_BASE,
+			       get_led_state(fd) ? "ON" : "OFF");
 		}
-	}
-	else if (strcmp(cmd, "get") == 0)
-	{
+	} else if (strcmp(cmd, "get") == 0) {
 		ret = get_led_state(fd);
-		if (ret >= 0)
-		{
-			printf("GPIO %d state: %s\n", gpio_pin - GPIO_CHARDEV_BASE, ret ? "ON" : "OFF");
+		if (ret >= 0) {
+			printf("GPIO %d state: %s\n",
+			       gpio_pin - GPIO_CHARDEV_BASE,
+			       ret ? "ON" : "OFF");
 			ret = 0;
 		}
-	}
-	else if (strcmp(cmd, "gpio") == 0)
-	{
+	} else if (strcmp(cmd, "gpio") == 0) {
 		ret = get_gpio_pin(fd);
-		if (ret >= 0)
-		{
+		if (ret >= 0) {
 			printf("GPIO pin: %d\n", ret);
 			ret = 0;
 		}
-	}
-	else if (strcmp(cmd, "blink") == 0)
-	{
-		if (argc != 5)
-		{
-			fprintf(stderr, "Usage: %s blink [count] [on_ms] [off_ms]\n", argv[0]);
+	} else if (strcmp(cmd, "blink") == 0) {
+		if (argc != 5) {
+			fprintf(stderr,
+				"Usage: %s blink [count] [on_ms] [off_ms]\n",
+				argv[0]);
 			print_usage(argv[0]);
 			ret = 1;
-		}
-		else
-		{
+		} else {
 			unsigned int count, on_ms, off_ms;
 
 			if (parse_uint(argv[2], &count) != 0 ||
-				parse_uint(argv[3], &on_ms) != 0 ||
-				parse_uint(argv[4], &off_ms) != 0)
-			{
-				fprintf(stderr, "Error: invalid blink arguments\n");
+			    parse_uint(argv[3], &on_ms) != 0 ||
+			    parse_uint(argv[4], &off_ms) != 0) {
+				fprintf(stderr,
+					"Error: invalid blink arguments\n");
 				ret = 1;
-			}
-			else
-			{
+			} else {
 				ret = blink_led(fd, count, on_ms, off_ms);
-				if (ret == 0)
-				{
+				if (ret == 0) {
 					printf("Blinking GPIO %d: %d times (%ums on, %ums off)\n",
-						   gpio_pin - GPIO_CHARDEV_BASE, count, on_ms, off_ms);
+					       gpio_pin - GPIO_CHARDEV_BASE,
+					       count, on_ms, off_ms);
 				}
 			}
 		}
-	}
-	else
-	{
+	} else {
 		fprintf(stderr, "Unknown command: %s\n", cmd);
 		print_usage(argv[0]);
 		ret = 1;
@@ -192,8 +174,7 @@ static void print_usage(const char *prog)
  */
 static int set_led_state(int fd, unsigned int state)
 {
-	if (ioctl(fd, GPIO_CHARDEV_IOC_SET_STATE, &state) < 0)
-	{
+	if (ioctl(fd, GPIO_CHARDEV_IOC_SET_STATE, &state) < 0) {
 		perror("ioctl GPIO_CHARDEV_IOC_SET_STATE failed");
 		return -1;
 	}
@@ -209,8 +190,7 @@ static int get_led_state(int fd)
 {
 	unsigned int state;
 
-	if (ioctl(fd, GPIO_CHARDEV_IOC_GET_STATE, &state) < 0)
-	{
+	if (ioctl(fd, GPIO_CHARDEV_IOC_GET_STATE, &state) < 0) {
 		perror("ioctl GPIO_CHARDEV_IOC_GET_STATE failed");
 		return -1;
 	}
@@ -224,8 +204,7 @@ static int get_led_state(int fd)
  */
 static int toggle_led(int fd)
 {
-	if (ioctl(fd, GPIO_CHARDEV_IOC_TOGGLE) < 0)
-	{
+	if (ioctl(fd, GPIO_CHARDEV_IOC_TOGGLE) < 0) {
 		perror("ioctl GPIO_CHARDEV_IOC_TOGGLE failed");
 		return -1;
 	}
@@ -241,8 +220,7 @@ static int get_gpio_pin(int fd)
 {
 	unsigned int gpio;
 
-	if (ioctl(fd, GPIO_CHARDEV_IOC_GET_GPIO, &gpio) < 0)
-	{
+	if (ioctl(fd, GPIO_CHARDEV_IOC_GET_GPIO, &gpio) < 0) {
 		perror("ioctl GPIO_CHARDEV_IOC_GET_GPIO failed");
 		return -1;
 	}
@@ -258,7 +236,7 @@ static int get_gpio_pin(int fd)
  * Returns 0 on success, -1 on failure
  */
 static int blink_led(int fd, unsigned int count, unsigned int on_ms,
-					 unsigned int off_ms)
+		     unsigned int off_ms)
 {
 	struct gpio_chardev_blink blink = {
 		.count = count,
@@ -266,8 +244,7 @@ static int blink_led(int fd, unsigned int count, unsigned int on_ms,
 		.delay_off = off_ms,
 	};
 
-	if (ioctl(fd, GPIO_CHARDEV_IOC_BLINK, &blink) < 0)
-	{
+	if (ioctl(fd, GPIO_CHARDEV_IOC_BLINK, &blink) < 0) {
 		perror("ioctl GPIO_CHARDEV_IOC_BLINK failed");
 		return -1;
 	}
