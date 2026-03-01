@@ -23,30 +23,28 @@
 
 /**
  * struct gpio_sysfs_device - GPIO device handle
- * @gpio_pin:        GPIO pin number string (e.g., "534")
- * @base_path:       Base sysfs path  (e.g., "/sys/class/gpio/gpio534")
- * @value_path:      Path to value file
- * @direction_path:  Path to direction file
- * @edge_path:       Path to edge file (for interrupts)
+ * @gpio_pin: GPIO pin number string (e.g., "534")
+ * @base_path: Base sysfs path  (e.g., "/sys/class/gpio/gpio534")
+ * @value_path: Path to value file
+ * @direction_path: Path to direction file
+ * @edge_path: Path to edge file (for interrupts)
  * @active_low_path: Path to active_low file
  */
-typedef struct gpio_sysfs_device
-{
-    char gpio_pin[16];
-    char base_path[GPIO_BUFFER_SIZE];
-    char value_path[GPIO_BUFFER_SIZE];
-    char direction_path[GPIO_BUFFER_SIZE];
-    char edge_path[GPIO_BUFFER_SIZE];
-    char active_low_path[GPIO_BUFFER_SIZE];
+typedef struct gpio_sysfs_device {
+	char gpio_pin[16];
+	char base_path[GPIO_BUFFER_SIZE];
+	char value_path[GPIO_BUFFER_SIZE];
+	char direction_path[GPIO_BUFFER_SIZE];
+	char edge_path[GPIO_BUFFER_SIZE];
+	char active_low_path[GPIO_BUFFER_SIZE];
 } gpio_sysfs_device_t;
 
-typedef struct gpio_sysfs_info
-{
-    char gpio_pin[16];
-    char direction[GPIO_BUFFER_SIZE];
-    char edge[GPIO_BUFFER_SIZE];
-    int value;
-    int active_low;
+typedef struct gpio_sysfs_info {
+	char gpio_pin[16];
+	char direction[GPIO_BUFFER_SIZE];
+	char edge[GPIO_BUFFER_SIZE];
+	int value;
+	int active_low;
 } gpio_sysfs_info_t;
 
 /**

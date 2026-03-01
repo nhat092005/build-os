@@ -1,30 +1,30 @@
 # SPDX-License-Identifier: GPL-2.0
 # Makefile for GPIO Rust Userspace Tool and Library
 
-CROSS_COMPILE   ?= aarch64-linux-
-CC              := $(CROSS_COMPILE)gcc
-AR              := $(CROSS_COMPILE)ar
-CFLAGS          := -Wall -Wextra -O2 -std=gnu11 -fPIC
-LDFLAGS         :=
+CROSS_COMPILE ?= aarch64-linux-
+CC := $(CROSS_COMPILE)gcc
+AR := $(CROSS_COMPILE)ar
+CFLAGS := -Wall -Wextra -O2 -std=gnu11 -fPIC
+LDFLAGS :=
 
-USERSPACE_DIR   := $(shell pwd)
-LIB_DIR         := $(USERSPACE_DIR)/lib/
-TOOLS_DIR       := $(USERSPACE_DIR)/tools
-BUILD_DIR       := $(USERSPACE_DIR)/../build/tools
+USERSPACE_DIR := $(shell pwd)
+LIB_DIR := $(USERSPACE_DIR)/lib/
+TOOLS_DIR := $(USERSPACE_DIR)/tools
+BUILD_DIR := $(USERSPACE_DIR)/../build/tools
 
-LIB_NAME        := libgpio-rust
-LIB_STATIC      := $(BUILD_DIR)/lib$(LIB_NAME).a
-LIB_SHARED      := $(BUILD_DIR)/lib$(LIB_NAME).so
-LIB_HEADER      := $(LIB_DIR)/libgpio-rust.h
-LIB_SOURCE      := $(LIB_DIR)/libgpio-rust.c
-LIB_OBJECT      := $(BUILD_DIR)/libgpio-rust.o
+LIB_NAME := libgpio-rust
+LIB_STATIC := $(BUILD_DIR)/lib$(LIB_NAME).a
+LIB_SHARED := $(BUILD_DIR)/lib$(LIB_NAME).so
+LIB_HEADER := $(LIB_DIR)/libgpio-rust.h
+LIB_SOURCE := $(LIB_DIR)/libgpio-rust.c
+LIB_OBJECT := $(BUILD_DIR)/libgpio-rust.o
 
-TOOL_NAME       := gpio-rust-ctl
-TOOL_SOURCE     := $(TOOLS_DIR)/$(TOOL_NAME).c
-TOOL_OBJECT     := $(BUILD_DIR)/$(TOOL_NAME).o
-TOOL_BINARY     := $(BUILD_DIR)/$(TOOL_NAME)
+TOOL_NAME := gpio-rust-ctl
+TOOL_SOURCE := $(TOOLS_DIR)/$(TOOL_NAME).c
+TOOL_OBJECT := $(BUILD_DIR)/$(TOOL_NAME).o
+TOOL_BINARY := $(BUILD_DIR)/$(TOOL_NAME)
 
-.PHONY: all clean help 
+.PHONY: all clean 
 .PHONY: lib static shared 
 .PHONY: tools tools-clean
 

@@ -56,16 +56,16 @@ int gpio_open(gpio_sysfs_device_t *gpio, const char *gpio_pin)
 
 	snprintf(gpio->gpio_pin, sizeof(gpio->gpio_pin), "%s", gpio_pin);
 
-	snprintf(gpio->base_path, sizeof(gpio->base_path),
-			 "%s/gpio%s", GPIO_SYSFS_PATH, gpio_pin);
-	snprintf(gpio->value_path, sizeof(gpio->value_path),
-			 "%s/gpio%s/value", GPIO_SYSFS_PATH, gpio_pin);
+	snprintf(gpio->base_path, sizeof(gpio->base_path), "%s/gpio%s",
+		 GPIO_SYSFS_PATH, gpio_pin);
+	snprintf(gpio->value_path, sizeof(gpio->value_path), "%s/gpio%s/value",
+		 GPIO_SYSFS_PATH, gpio_pin);
 	snprintf(gpio->direction_path, sizeof(gpio->direction_path),
-			 "%s/gpio%s/direction", GPIO_SYSFS_PATH, gpio_pin);
-	snprintf(gpio->edge_path, sizeof(gpio->edge_path),
-			 "%s/gpio%s/edge", GPIO_SYSFS_PATH, gpio_pin);
+		 "%s/gpio%s/direction", GPIO_SYSFS_PATH, gpio_pin);
+	snprintf(gpio->edge_path, sizeof(gpio->edge_path), "%s/gpio%s/edge",
+		 GPIO_SYSFS_PATH, gpio_pin);
 	snprintf(gpio->active_low_path, sizeof(gpio->active_low_path),
-			 "%s/gpio%s/active_low", GPIO_SYSFS_PATH, gpio_pin);
+		 "%s/gpio%s/active_low", GPIO_SYSFS_PATH, gpio_pin);
 
 	/* Verify the sysfs directory exists (i.e., the GPIO has been exported) */
 	if (access(gpio->base_path, F_OK) != 0)
@@ -156,7 +156,8 @@ int gpio_get_info(gpio_sysfs_device_t *gpio, gpio_sysfs_info_t *info)
 
 	snprintf(info->gpio_pin, sizeof(info->gpio_pin), "%s", gpio->gpio_pin);
 
-	ret = gpio_get_direction(gpio, info->direction, sizeof(info->direction));
+	ret = gpio_get_direction(gpio, info->direction,
+				 sizeof(info->direction));
 	if (ret < 0)
 		return ret;
 
@@ -189,14 +190,14 @@ int gpio_list(gpio_list_callback_t callback, void *user_data)
 	if (!dir)
 		return -errno;
 
-	while ((entry = readdir(dir)) != NULL)
-	{
+	while ((entry = readdir(dir)) != NULL) {
 		if (strncmp(entry->d_name, "gpio", 4) != 0)
 			continue;
 		if (!isdigit((unsigned char)entry->d_name[4]))
 			continue;
 
-		snprintf(path, sizeof(path), "%s/%s", GPIO_SYSFS_PATH, entry->d_name);
+		snprintf(path, sizeof(path), "%s/%s", GPIO_SYSFS_PATH,
+			 entry->d_name);
 		if (stat(path, &st) != 0 || !S_ISDIR(st.st_mode))
 			continue;
 
@@ -259,15 +260,13 @@ static int write_sysfs(const char *path, const char *value)
 		ret = write(fd, value, len);
 	} while (ret < 0 && errno == EINTR);
 
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		int err = -errno;
 		close(fd);
 		return err;
 	}
 
-	if ((size_t)ret != len)
-	{
+	if ((size_t)ret != len) {
 		close(fd);
 		return -EIO; /* partial write */
 	}
@@ -296,8 +295,7 @@ static int read_sysfs(const char *path, char *buffer, size_t size)
 		ret = read(fd, buffer, size - 1);
 	} while (ret < 0 && errno == EINTR);
 
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		int err = -errno;
 		close(fd);
 		return err;
