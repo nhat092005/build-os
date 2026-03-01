@@ -1,0 +1,6 @@
+# docker/sdk.Dockerfile.dockerignore
+# Context for SDK image build — only toolchains/ needed
+**
+!toolchains/
+!toolchains/**
+toolchains/**/.git
