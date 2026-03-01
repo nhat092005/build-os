@@ -1,0 +1,3 @@
+# kbuild definitions for GPIO Inputs Driver
+obj-m := gpio_inputs.o
+ccflags-y := -I$(src)/../include

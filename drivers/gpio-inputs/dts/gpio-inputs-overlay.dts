@@ -1,0 +1,46 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+/dts-v1/;
+/plugin/;
+
+/*
+ * GPIO Inputs overlay — BCM GPIO12 button, active-low wiring
+ *
+ * GPIO specifier flags:
+ *   Bit 0 = GPIO_ACTIVE_LOW (1) — pin is pulled high, button connects to GND
+ *
+ * linux,code:
+ *   0x100 = BTN_0 (BTN_MISC) — standard gamepad/button event code
+ *
+ * To use a different GPIO or key code:
+ *   dtoverlay=gpio-inputs,gpio=13,code=0x101
+ */
+
+/ {
+	compatible = "brcm,bcm2711";
+
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+			gpio-inputs {
+				compatible = "bos,gpio-inputs";
+
+				/*
+				 * BCM GPIO12, GPIO_ACTIVE_LOW (flag = 1).
+				 * Button is normally-open, pulled high externally;
+				 * pressing connects the pin to GND.
+				 */
+				gpios = <&gpio 12 1>;
+				gpio-names = "button0";
+
+				/*
+				 * EV_KEY event code: 0x100 = BTN_0 (BTN_MISC).
+				 * Override with 0x1c (KEY_ENTER), 0x02 (KEY_1), etc.
+				 */
+				linux,code = <0x100>;
+
+				status = "okay";
+			};
+		};
+	};
+};
