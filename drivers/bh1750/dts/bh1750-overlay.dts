@@ -1,0 +1,48 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Device Tree Overlay — BH1750 on Raspberry Pi I2C1
+ *
+ * I2C address: 0x23 (ADDR pin LOW, default) or 0x5C (ADDR pin HIGH).
+ * The address can be changed via dtparam:
+ *   dtoverlay=bh1750,addr=0x5c
+ *
+ * Compatible boards: Raspberry Pi 4B, 3B+, Zero 2 W
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2711", "brcm,bcm2837", "brcm,bcm2835";
+
+	/*
+	 * Fragment 0: Configure I2C1 bus for BH1750
+	 *
+	 * - Enable the bus (status = "okay")
+	 * - Standard Mode 100 kHz (BH1750 supports up to 400 kHz Fast Mode)
+	 * - Declare a child node for the BH1750 at slave address 0x23
+	 */
+	fragment@0 {
+		target = <&i2c1>;
+		__overlay__ {
+			status = "okay";
+			clock-frequency = <100000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			bh1750: bh1750@23 {
+				compatible = "rohm,bh1750";
+				reg = <0x23>;
+				status = "okay";
+			};
+		};
+	};
+
+	/*
+	 * Overridable parameters:
+	 *   addr — I2C address (default 0x23, alternative 0x5c)
+	 */
+	__overrides__ {
+		addr = <&bh1750>, "reg:0";
+	};
+};
