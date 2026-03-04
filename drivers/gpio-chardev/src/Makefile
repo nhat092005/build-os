@@ -17,18 +17,18 @@ endif
 IN_DOCKER := $(shell test -f /.dockerenv && echo 1)
 
 ifeq ($(IN_DOCKER),1)
-	CONTAINER_ROOT := $(_FIND_ROOT)
+  CONTAINER_ROOT := $(_FIND_ROOT)
 else
-	CONTAINER_ROOT := $(DOCKER_CONTAINER_ROOT)
+  CONTAINER_ROOT := $(DOCKER_CONTAINER_ROOT)
 endif
 
 DOCKER_MOUNT   := $(_FIND_ROOT):$(DOCKER_CONTAINER_ROOT)
 DOCKER_WORKDIR := $(DOCKER_CONTAINER_ROOT)/drivers/gpio-chardev/src
 
 ifeq ($(IN_DOCKER),1)
-	RUN :=
+  RUN :=
 else
-	RUN := $(DOCKER_RUN_NO_TTY)
+  RUN := $(DOCKER_RUN_NO_TTY)
 endif
 
 ARCH          ?= arm64
@@ -37,7 +37,8 @@ KERNEL_DIR    ?= $(CONTAINER_ROOT)/buildroot/output/build/linux-custom
 
 BUILD_DIR := ../build/module
 
-.PHONY: all clean modules modules-clean
+.PHONY: all clean 
+.PHONY: modules modules-clean
 
 all: modules
 
@@ -58,6 +59,7 @@ modules-clean:
 	        M=$(if $(filter 1,$(IN_DOCKER)),$(CURDIR),$(DOCKER_CONTAINER_ROOT)/drivers/gpio-chardev/src) \
 	        clean 2>/dev/null || true; \
 	fi
+	# Remove kbuild artifacts directly from src/ (no KERNEL_DIR required)
 	$(RUN) rm -f  *.ko *.o *.mod *.mod.c \
 	              modules.order Module.symvers
 	$(RUN) rm -f  .*.cmd ..*.cmd .module-common.o

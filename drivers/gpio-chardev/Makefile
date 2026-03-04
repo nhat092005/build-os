@@ -17,18 +17,18 @@ endif
 IN_DOCKER := $(shell test -f /.dockerenv && echo 1)
 
 ifeq ($(IN_DOCKER),1)
-	CONTAINER_ROOT := $(_FIND_ROOT)
+  CONTAINER_ROOT := $(_FIND_ROOT)
 else
-	CONTAINER_ROOT := $(DOCKER_CONTAINER_ROOT)
+  CONTAINER_ROOT := $(DOCKER_CONTAINER_ROOT)
 endif
 
 DOCKER_MOUNT   := $(_FIND_ROOT):$(DOCKER_CONTAINER_ROOT)
 DOCKER_WORKDIR := $(DOCKER_CONTAINER_ROOT)/drivers/gpio-chardev
 
 ifeq ($(IN_DOCKER),1)
-	RUN :=
+  RUN :=
 else
-	RUN := $(DOCKER_RUN_NO_TTY)
+  RUN := $(DOCKER_RUN_NO_TTY)
 endif
 
 DTC       ?= dtc

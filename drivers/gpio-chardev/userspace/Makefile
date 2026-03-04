@@ -3,7 +3,6 @@
 
 DRIVER_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 
-# Walk-up: find project root containing mk/docker.mk
 _MK_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 _FIND_ROOT := $(firstword $(foreach d,\
     $(_MK_DIR) \
@@ -19,22 +18,19 @@ endif
 
 IN_DOCKER := $(shell test -f /.dockerenv && echo 1)
 
-# Mount driver root: ../include/uapi and ../build/tools are accessible.
-# -w .../userspace so relative paths (tools/, ../build/) resolve correctly.
 DOCKER_MOUNT   := $(DRIVER_ROOT):$(DOCKER_CONTAINER_ROOT)
 DOCKER_WORKDIR := $(DOCKER_CONTAINER_ROOT)/userspace
 
 ifeq ($(IN_DOCKER),1)
-	RUN :=
+  RUN :=
 else
-	RUN := $(DOCKER_RUN_NO_TTY)
+  RUN := $(DOCKER_RUN_NO_TTY)
 endif
 
 CROSS_COMPILE ?= aarch64-linux-
-CC    ?= $(CROSS_COMPILE)gcc
-CFLAGS ?= -Wall -Wextra -O2
+CC            ?= $(CROSS_COMPILE)gcc
+CFLAGS        ?= -Wall -Wextra -O2
 
-# Relative paths — resolved relative to workdir $(DOCKER_CONTAINER_ROOT)/userspace
 TOOLS_DIR := tools
 BUILD_DIR := ../build/tools
 UAPI_DIR  := ../include/uapi

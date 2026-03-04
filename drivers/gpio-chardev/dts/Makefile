@@ -22,9 +22,9 @@ DOCKER_MOUNT   := $(DRIVER_ROOT):$(DOCKER_CONTAINER_ROOT)
 DOCKER_WORKDIR := $(DOCKER_CONTAINER_ROOT)/dts
 
 ifeq ($(IN_DOCKER),1)
-	RUN :=
-else
-	RUN := $(DOCKER_RUN_NO_TTY)
+  RUN :=
+else 
+  RUN := $(DOCKER_RUN_NO_TTY)
 endif
 
 DTC       ?= dtc
@@ -34,7 +34,8 @@ BUILD_DIR := ../build/dtbo
 DTS       := gpio-chardev-overlay.dts
 DTBO_OUT  := gpio-chardev.dtbo
 
-.PHONY: all clean dtbo dtbo-clean
+.PHONY: all clean 
+.PHONY: dtbo dtbo-clean
 
 all: dtbo
 
