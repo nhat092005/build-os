@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
-# Makefile for GPIO Character Device Driver (top-level)
+# Makefile for GPIO Character Device Driver
 
 _MK_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 _FIND_ROOT := $(firstword $(foreach d,\
