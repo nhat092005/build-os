@@ -1,32 +1,71 @@
 # SPDX-License-Identifier: GPL-2.0
 # Makefile for GPIO Sysfs Driver 
 
-USERSPACE_DIR  := $(shell pwd)/userspace
+_MK_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+_FIND_ROOT := $(firstword $(foreach d,\
+    $(_MK_DIR) \
+    $(abspath $(_MK_DIR)/..) \
+    $(abspath $(_MK_DIR)/../..) \
+    $(abspath $(_MK_DIR)/../../..) \
+    $(abspath $(_MK_DIR)/../../../..) \
+  ,$(if $(wildcard $(d)/mk/docker.mk),$(d))))
 
-export ARCH CROSS_COMPILE KERNEL_DIR
+ifneq ($(_FIND_ROOT),)
+  include $(_FIND_ROOT)/mk/docker.mk
+endif
+
+IN_DOCKER := $(shell test -f /.dockerenv && echo 1)
+
+ifeq ($(IN_DOCKER),1)
+  CONTAINER_ROOT := $(_FIND_ROOT)
+else
+  CONTAINER_ROOT := $(DOCKER_CONTAINER_ROOT)
+endif
+
+DOCKER_MOUNT   := $(_FIND_ROOT):$(DOCKER_CONTAINER_ROOT)
+DOCKER_WORKDIR := $(DOCKER_CONTAINER_ROOT)/drivers/gpio-sysfs
+
+ifeq ($(IN_DOCKER),1)
+  RUN :=
+else
+  RUN := $(DOCKER_RUN_NO_TTY)
+endif
+
+CROSS_COMPILE ?= aarch64-linux-
+
+CC 		?= $(CROSS_COMPILE)gcc
+AR 		?= $(CROSS_COMPILE)ar
+CFLAGS  ?= -Wall -Wextra -O2 -std=gnu11 -fPIC
+LDFLAGS ?=
 
 .PHONY: all clean
+.PHONY: dtbo dtbo-clean
+.PHONY: modules modules-clean 
 .PHONY: tools tools-clean
-.PHONY: modules modules-clean dtbo dtbo-clean
 
-all: tools
+all: dtbo modules tools
 
-tools:
-	$(MAKE) -C userspace tools
-
-clean: tools-clean
-
-tools-clean:
-	$(MAKE) -C userspace tools-clean
+dtbo:
+	@:
 
 modules:
+	@:
+
+tools:
+	$(RUN) $(MAKE) -C userspace tools \
+		CROSS_COMPILE=$(CROSS_COMPILE) \
+		CC=$(CC) \
+		AR=$(AR) \
+		CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)"
+
+clean: dtbo-clean modules-clean tools-clean
+
+dtbo-clean:
 	@:
 
 modules-clean:
 	@:
 
-dtbo:
-	@:
-
-dtbo-clean:
-	@:
+tools-clean:
+	$(RUN) $(MAKE) -C userspace tools-clean
