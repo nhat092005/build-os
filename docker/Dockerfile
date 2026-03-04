@@ -83,11 +83,8 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 # Build environment
 ENV ARCH=arm64
 ENV CROSS_COMPILE=aarch64-linux-
-
-# KERNEL_DIR is provided at runtime (via Makefile.native)
-# and references the Buildroot-generated kernel build directory.
-    
-WORKDIR /build
+  
+WORKDIR /root
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["bash"]
