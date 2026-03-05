@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /**
  * BH1750 Ambient Light Sensor Driver - Internal Header
- * 
+ *
  * This header defines internal structures, constants, and helper functions
- * for the BH1750 I2C ambient light sensor driver. It is intended for 
+ * for the BH1750 I2C ambient light sensor driver. It is intended for
  * kernel-internal use only
  */
 

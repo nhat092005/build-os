@@ -116,8 +116,8 @@ int rust_helper_gpio_get_value(unsigned int gpio)
  */
 static unsigned int gpio_pin = GPIO_RUST_DEFAULT_PIN;
 module_param(gpio_pin, uint, 0444);
-MODULE_PARM_DESC(gpio_pin, "BCM GPIO pin number (default: " __stringify(
-				   GPIO_RUST_DEFAULT_PIN) ")");
+MODULE_PARM_DESC(gpio_pin,
+		 "BCM GPIO pin number (default: " __stringify(GPIO_RUST_DEFAULT_PIN) ")");
 /**
  * rust_helper_get_gpio_pin - Return the resolved global GPIO number
  *

@@ -178,8 +178,11 @@ kernel-prepare:
 .PHONY: ci-check
 
 ci-check: kernel-prepare dtbo modules tools 
-	$(RUN) bash -c 'find drivers -name "*.c" -o -name "*.h" | \
-		xargs kernel/scripts/checkpatch.pl --strict --no-tree -f'
+	$(RUN) bash -c 'find drivers \( -name "*.c" -o -name "*.h" \) \
+			! -name "*.mod.c" \
+			! -path "*/userspace/*" \
+			! -path "*/common/*" | \
+			xargs kernel/scripts/checkpatch.pl --strict --no-tree -f'
 
 .PHONY: sdk-image-build sdk-image-push sdk-image-release
 

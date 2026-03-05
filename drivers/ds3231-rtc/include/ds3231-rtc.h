@@ -24,12 +24,12 @@
 /* Driver Metadata */
 #define DRIVER_NAME "ds3231-rtc"
 
-/* 
+/*
  * Register Map (DS3231 Datasheet Table 1)
  *
  * All time registers use BCD encoding.
  * Use bcd2bin() / bin2bcd() from <linux/bcd.h> for conversion.
- * 
+ *
  */
 
 /* Timekeeping registers (0x00 - 0x06): 7-byte block, auto-increment */
@@ -120,7 +120,7 @@
 struct ds3231_data {
 	struct i2c_client *client;
 	struct rtc_device *rtc;
-	struct mutex lock;
+	struct mutex lock; /* protects all data fields */
 	bool osf_seen;
 	int irq;
 };

@@ -27,9 +27,8 @@
 /* Module parameter: resolution mode (0=H, 1=H2, 2=L) */
 static unsigned int resolution;
 module_param(resolution, uint, 0444);
-MODULE_PARM_DESC(
-	resolution,
-	"Measurement resolution (0=H-res 1lx, 1=H-res2 0.5lx, 2=L-res 4lx)");
+MODULE_PARM_DESC(resolution,
+		 "Measurement resolution (0=H-res 1lx, 1=H-res2 0.5lx, 2=L-res 4lx)");
 
 /**
  * struct bh1750_data - BH1750 device private data
@@ -360,9 +359,7 @@ static int bh1750_runtime_resume(struct device *dev)
 
 	/* Restart periodic polling */
 	if (data->continuous)
-		schedule_delayed_work(
-			&data->work,
-			msecs_to_jiffies(bh1750_poll_ms[data->res]));
+		schedule_delayed_work(&data->work, msecs_to_jiffies(bh1750_poll_ms[data->res]));
 
 	return 0;
 }
@@ -438,10 +435,7 @@ static int bh1750_probe(struct i2c_client *client)
 	ret = bh1750_start_continuous(data);
 	if (ret) {
 		mutex_unlock(&data->lock);
-		dev_warn(
-			dev,
-			"Failed to start continuous mode: %d, using one-time only\n",
-			ret);
+		dev_warn(dev, "Failed to start continuous mode: %d, using one-time only\n", ret);
 	} else {
 		data->continuous = true;
 		mutex_unlock(&data->lock);
@@ -457,9 +451,7 @@ static int bh1750_probe(struct i2c_client *client)
 	/* Start periodic work if continuous mode is active */
 	if (data->continuous) {
 		INIT_DELAYED_WORK(&data->work, bh1750_work_fn);
-		schedule_delayed_work(
-			&data->work,
-			msecs_to_jiffies(bh1750_poll_ms[data->res]));
+		schedule_delayed_work(&data->work, msecs_to_jiffies(bh1750_poll_ms[data->res]));
 	}
 
 	/* Enable runtime PM with autosuspend */
