@@ -27,11 +27,11 @@ CONTAINER_ROOT := $(DOCKER_CONTAINER_ROOT)
 ARCH := arm64
 export ARCH
 
-BUILDROOT_DIR 	:= $(PROJ_ROOT)/buildroot
-DRIVERS_DIR 	:= $(PROJ_ROOT)/drivers
-SCRIPTS_DIR		:= $(PROJ_ROOT)/scripts
-KERNEL_SRC_DIR 	:= $(PROJ_ROOT)/kernel
-OUTPUT_DIR 		:= $(PROJ_ROOT)/output
+BUILDROOT_DIR 	:= buildroot
+DRIVERS_DIR 	:= drivers
+SCRIPTS_DIR		:= scripts
+KERNEL_SRC_DIR 	:= kernel
+OUTPUT_DIR 		:= output
 
 KERNEL_DIR := $(BUILDROOT_DIR)/output/build/linux-custom
 

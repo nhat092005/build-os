@@ -1,68 +1,44 @@
-# sht3x
+# sht3x — SHT3x Temperature & Humidity Sensor Driver
 
-A Linux kernel hwmon driver for the Sensirion SHT30/SHT31/SHT35 temperature and humidity sensor over I2C.
+## Overview
 
-## Hardware
+| Field      | Value                                          |
+| ---------- | ---------------------------------------------- |
+| Module     | `sht3x.ko`                                     |
+| Subsystem  | hwmon (`devm_hwmon_device_register_with_info`) |
+| Bus        | I2C1, addr `0x44`                              |
+| Compatible | `sensirion,sht3x`                              |
+| Device     | `/sys/class/hwmon/hwmon*`                      |
+| DTS        | `sht3x-overlay.dts`                            |
 
-| Signal | RPi Pin | GPIO  | Description       |
-|--------|---------|-------|-------------------|
-| VCC    | 1 / 17  | —     | 3.3 V             |
-| GND    | 6       | —     | Ground            |
-| SDA    | 3       | GPIO2 | I2C1 data         |
-| SCL    | 5       | GPIO3 | I2C1 clock        |
-| ADDR   | GND     | —     | 0x44 (default)    |
-
-Alternate address: 0x45 (ADDR pin HIGH). Set via `dtoverlay=sht3x,addr=0x45`.
-
-## Kernel Subsystem
-
-- `i2c_driver` + `hwmon_device`
-- `compatible = "sensirion,sht3x"` in DTS
-- Userspace interface: `/sys/class/hwmon/hwmonX/`
-  - `temp1_input` — temperature in milli-°C (e.g. 25000 = 25.0 °C)
-  - `humidity1_input` — relative humidity in milli-%RH (e.g. 60000 = 60.0 %RH)
-  - `heater_enable` — sysfs attribute for heater on/off (30 s safety watchdog)
-- CRC-8 integrity check (poly 0x31, init 0xFF) on every read
-- Period measurement mode (1 Hz) and single-shot mode
-
-## Directory Structure
-
-```
-sht3x/
-├── Makefile
-├── dts/
-│   ├── Makefile
-│   └── sht3x-overlay.dts
-└── src/
-    ├── Kbuild
-    ├── Makefile
-    └── sht3x.c
-```
-
-## Quick Start
+## Build
 
 ```bash
-# Build
-make modules DRIVER=sht3x
+make modules MODULE=sht3x
 make dtbo DTBO=sht3x
-
-# Install
-make install-modules
-make install-overlays
-sudo make deploy-sdcard DEVICE=/dev/sdX
 ```
 
-Add to `/boot/config.txt` (once only):
-```
-dtparam=i2c_arm=on
-dtoverlay=sht3x
+## DTS Configuration
+
+```dts
+sht3x: sht3x@44 {
+    compatible = "sensirion,sht3x";
+    reg = <0x44>;
+};
 ```
 
-## Verify on Target
+I2C1, 100 kHz clock. Requires `dtparam=i2c_arm=on`.
+
+## Usage
 
 ```bash
-dmesg | grep sht3x             # expect: probe success, soft reset, hwmon registered
-ls /sys/class/hwmon/hwmon1/    # index may vary
-cat /sys/class/hwmon/hwmon1/temp1_input
-cat /sys/class/hwmon/hwmon1/humidity1_input
+# Read temperature (millidegrees Celsius)
+cat /sys/class/hwmon/hwmon*/temp1_input
+
+# Read humidity (milli-percent)
+cat /sys/class/hwmon/hwmon*/humidity1_input
 ```
+
+## Safety
+
+Heater control with `WARN_ON_ONCE` safety: warns if heater is on for more than 30 seconds without kernel panic.

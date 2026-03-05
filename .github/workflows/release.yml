@@ -41,10 +41,6 @@ jobs:
           restore-keys: br-dl-
 
       - name: Build full OS (Buildroot + kernel + rootfs)
-        # Runs inside Docker: toolchain + Rust baked in, no apt-get needed.
-        # Replaces the old double-SDK-build (apt-get → native defconfig → make sdk →
-        # install-toolchains → custom defconfig — which also failed because
-        # make build-all on host invokes Docker but image was never built).
         run: make buildroot
 
       - name: Build all drivers
@@ -80,13 +76,13 @@ jobs:
           body: |
             ## Build OS ${{ github.ref_name }}
 
-            | Detail | Value |
-            |--------|-------|
-            | **Target** | Raspberry Pi 4 (aarch64) |
-            | **Kernel** | ${{ steps.prep.outputs.kernel }} |
-            | **Image size** | ${{ steps.prep.outputs.size }}MB |
-            | **Commit** | ${{ github.sha }} |
-            | **Builder** | `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest` |
+            | Detail         | Value                                              |
+            |----------------|----------------------------------------------------|
+            | **Target**     | Raspberry Pi 4 (aarch64)                           |
+            | **Kernel**     | ${{ steps.prep.outputs.kernel }}                   |
+            | **Image size** | ${{ steps.prep.outputs.size }}MB                   |
+            | **Commit**     | ${{ github.sha }}                                  |
+            | **Builder**    | `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest` |
 
             ### Install
             ```bash
