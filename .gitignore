@@ -27,6 +27,7 @@ buildroot/.config.old
 *.swp
 *.swo
 .*.swp
+.*.o.d
 
 # Backup files
 *.backup
@@ -68,3 +69,8 @@ drivers/*/build/
 
 # Others
 toolchains/
+.bash_history
+prompt/
+task/
+GEMINI.md
+CLAUDE.md
