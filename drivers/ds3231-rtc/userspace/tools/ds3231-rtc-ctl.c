@@ -79,7 +79,7 @@ static int resolve_rtc_node(char *rtc_name, size_t buflen)
 			if (strcmp(name, "ds3231-rtc") == 0) {
 				fclose(fp);
 				closedir(dir);
-				snprintf(rtc_name, buflen, "%s", ent->d_name);
+				snprintf(rtc_name, buflen, "%.*s", (int)(buflen - 1), ent->d_name);
 				return 0;
 			}
 		}

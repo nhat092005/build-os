@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * GPIO Inputs Driver 
+ * GPIO Inputs Driver
  *
  * This driver demonstrates how to use the Linux GPIO and Input subsystems
  * to implement a simple button input driver.  It supports multiple buttons
@@ -246,12 +246,13 @@ static int gpio_inputs_probe(struct platform_device *pdev)
 		 *   IRQF_TRIGGER_RISING|FALLING: catch both press and release edges
 		 *   IRQF_ONESHOT: thread runs with IRQ masked (required)
 		 */
-		ret = devm_request_threaded_irq(
-			dev, btn->irq, gpio_inputs_irq_handler,
-			gpio_inputs_irq_thread,
-			IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
-				IRQF_ONESHOT,
-			DRIVER_NAME, btn);
+		ret = devm_request_threaded_irq(dev, btn->irq,
+						gpio_inputs_irq_handler,
+						gpio_inputs_irq_thread,
+						IRQF_TRIGGER_RISING |
+						IRQF_TRIGGER_FALLING |
+						IRQF_ONESHOT,
+						DRIVER_NAME, btn);
 		if (ret) {
 			dev_err(dev, "button%u: failed to request IRQ %u: %d\n",
 				i, btn->irq, ret);

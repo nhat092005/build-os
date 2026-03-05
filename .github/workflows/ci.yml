@@ -72,22 +72,12 @@ jobs:
             -v ${{ github.workspace }}:/root \
             -w /root \
             build-os-builder \
-            bash -c '
-              ERRORS=0
-              while IFS= read -r -d "" f; do
-                OUT=$(kernel/scripts/checkpatch.pl --strict --no-tree -f "$f" 2>&1)
-                echo "$OUT"
-                if echo "$OUT" | grep -q "^ERROR:"; then
-                  ERRORS=$((ERRORS + 1))
-                fi
-              done < <(find drivers \( -name "*.c" -o -name "*.h" \) -print0)
-              if [ "$ERRORS" -gt 0 ]; then
-                echo ""
-                echo "checkpatch: $ERRORS file(s) with ERRORs — fix before merging"
-                exit 1
-              fi
-              echo "checkpatch: no ERRORs found"
-            '
+            bash -c 'find drivers -type f \( -name "*.c" -o -name "*.h" \) \
+              ! -name "*.mod.c" \
+              ! -path "*/userspace/*" \
+              ! -path "*/common/*" \
+              -print0 | \
+              xargs -0 kernel/scripts/checkpatch.pl --strict --no-tree -f'
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

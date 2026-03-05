@@ -361,10 +361,7 @@ static int gpio_led_resume(struct device *dev)
 	if (!led->retain_state_suspended) {
 		ret = gpio_led_set_brightness(&led->cdev, led->cdev.brightness);
 		if (ret)
-			dev_warn(
-				dev,
-				"Failed to restore LED state after resume: %d\n",
-				ret);
+			dev_warn(dev, "Failed to restore LED state after resume: %d\n", ret);
 	}
 
 	return 0;
@@ -396,8 +393,7 @@ static struct platform_driver gpio_led_driver = {
 module_platform_driver(gpio_led_driver);
 
 MODULE_AUTHOR("nhat092005");
-MODULE_DESCRIPTION(
-	"GPIO LED Driver - LED Class Interface with Device Tree Support");
+MODULE_DESCRIPTION("GPIO LED Driver - LED Class Interface with Device Tree Support");
 MODULE_LICENSE("GPL");
 MODULE_VERSION(GPIO_LEDS_DRIVER_VERSION);
 MODULE_ALIAS("platform:" GPIO_LEDS_DRIVER_NAME);

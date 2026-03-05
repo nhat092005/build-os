@@ -57,7 +57,7 @@ INCLUDES := -I$(LIB_DIR) -I$(TRANSPORT_DIR)
 all: tools
 
 transport:
-	$(RUN) $(MAKE) -C $(TRANSPORT_DIR)
+	$(RUN) $(MAKE) -C $(TRANSPORT_DIR) CC=$(CC) AR=$(AR) clean all
 
 $(TRANSPORT_LIB): transport
 	@:

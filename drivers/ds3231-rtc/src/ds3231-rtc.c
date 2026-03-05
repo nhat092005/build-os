@@ -319,9 +319,8 @@ static int ds3231_check_osf(struct ds3231_data *data)
 	}
 
 	if (status & DS3231_STAT_OSF) {
-		dev_warn(
-			dev,
-			"Oscillator was stopped (OSF=1). Stored time may be invalid — please set the clock\n");
+		dev_warn(dev,
+			 "Oscillator was stopped (OSF=1). Stored time may be invalid — please set the clock\n");
 		data->osf_seen = true;
 
 		/* Clear OSF (bit 7) and disable 32 kHz output (bit 3) */
@@ -341,10 +340,7 @@ static int ds3231_check_osf(struct ds3231_data *data)
 			ret = ds3231_write_reg(data, DS3231_REG_STATUS,
 					       (u8)status);
 			if (ret < 0)
-				dev_warn(
-					dev,
-					"Failed to disable 32 kHz output: %d\n",
-					ret);
+				dev_warn(dev, "Failed to disable 32 kHz output: %d\n", ret);
 		}
 	}
 
@@ -722,9 +718,8 @@ static int ds3231_read_temp(struct ds3231_data *data, long *val)
 	}
 
 	if (i == 10) {
-		dev_warn_ratelimited(
-			&data->client->dev,
-			"Temperature conversion busy after 200 ms\n");
+		dev_warn_ratelimited(&data->client->dev,
+				     "Temperature conversion busy after 200 ms\n");
 		ret = -ETIMEDOUT;
 		goto unlock;
 	}
@@ -790,8 +785,8 @@ static void ds3231_hwmon_register(struct ds3231_data *data)
 	struct device *dev = &data->client->dev;
 	struct device *hwmon;
 
-	hwmon = devm_hwmon_device_register_with_info(
-		dev, DRIVER_NAME, data, &ds3231_hwmon_chip_info, NULL);
+	hwmon = devm_hwmon_device_register_with_info(dev, DRIVER_NAME, data,
+						     &ds3231_hwmon_chip_info, NULL);
 	if (IS_ERR(hwmon))
 		dev_warn(dev, "Failed to register hwmon device: %ld\n",
 			 PTR_ERR(hwmon));
@@ -895,10 +890,9 @@ static int ds3231_probe(struct i2c_client *client)
 						IRQF_SHARED | IRQF_ONESHOT,
 						DRIVER_NAME, data);
 		if (ret) {
-			dev_warn(
-				dev,
-				"Failed to request IRQ %d: %d (alarm disabled)\n",
-				data->irq, ret);
+			dev_warn(dev,
+				 "Failed to request IRQ %d: %d (alarm disabled)\n",
+				 data->irq, ret);
 			data->irq = 0;
 			clear_bit(RTC_FEATURE_ALARM, data->rtc->features);
 		} else {
