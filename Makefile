@@ -162,6 +162,14 @@ kernel-prepare:
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
 		bcm2711_defconfig
+	$(RUN) $(CONTAINER_ROOT)/kernel/scripts/config \
+		--file $(CONTAINER_ROOT)/kernel/.config \
+		--disable MODVERSIONS \
+		--enable RUST
+	$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/kernel \
+		ARCH=$(ARCH) \
+		CROSS_COMPILE=$(CROSS_COMPILE) \
+		olddefconfig
 	$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/kernel \
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
