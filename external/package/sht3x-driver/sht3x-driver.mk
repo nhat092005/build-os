@@ -1,15 +1,15 @@
-# Makefile for DS3231 RTC driver package
-DS3231_RTC_DRIVER_VERSION = 1.0.0
-DS3231_RTC_DRIVER_SITE = $(BR2_EXTERNAL_NHAT092005_PATH)/../drivers/ds3231-rtc
-DS3231_RTC_DRIVER_SITE_METHOD = local
-DS3231_RTC_DRIVER_LICENSE = GPL-2.0
-DS3231_RTC_DRIVER_LICENSE_FILES = LICENSE
+# Makefile for SHT3x sensor driver package
+SHT3X_DRIVER_VERSION = 1.0.0
+SHT3X_DRIVER_SITE = $(BR2_EXTERNAL_NHAT092005_PATH)/../drivers/sht3x
+SHT3X_DRIVER_SITE_METHOD = local
+SHT3X_DRIVER_LICENSE = GPL-2.0
+SHT3X_DRIVER_LICENSE_FILES = LICENSE
 
 # This is a kernel module package
 $(eval $(kernel-module))
 
 # Define build commands for the kernel module
-define DS3231_RTC_DRIVER_BUILD_CMDS
+define SHT3X_DRIVER_BUILD_CMDS
 	$(MAKE) -C $(LINUX_DIR) \
 		M=$(@D)/src \
 		$(LINUX_MAKE_FLAGS) \
@@ -29,7 +29,7 @@ define DS3231_RTC_DRIVER_BUILD_CMDS
 endef
 
 # Install kernel module
-define DS3231_RTC_DRIVER_INSTALL_TARGET_CMDS
+define SHT3X_DRIVER_INSTALL_TARGET_CMDS
 	$(MAKE) -C $(LINUX_DIR) \
 		M=$(@D)/src \
 		$(LINUX_MAKE_FLAGS) \
@@ -39,12 +39,8 @@ define DS3231_RTC_DRIVER_INSTALL_TARGET_CMDS
 		modules_install
 	
 	# Install module auto-load configuration
-	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_NHAT092005_PATH)/package/ds3231-rtc-driver/ds3231-rtc.modules-load \
-		$(TARGET_DIR)/etc/modules-load.d/ds3231-rtc.conf
-	
-	# Install UAPI header for userspace applications
-	$(INSTALL) -D -m 0644 $(@D)/include/uapi/ds3231-rtc.h \
-		$(STAGING_DIR)/usr/include/linux/ds3231-rtc.h
+	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_NHAT092005_PATH)/package/sht3x-driver/sht3x.modules-load \
+		$(TARGET_DIR)/etc/modules-load.d/sht3x.conf
 	
 	# Install userspace tools to /usr/bin
 	if [ -d $(@D)/build/tools ]; then \
@@ -57,15 +53,15 @@ define DS3231_RTC_DRIVER_INSTALL_TARGET_CMDS
 	
 	# Install Device Tree overlay to rpi-firmware directory
 	# This will be included in boot.vfat by post-image script
-	if [ -f $(@D)/build/dtbo/ds3231-rtc.dtbo ]; then \
-		$(INSTALL) -D -m 0644 $(@D)/build/dtbo/ds3231-rtc.dtbo \
-			$(BINARIES_DIR)/rpi-firmware/overlays/ds3231-rtc.dtbo; \
+	if [ -f $(@D)/build/dtbo/sht3x.dtbo ]; then \
+		$(INSTALL) -D -m 0644 $(@D)/build/dtbo/sht3x.dtbo \
+			$(BINARIES_DIR)/rpi-firmware/overlays/sht3x.dtbo; \
 	fi
 endef
 
 # Build Device Tree overlay
-define DS3231_RTC_DRIVER_BUILD_DTS
-	if [ -f $(@D)/dts/ds3231-rtc-overlay.dts ]; then \
+define SHT3X_DRIVER_BUILD_DTS
+	if [ -f $(@D)/dts/sht3x-overlay.dts ]; then \
 		$(MAKE) -C $(@D)/dts \
 			DTC=$(LINUX_DIR)/scripts/dtc/dtc \
 			KERNEL_DIR=$(LINUX_DIR) \
@@ -74,9 +70,9 @@ define DS3231_RTC_DRIVER_BUILD_DTS
 endef
 
 # Hook to build DTS after kernel module
-DS3231_RTC_DRIVER_POST_BUILD_HOOKS += DS3231_RTC_DRIVER_BUILD_DTS
+SHT3X_DRIVER_POST_BUILD_HOOKS += SHT3X_DRIVER_BUILD_DTS
 
 # Ensure kernel is built before this module
-DS3231_RTC_DRIVER_DEPENDENCIES = linux
+SHT3X_DRIVER_DEPENDENCIES = linux
 
 $(eval $(generic-package))

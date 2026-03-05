@@ -2,14 +2,22 @@
 arm_64bit=1
 kernel=Image
 enable_uart=1
-dtoverlay=miniuart-bt
+dtoverlay=disable-bt
 
-# I2C — required for DS3231 RTC on GPIO2/GPIO3 (I2C1)
+# I2C — required for DS3231 RTC, SHT3x, and BH1750 on GPIO2/GPIO3 (I2C1)
 dtparam=i2c_arm=on
 
 # Custom device tree overlays
+
+# gpio
 dtoverlay=gpio-leds
 dtoverlay=gpio-rust
+dtoverlay=gpio-chardev
+dtoverlay=gpio-inputs
+
+# i2c
 dtoverlay=ds3231-rtc
+dtoverlay=sht3x
+dtoverlay=bh1750
 
 arm_boost=1

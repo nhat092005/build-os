@@ -1,0 +1,7 @@
+config BR2_PACKAGE_SHT3X_DRIVER
+	bool "sht3x-driver"
+	depends on BR2_LINUX_KERNEL
+	help
+	  Kernel driver for the Sensirion SHT3x temperature and humidity
+	  sensor over I2C. The driver exposes measurements via the
+	  standard Linux hwmon interface.

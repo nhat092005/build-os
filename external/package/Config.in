@@ -1,5 +1,12 @@
-source "$BR2_EXTERNAL_NHAT092005_PATH/package/ds3231-rtc-driver/Config.in"
 source "$BR2_EXTERNAL_NHAT092005_PATH/package/gpio-chardev-driver/Config.in"
 source "$BR2_EXTERNAL_NHAT092005_PATH/package/gpio-leds-driver/Config.in"
 source "$BR2_EXTERNAL_NHAT092005_PATH/package/gpio-rust-driver/Config.in"
 source "$BR2_EXTERNAL_NHAT092005_PATH/package/gpio-sysfs-driver/Config.in"
+source "$BR2_EXTERNAL_NHAT092005_PATH/package/gpio-inputs-driver/Config.in"
+
+source "$BR2_EXTERNAL_NHAT092005_PATH/package/bh1750-driver/Config.in"
+source "$BR2_EXTERNAL_NHAT092005_PATH/package/ds3231-rtc-driver/Config.in"
+source "$BR2_EXTERNAL_NHAT092005_PATH/package/sht3x-driver/Config.in"
+
+source "$BR2_EXTERNAL_NHAT092005_PATH/package/stm32-uart-driver/Config.in"
+source "$BR2_EXTERNAL_NHAT092005_PATH/package/esp32-uart-driver/Config.in"
