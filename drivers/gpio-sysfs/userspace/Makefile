@@ -33,7 +33,7 @@ AR            ?= $(CROSS_COMPILE)ar
 CFLAGS        ?= -Wall -Wextra -O2 -std=gnu11 -fPIC
 LDFLAGS       ?=
 
-LIB_DIR := lib/libio
+LIB_DIR := lib
 TOOLS_DIR := tools
 BUILD_DIR := ../build/tools
 
