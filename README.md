@@ -78,9 +78,8 @@ sudo make deploy-sdcard DEVICE=/dev/sdX
 
 - [Docker Documentation](./docker/README.md) - Docker image for building the OS
 - [Drivers Documentation](./drivers/README.md) - Out-of-tree kernel drivers
-- [External Documentation](./external-drivers/README.md) - External drivers
+- [External Documentation](./external/README.md) - External drivers
 - [Scripts Documentation](./scripts/README.md) - Build scripts
-- [Common Documentation](./common/README.md) - Common files
 
 ## License
 
