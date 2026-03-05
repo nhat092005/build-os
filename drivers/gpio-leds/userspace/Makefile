@@ -33,18 +33,18 @@ AR 			      ?= $(CROSS_COMPILE)ar
 CFLAGS 		    ?= -Wall -Wextra -O2 -std=gnu11 -fPIC
 LDFLAGS 	    ?=
 
-LIB_DIR := lib/libled
+LIB_DIR   := lib
 TOOLS_DIR := tools
 BUILD_DIR := ../build/tools
 
-LIB_NAME := libled
+LIB_NAME   := libled
 LIB_STATIC := $(BUILD_DIR)/lib$(LIB_NAME).a
 LIB_SHARED := $(BUILD_DIR)/lib$(LIB_NAME).so
 LIB_HEADER := $(LIB_DIR)/libled.h
 LIB_SOURCE := $(LIB_DIR)/libled.c
 LIB_OBJECT := $(BUILD_DIR)/libled.o
 
-TOOL_NAME := gpio-leds-ctl
+TOOL_NAME   := gpio-leds-ctl
 TOOL_SOURCE := $(TOOLS_DIR)/$(TOOL_NAME).c
 TOOL_OBJECT := $(BUILD_DIR)/$(TOOL_NAME).o
 TOOL_BINARY := $(BUILD_DIR)/$(TOOL_NAME)
