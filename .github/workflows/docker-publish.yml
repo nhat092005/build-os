@@ -3,6 +3,10 @@ name: Publish Docker Image
 on:
     push:
         branches: [main]
+        paths: 
+            - "docker/**"
+            - "Makefile"
+            - ".github/workflows/docker-publish.yml"
     workflow_dispatch:
 
 env:
