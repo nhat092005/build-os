@@ -8,8 +8,8 @@ GPIO_RUST_DRIVER_LICENSE = GPL-2.0
 $(eval $(kernel-module))
 
 # Rust toolchain paths (installed via rustup in ~/.cargo/bin)
-RUSTC_PATH ?= $(HOME)/.cargo/bin/rustc
-BINDGEN_PATH ?= $(HOME)/.cargo/bin/bindgen
+RUSTC_PATH       	?= /usr/local/cargo/bin/rustc
+BINDGEN_PATH     	?= /usr/local/cargo/bin/bindgen
 
 # Define build commands for the Rust kernel module
 define GPIO_RUST_DRIVER_BUILD_CMDS
