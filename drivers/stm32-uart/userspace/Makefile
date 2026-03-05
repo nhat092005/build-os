@@ -32,7 +32,7 @@ CC            ?= $(CROSS_COMPILE)gcc
 AR            ?= $(CROSS_COMPILE)ar
 CFLAGS        ?= -Wall -Wextra -Werror -Wshadow -Wformat-security -O2 -std=gnu11
 
-COMMON_DIR    := $(_FIND_ROOT)/drivers/common
+COMMON_DIR    := $(if $(_FIND_ROOT),$(_FIND_ROOT)/drivers/common,$(TOPDIR)/drivers/common)
 TRANSPORT_DIR := $(COMMON_DIR)/libuart-transport
 TRANSPORT_LIB := $(TRANSPORT_DIR)/build/libuart-transport.a
 
@@ -57,7 +57,8 @@ INCLUDES := -I$(LIB_DIR) -I$(TRANSPORT_DIR)
 all: tools
 
 transport:
-	$(RUN) $(MAKE) -C $(TRANSPORT_DIR) CC=$(CC) AR=$(AR) clean all
+	$(RUN) $(MAKE) -C $(TRANSPORT_DIR) CC=$(CC) AR=$(AR) clean
+	$(RUN) $(MAKE) -C $(TRANSPORT_DIR) CC=$(CC) AR=$(AR) all
 
 $(TRANSPORT_LIB): transport
 	@:
