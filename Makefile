@@ -1,341 +1,477 @@
-# Makefile for build operation system
+# SPDX-License-Identifier: SPDX-2.0
+# Makefile Docker wrapper for build-os project.
 
-# Target platform configuration
-ARCH					:= arm64
+DOCKER_IMAGE		  := build-os-builder
+DOCKER_CONTAINER_ROOT := /root
 
-# Directory paths
-BR2_EXTERNAL			:= $(shell pwd)/external
-BUILDROOT_DIR			:= $(shell pwd)/buildroot
-DRIVERS_DIR				:= $(shell pwd)/drivers
-SCRIPTS_DIR				:= $(shell pwd)/scripts
-KERNEL_SRC_DIR			:= $(shell pwd)/kernel
-KERNEL_DIR				:= $(BUILDROOT_DIR)/output/build/linux-custom
-TOOLCHAIN_DIR 			:= $(shell pwd)/toolchains/aarch64-buildroot-linux-gnu_sdk-buildroot
+PROJ_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 
-# Output directories
-IMAGE_DIR				:= $(BUILDROOT_DIR)/output/images
-OUTPUT_DIR				:= $(shell pwd)/output
+include $(PROJ_ROOT)/mk/docker.mk
 
-# Buildroot make command with external and kernel source overrides
-BUILDROOT_MAKE = $(MAKE) -C $(BUILDROOT_DIR) BR2_EXTERNAL=$(BR2_EXTERNAL) LINUX_OVERRIDE_SRCDIR=$(KERNEL_SRC_DIR)
+IN_DOCKER := $(shell test -f /.dockerenv && echo 1)
 
-# Buildroot toolchain
-CROSS_COMPILE 			:= $(TOOLCHAIN_DIR)/bin/aarch64-linux-
+ifeq ($(IN_DOCKER),1)
+	RUN 	:=
+	RUN_TTY :=
+else
+	RUN 	:= $(DOCKER_RUN_NO_TTY)
+	RUN_TTY := $(DOCKER_RUN_TTY)
+endif
 
-# Toolchain Configuration
-CC						:= $(CROSS_COMPILE)gcc
-CFLAGS					:= -Wall -Wextra -O2
-AR						:= $(CROSS_COMPILE)ar
-DTC						:= dtc
-DTC_FLAGS				:= -@ -I dts -O dtb -Wno-unit_address_vs_reg
+SDK_IMAGE 		:= ghcr.io/nhat092005/build-os-sdk:gcc14.3-glibc
+DOCKERFILE 		:= docker/Dockerfile
+SDK_DOCKERFILE 	:= docker/sdk.Dockerfile
 
-# Auto-detect available drivers
-AVAILABLE_DRIVERS		:= $(filter-out Makefile README.md, $(notdir $(wildcard $(DRIVERS_DIR)/*)))
+CONTAINER_ROOT := $(DOCKER_CONTAINER_ROOT)
 
-# Default configuration
-DTBO	  				?= all
-MODULE					?= all
-TOOLS					?= all
-DRIVER					?= all
-DEVICE					?= /dev/sda
+ARCH := arm64
+export ARCH
 
-# Export for sub-makefiles
-export ARCH CROSS_COMPILE KERNEL_DIR DTBO MODULE TOOLS DEVICE
+BUILDROOT_DIR 	:= $(PROJ_ROOT)/buildroot
+DRIVERS_DIR 	:= $(PROJ_ROOT)/drivers
+SCRIPTS_DIR		:= $(PROJ_ROOT)/scripts
+KERNEL_SRC_DIR 	:= $(PROJ_ROOT)/kernel
+OUTPUT_DIR 		:= $(PROJ_ROOT)/output
 
-.PHONY: all
-# Main Targets
-#all: build-all stage-output deploy-sdcard
+KERNEL_DIR := $(BUILDROOT_DIR)/output/build/linux-custom
+
+CROSS_COMPILE := aarch64-linux-
+
+export KERNEL_DIR CROSS_COMPILE
+
+CC 		:= $(CROSS_COMPILE)gcc
+AR 		:= $(CROSS_COMPILE)ar
+CFLAGS 	:= -Wall -Wextra -Werror -Wshadow -Wformat-security -O2 -std=gnu11
+LDFLAGS := 
+
+RUSTC 	:= /usr/local/cargo/bin/rustc
+BINDGEN := /usr/local/cargo/bin/bindgen
+
+DTC 	  := dtc
+DTC_FLAGS := -@ -I dts -O dtb -Wno-unit_address_vs_reg
+
+AVAILABLE_DRIVERS := $(filter-out README.md common, $(notdir $(wildcard $(DRIVERS_DIR)/*)))
+
+.PHONY: all help
+
 all: help
 
-.PHONY: build-all
-# Build all components
-build-all: buildroot dtbo modules tools
+help:
+	@echo "build-os — Hermetic Docker Build System"
+	@echo ""
+	@echo "Setup (once):"
+	@echo "  make docker-build                   - Build Docker image (~2 min)"
+	@echo "  make buildroot                      - Full Buildroot build (~60 min first time)"
+	@echo ""
+	@echo "Docker:"
+	@echo "  make docker-shell                   - Interactive shell in container"
+	@echo "  make ci-check                       - Full driver build + checkpatch (Docker)"
+	@echo "  make kernel-prepare                 - Prepare kernel/ source tree (~2-3 min)"
+	@echo "  make sdk-image-build                - Build SDK image (~2 min)"
+	@echo "  make sdk-image-push                 - Push SDK image to registry"
+	@echo "  make sdk-image-release              - Build + push SDK image"
+	@echo ""
+	@echo "Build (after buildroot):"
+	@echo "  make build                          - Build dtbo + modules + tools"
+	@echo "  make dtbo [DTBO=<n>]                - Build DTS overlays"
+	@echo "  make modules [MODULE=<n>]           - Build kernel module(s)"
+	@echo "  make tools [TOOLS=<n>]              - Build userspace tools"
+	@echo ""
+	@echo "Clean:"
+	@echo "  make clean                          - Clean dtbo + modules + tools"
+	@echo "  make dtbo-clean [DTBO=<n>]          - Clean DTS overlays build artifacts"
+	@echo "  make modules-clean [MODULE=<n>]     - Clean kernel module build artifacts"
+	@echo "  make tools-clean [TOOLS=<n>]        - Clean userspace tool build artifacts"
+	@echo ""
+	@echo "Buildroot:"
+	@echo "  make buildroot                      - Full build (kernel + rootfs + drivers)"
+	@echo "  make buildroot-toolchain            - Build Buildroot SDK toolchain"
+	@echo "  make buildroot-sdk                  - Build Buildroot SDK tarball"
+	@echo "  make buildroot-custom               - Apply custom defconfig"
+	@echo "  make buildroot-config               - Interactive menuconfig"
+	@echo "  make buildroot-clean                - Clean output (full rebuild needed after)"
+	@echo "  make buildroot-distclean            - Clean output + configs (full rebuild needed after)"
+	@echo ""
+	@echo "Driver-specific Buildroot targets:"
+	@echo "  make buildroot-driver DRIVER=<n>"
+	@echo "                                      - Build and install and all its dependencies"
+	@echo "  make buildroot-driver-dirclean DRIVER=<n>"
+	@echo "                                      - Remove build directory"
+	@echo "  make buildroot-driver-reconfigure DRIVER=<n>"
+	@echo "                                      - Restart the build from the configure step"
+	@echo "  make buildroot-driver-rebuild DRIVER=<n>"
+	@echo "                                      - Restart the build from the build step"
+	@echo "  make buildroot-driver-reinstall DRIVER=<n>"
+	@echo "                                      - Restart the build from the install step"
+	@echo ""
+	@echo "Deployment (host only):"
+	@echo "  make identify-sdcard                - Identify SD card device (prints to stdout)"
+	@echo "  make stage-output                   - Stage files to output/"
+	@echo "  make deploy-sdcard                  - Write image to SD card"
+	@echo ""
+	@echo "Install output to staged rootfs (host only):"
+	@echo "  make install-overlays               - Install .dtbo to staged rootfs"
+	@echo "  make install-modules                - Install .ko to staged rootfs"
+	@echo "  make install-tools                  - Install tools to staged rootfs"
+	@echo ""
+	@echo "Remove from staged rootfs (host only):"
+	@echo "  make remove-overlays                - Remove .dtbo from staged rootfs"
+	@echo "  make remove-modules                 - Remove .ko from staged rootfs"
+	@echo "  make remove-tools                   - Remove tools from staged rootfs"
+	@echo ""
+	@echo "Others:"
+	@echo "  make build-all                      - Buildroot + dtbo + modules + tools"
+	@echo "  make clean-all                      - Clean buildroot + dtbo + modules + tools + output"
+	@echo "  make driver-list                    - List available drivers"
+	@echo "  make setup-rust                     - Install Rust toolchain locally for development"
+	@echo "  make install-toolchains             - Install Buildroot SDK toolchain locally"
+	@echo "  make remove-toolchains              - Remove locally installed Buildroot SDK toolchain"
+	@echo ""	
+	@echo "Options:"
+	@echo "  DRIVER=<name|all>                   - Target driver (default: all)"
+	@echo "  DTBO=<name|all>                     - Target overlay (default: all)"	
+	@echo "  MODULE=<name|all>                   - Alias for DRIVER (default: all)"
+	@echo "  TOOLS=<name|all>                    - Target tool (default: all)"
+	@echo "  KERNEL_DIR=<path>                   - Override kernel tree (host path)"
+	@echo "  DEVICE=<dev>                        - SD card device (default: /dev/sda)"
 
-.PHONY: buildroot buildroot-clean menuconfig
-# Build Buildroot
+# =======================================================================
+# DOCKER BUILD TARGETS (run inside Docker)
+# =======================================================================
+
+.PHONY: docker-build docker-shell
+
+docker-build:
+	DOCKER_BUILDKIT=1 docker build \
+		--build-arg SDK_IMAGE=$(SDK_IMAGE) \
+		-t $(DOCKER_IMAGE) \
+		-f $(DOCKERFILE) .
+
+docker-shell:
+	$(RUN_TTY) bash
+
+.PHONY: kernel-prepare
+
+kernel-prepare:
+	@if [ ! -f "$(KERNEL_SRC_DIR)/Makefile" ]; then \
+		echo "Error: kernel/ submodule not found."; \
+		echo "Run: git submodule update --init kernel"; \
+		exit 1; \
+	fi
+	$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/kernel \
+		ARCH=$(ARCH) \
+		CROSS_COMPILE=$(CROSS_COMPILE) \
+		bcm2711_defconfig
+	$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/kernel \
+		ARCH=$(ARCH) \
+		CROSS_COMPILE=$(CROSS_COMPILE) \
+		modules_prepare
+
+.PHONY: ci-check
+
+ci-check: kernel-prepare dtbo modules tools 
+	$(RUN) bash -c 'find drivers -name "*.c" -o -name "*.h" | \
+		xargs kernel/scripts/checkpatch.pl --strict --no-tree -f'
+
+.PHONY: sdk-image-build sdk-image-push sdk-image-release
+
+sdk-image-release: sdk-image-build sdk-image-push
+
+sdk-image-build:
+	DOCKER_BUILDKIT=1 docker build \
+		-t $(SDK_IMAGE) \
+		-f $(SDK_DOCKERFILE) .
+
+sdk-image-push:
+	docker push $(SDK_IMAGE)
+
+# =======================================================================
+# BUILDROOT BUILD TARGETS (run inside Docker)
+# =======================================================================
+
+.PHONY: buildroot buildroot-toolchain buildroot-sdk
+.PHONY: buildroot-custom buildroot-config 
+.PHONY: buildroot-clean buildroot-distclean
+
+BUILDROOT_MAKE = $(MAKE) -C $(CONTAINER_ROOT)/buildroot \
+					BR2_EXTERNAL=$(CONTAINER_ROOT)/external \
+					LINUX_OVERRIDE_SRCDIR=$(CONTAINER_ROOT)/kernel
+
 buildroot:
-	@if [ ! -d "$(BUILDROOT_DIR)" ]; then \
-		echo "Error: Buildroot not found"; \
-		echo "Run: git submodule update --init buildroot"; \
-		exit 1; \
-	fi
-	$(BUILDROOT_MAKE)
+	$(RUN) $(BUILDROOT_MAKE) -j$(shell nproc)
 
-# Clean Buildroot
+buildroot-toolchain:
+	$(RUN) $(BUILDROOT_MAKE) toolchain
+
+buildroot-sdk:
+	$(RUN) $(BUILDROOT_MAKE) sdk
+
+buildroot-custom:
+	$(RUN) $(BUILDROOT_MAKE) raspberrypi4_64_custom_defconfig
+
+buildroot-config:
+	$(RUN_TTY) $(BUILDROOT_MAKE) menuconfig
+
 buildroot-clean:
-	$(BUILDROOT_MAKE) clean
+	$(RUN) $(BUILDROOT_MAKE) clean
 
-# Configure Buildroot
-menuconfig:
-	@if [ ! -d "$(BUILDROOT_DIR)" ]; then \
-		echo "Error: Buildroot not found"; \
-		exit 1; \
-	fi
-	$(BUILDROOT_MAKE) menuconfig
-
-# Load defconfig (supports both built-in and BR2_EXTERNAL defconfigs)
-%_defconfig:
-	@if [ ! -d "$(BUILDROOT_DIR)" ]; then \
-		echo "Error: Buildroot not found"; \
-		echo "Run: git submodule update --init buildroot"; \
-		exit 1; \
-	fi
-	$(BUILDROOT_MAKE) $@
-
-.PHONY: buildroot-distclean
-# Distclean Buildroot
 buildroot-distclean:
-	@if [ ! -d "$(BUILDROOT_DIR)" ]; then \
-		echo "Error: Buildroot not found"; \
-		exit 1; \
-	fi
-	$(MAKE) -C $(BUILDROOT_DIR) distclean
+	$(RUN) $(BUILDROOT_MAKE) distclean
+
+.PHONY: buildroot-driver buildroot-driver-dirclean 
+.PHONY: buildroot-driver-reconfigure buildroot-driver-rebuild buildroot-driver-reinstall
+
+DRIVER ?= all
+
+buildroot-driver:
+ifeq ($(DRIVER),all)
+	@for drv in $(AVAILABLE_DRIVERS); do \
+		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
+			$(RUN) $(BUILDROOT_MAKE) $${drv}-driver || exit 1; \
+		fi; \
+	done
+else
+	$(RUN) $(BUILDROOT_MAKE) $(DRIVER)-driver
+endif
+
+buildroot-driver-dirclean:
+ifeq ($(DRIVER),all)
+	@for drv in $(AVAILABLE_DRIVERS); do \
+		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
+			$(RUN) $(BUILDROOT_MAKE) $${drv}-driver-dirclean || exit 1; \
+		fi; \
+	done
+else
+	$(RUN) $(BUILDROOT_MAKE) $(DRIVER)-driver-dirclean
+endif
+
+buildroot-driver-reconfigure:
+ifeq ($(DRIVER),all)
+	@for drv in $(AVAILABLE_DRIVERS); do \
+		$(RUN) $(BUILDROOT_MAKE) $${drv}-driver-reconfigure || exit 1; \
+	done
+else
+	$(RUN) $(BUILDROOT_MAKE) $(DRIVER)-driver-reconfigure
+endif
+
+buildroot-driver-rebuild:
+ifeq ($(DRIVER),all)
+	@for drv in $(AVAILABLE_DRIVERS); do \
+		$(RUN) $(BUILDROOT_MAKE) $${drv}-driver-rebuild || exit 1; \
+	done
+else
+	$(RUN) $(BUILDROOT_MAKE) $(DRIVER)-driver-rebuild
+endif
+
+buildroot-driver-reinstall:
+ifeq ($(DRIVER),all)
+	@for drv in $(AVAILABLE_DRIVERS); do \
+		$(RUN) $(BUILDROOT_MAKE) $${drv}-driver-reinstall || exit 1; \
+	done
+else
+	$(RUN) $(BUILDROOT_MAKE) $(DRIVER)-driver-reinstall
+endif
+
+# =======================================================================
+# DRIVER-SPECIFIC BUILD TARGETS (run inside Docker)
+# =======================================================================
+
+.PHONY: build clean
+
+build: dtbo modules tools
+
+clean: dtbo-clean modules-clean tools-clean
 
 .PHONY: dtbo dtbo-clean
-# Build Device Tree Blob Overlays
+
+DTBO ?= all
+
 dtbo:
-	$(MAKE) -C $(DRIVERS_DIR) dtbo \
+ifeq ($(DTBO),all)
+	@for drv in $(AVAILABLE_DRIVERS); do \
+		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
+			$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/drivers/$$drv dtbo \
+				DTC=$(DTC) \
+				DTC_FLAGS="$(DTC_FLAGS)" || true; \
+		fi; \
+	done
+else
+	@if [ ! -d "$(DRIVERS_DIR)/$(DTBO)" ]; then \
+		echo "Error: Driver '$(DTBO)' not found"; \
+		exit 1; \
+	fi
+	$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/drivers/$(DTBO) dtbo \
 		DTC=$(DTC) \
 		DTC_FLAGS="$(DTC_FLAGS)"
+endif
 
-# Clean Device Tree Blob Overlays
 dtbo-clean:
-	$(MAKE) -C $(DRIVERS_DIR) dtbo-clean \
-		DTBO=$(DTBO)
+ifeq ($(DTBO),all)
+	@for drv in $(AVAILABLE_DRIVERS); do \
+		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
+			$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/drivers/$$drv dtbo-clean || true; \
+		fi; \
+	done
+else
+	@if [ ! -d "$(DRIVERS_DIR)/$(DTBO)" ]; then \
+		echo "Error: Driver '$(DTBO)' not found"; \
+		exit 1; \
+	fi
+	$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/drivers/$(DTBO) dtbo-clean
+endif
 
-.PHONY: modules modules-clean 
-# Build Modules
+.PHONY: modules modules-clean
+
+MODULE ?= all
+
 modules:
-	$(MAKE) -C $(DRIVERS_DIR) modules \
+ifeq ($(MODULE),all)
+	@for drv in $(AVAILABLE_DRIVERS); do \
+		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
+			$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/drivers/$$drv modules \
+				ARCH=$(ARCH) \
+				CROSS_COMPILE=$(CROSS_COMPILE) || true; \
+		fi; \
+	done
+else
+	@if [ ! -d "$(DRIVERS_DIR)/$(MODULE)" ]; then \
+		echo "Error: Module '$(MODULE)' not found"; \
+		exit 1; \
+	fi
+	$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/drivers/$(MODULE) modules \
 		ARCH=$(ARCH) \
-		CROSS_COMPILE=$(CROSS_COMPILE) \
-		KERNEL_DIR=$(KERNEL_DIR) \
-		MODULE=$(MODULE)
+		CROSS_COMPILE=$(CROSS_COMPILE)
+endif
 
-# Clean Modules
 modules-clean:
-	$(MAKE) -C $(DRIVERS_DIR) modules-clean \
-		MODULE=$(MODULE)
+ifeq ($(MODULE),all)
+	@for drv in $(AVAILABLE_DRIVERS); do \
+		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
+			$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/drivers/$$drv modules-clean || true; \
+		fi; \
+	done
+else
+	@if [ ! -d "$(DRIVERS_DIR)/$(MODULE)" ]; then \
+		echo "Error: Module '$(MODULE)' not found"; \
+		exit 1; \
+	fi
+	$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/drivers/$(MODULE) modules-clean
+endif
 
 .PHONY: tools tools-clean
-# Build Userspace Tools
+
+TOOLS ?= all
+
 tools:
-	$(MAKE) -C $(DRIVERS_DIR) tools \
-		ARCH=$(ARCH) \
+ifeq ($(TOOLS),all)
+	@for drv in $(AVAILABLE_DRIVERS); do \
+		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
+			$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/drivers/$$drv tools \
+				CROSS_COMPILE=$(CROSS_COMPILE) \
+				CC=$(CC) \
+				AR=$(AR) \
+				CFLAGS="$(CFLAGS)" \
+				LDFLAGS="$(LDFLAGS)" || true; \
+		fi; \
+	done
+else
+	@if [ ! -d "$(DRIVERS_DIR)/$(TOOLS)" ]; then \
+		echo "Error: Tool '$(TOOLS)' not found"; \
+		exit 1; \
+	fi
+	$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/drivers/$(TOOLS) tools \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
-		KERNEL_DIR=$(KERNEL_DIR) \
-		TOOLS=$(TOOLS)
+		CC=$(CC) \
+		AR=$(AR) \
+		CFLAGS="$(CFLAGS)" \
+		LDFLAGS="$(LDFLAGS)"
+endif
 
-# Clean Userspace Tools
 tools-clean:
-	$(MAKE) -C $(DRIVERS_DIR) tools-clean \
-		TOOLS=$(TOOLS)
-
-.PHONY: driver driver-rebuild driver-reconfigure driver-clean driver-dirclean
-# Build kernel driver using Buildroot
-driver:
-ifeq ($(DRIVER),all)
+ifeq ($(TOOLS),all)
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
-			$(BUILDROOT_MAKE) $$drv-driver || exit 1; \
+			$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/drivers/$$drv tools-clean || true; \
 		fi; \
 	done
 else
-	@if [ ! -d "$(DRIVERS_DIR)/$(DRIVER)" ]; then \
-		echo "Error: Driver '$(DRIVER)' not found in $(DRIVERS_DIR)"; \
+	@if [ ! -d "$(DRIVERS_DIR)/$(TOOLS)" ]; then \
+		echo "Error: Tool '$(TOOLS)' not found"; \
 		exit 1; \
 	fi
-	$(BUILDROOT_MAKE) $(DRIVER)-driver
+	$(RUN) $(MAKE) -C $(CONTAINER_ROOT)/drivers/$(TOOLS) tools-clean
 endif
 
-# Rebuild kernel driver using Buildroot
-driver-rebuild:
-ifeq ($(DRIVER),all)
+.PHONY: driver-list
+
+driver-list:
+	@echo "Available drivers:"
 	@for drv in $(AVAILABLE_DRIVERS); do \
 		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
-			$(BUILDROOT_MAKE) $$drv-driver-rebuild || exit 1; \
+			echo "  - $$drv"; \
 		fi; \
 	done
-else
-	@if [ ! -d "$(DRIVERS_DIR)/$(DRIVER)" ]; then \
-		echo "Error: Driver '$(DRIVER)' not found in $(DRIVERS_DIR)"; \
-		exit 1; \
-	fi
-	$(BUILDROOT_MAKE) $(DRIVER)-driver-rebuild
-endif
 
-# Reconfigure kernel driver using Buildroot
-driver-reconfigure:
-ifeq ($(DRIVER),all)
-	@for drv in $(AVAILABLE_DRIVERS); do \
-		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
-			$(BUILDROOT_MAKE) $$drv-driver-reconfigure || exit 1; \
-		fi; \
-	done
-else
-	@if [ ! -d "$(DRIVERS_DIR)/$(DRIVER)" ]; then \
-		echo "Error: Driver '$(DRIVER)' not found in $(DRIVERS_DIR)"; \
-		exit 1; \
-	fi
-	$(BUILDROOT_MAKE) $(DRIVER)-driver-reconfigure
-endif
+# =======================================================================
+# SCRIPTS FOR INSTALLING / REMOVE / STAGING / DEPLOYMENT (host only)
+# =======================================================================
 
-# Clean kernel driver using Buildroot
-driver-clean:
-ifeq ($(DRIVER),all)
-	@for drv in $(AVAILABLE_DRIVERS); do \
-		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
-			$(BUILDROOT_MAKE) $$drv-driver-clean || exit 1; \
-		fi; \
-	done
-else
-	@if [ ! -d "$(DRIVERS_DIR)/$(DRIVER)" ]; then \
-		echo "Error: Driver '$(DRIVER)' not found in $(DRIVERS_DIR)"; \
-		exit 1; \
-	fi
-	$(BUILDROOT_MAKE) $(DRIVER)-driver-clean
-endif
+.PHONY: identify-sdcard setup-rust
+.PHONY: install-toolchains remove-toolchains
 
-# Clean driver build artifacts using Buildroot
-driver-dirclean:
-ifeq ($(DRIVER),all)
-	@for drv in $(AVAILABLE_DRIVERS); do \
-		if [ -d "$(DRIVERS_DIR)/$$drv" ]; then \
-			$(BUILDROOT_MAKE) $$drv-driver-dirclean || exit 1; \
-		fi; \
-	done
-else
-	@if [ ! -d "$(DRIVERS_DIR)/$(DRIVER)" ]; then \
-		echo "Error: Driver '$(DRIVER)' not found in $(DRIVERS_DIR)"; \
-		exit 1; \
-	fi
-	$(BUILDROOT_MAKE) $(DRIVER)-driver-dirclean
-endif
+DEVICE ?= /dev/sda
 
-.PHONY: image identify-sdcard deploy-sdcard
-# Image deployment
-image: identify-sdcard deploy-sdcard
-
-# Identify SD card device
 identify-sdcard:
 	$(MAKE) -C $(SCRIPTS_DIR) identify-sdcard
 
-# Deploy SD card
-deploy-sdcard:
-	$(MAKE) -C $(SCRIPTS_DIR) deploy-sdcard DEVICE=$(DEVICE)
+setup-rust:
+	$(MAKE) -C $(SCRIPTS_DIR) setup-rust
 
-.PHONY: stage-output
-# Stage output files
-stage-output:
-	$(MAKE) -C $(SCRIPTS_DIR) stage-output
-
-.PHONY: install-overlays remove-overlays
-# Install Device Tree overlays
-install-overlays:
-	$(MAKE) -C $(SCRIPTS_DIR) install-overlays
-
-# Remove Device Tree overlays
-remove-overlays:
-	$(MAKE) -C $(SCRIPTS_DIR) remove-overlays
-
-.PHONY: install-modules remove-modules
-# Install kernel modules
-install-modules:
-	$(MAKE) -C $(SCRIPTS_DIR) install-modules
-
-# Remove kernel modules
-remove-modules:
-	$(MAKE) -C $(SCRIPTS_DIR) remove-modules
-
-.PHONY: install-tools remove-tools 
-# Install tools
-install-tools:
-	$(MAKE) -C $(SCRIPTS_DIR) install-tools
-
-# Remove tools
-remove-tools:
-	$(MAKE) -C $(SCRIPTS_DIR) remove-tools
-
-.PHONY: install-toolchains remove-toolchains setup-rust
-# Install toolchains
 install-toolchains:
 	$(MAKE) -C $(SCRIPTS_DIR) install-toolchains
 
-# Remove toolchains
 remove-toolchains:
 	$(MAKE) -C $(SCRIPTS_DIR) remove-toolchains
 
-# Setup Rust toolchain for kernel Rust module support
-setup-rust:
-	$(MAKE) -C $(SCRIPTS_DIR) setup-rust-kernel
+.PHONY: install-overlays install-modules install-tools
 
-.PHONY: clean
-# Clean all build artifacts
-clean: buildroot-clean dtbo-clean modules-clean tools-clean output-clean
+install-overlays:
+	$(MAKE) -C $(SCRIPTS_DIR) install-overlays
 
-.PHONY: output-clean
-# Clean staged output files
+install-modules:
+	$(MAKE) -C $(SCRIPTS_DIR) install-modules
+
+install-tools:
+	$(MAKE) -C $(SCRIPTS_DIR) install-tools
+
+.PHONY: remove-overlays remove-modules remove-tools
+
+remove-overlays:
+	$(MAKE) -C $(SCRIPTS_DIR) remove-overlays
+
+remove-modules:
+	$(MAKE) -C $(SCRIPTS_DIR) remove-modules
+
+remove-tools:
+	$(MAKE) -C $(SCRIPTS_DIR) remove-tools
+
+.PHONY: stage-output deploy-sdcard
+
+stage-output:
+	$(MAKE) -C $(SCRIPTS_DIR) stage-output
+
+deploy-sdcard:
+	$(MAKE) -C $(SCRIPTS_DIR) deploy-sdcard DEVICE=$(DEVICE)
+
 output-clean:
 	@if [ "$$(id -u)" -ne 0 ]; then \
-		echo "Error: Staging output requires root privileges"; \
+		echo "Error: Output-clean requires root privileges"; \
 		exit 1; \
 	fi
-	rm -rf $(OUTPUT_DIR)
+	@if [ -d "$(OUTPUT_DIR)" ]; then \
+		rm -rf $(OUTPUT_DIR); \
+	fi
 
-.PHONY: list
-# List available drivers and tools
-list:
-	$(MAKE) -C $(DRIVERS_DIR) list
+build-all: buildroot build 
 
-.PHONY: help
-# Help
-help:
-	@echo "Main Targets:"
-	@echo "  all                      Build all components, stage output, and deploy to SD card (default)"
-	@echo "Build:"
-	@echo "  build-all                Build Buildroot, modules, and userspace tools"
-	@echo "  buildroot                Build kernel + rootfs with Buildroot"
-	@echo "  dtbo                     Build device tree blob overlays"
-	@echo "  modules                  Build kernel module(s)"
-	@echo "  tools                    Build userspace tools"
-	@echo "Configuration:"
-	@echo "  menuconfig               Configure Buildroot (interactive)"
-	@echo "  <name>_defconfig         Load a defconfig (built-in or custom)"
-	@echo "Driver:"
-	@echo "  driver                   Build kernel driver(s)"
-	@echo "  driver-rebuild           Rebuild kernel driver(s)"
-	@echo "  driver-reconfigure       Reconfigure kernel driver(s)"
-	@echo "  driver-clean             Clean kernel driver(s)"
-	@echo "  driver-dirclean          Clean kernel driver build artifacts"
-	@echo "Clean:"
-	@echo "  clean                    Clean all build artifacts"
-	@echo "  buildroot-clean          Clean Buildroot output"
-	@echo "  dtbo-clean               Clean device tree blob overlays"
-	@echo "  modules-clean            Clean module(s)"
-	@echo "  tools-clean              Clean tools"
-	@echo "  buildroot-distclean      Distclean Buildroot (resets to pristine state)"
-	@echo "Deployment:"
-	@echo "  stage-output             Stage buildroot output to output/ (requires root)"
-	@echo "  image                    Identify SD card, and deploy (requires root)"
-	@echo "  identify-sdcard          Identify SD card device"
-	@echo "  deploy-sdcard            Deploy to SD card (requires root)"
-	@echo "  output-clean             Clean staged output files (requires root)"
-	@echo "Install:" 
-	@echo "  install-overlays         Install device tree overlays to staged rootfs (requires root)"
-	@echo "  install-modules          Install kernel modules to staged rootfs"
-	@echo "  install-tools            Install userspace tools to staged rootfs"
-	@echo "  install-toolchain        Install toolchain to project"
-	@echo "  setup-rust               Setup Rust toolchain for kernel Rust modules"
-	@echo "Remove:"
-	@echo "  remove-overlays          Remove device tree overlays from staged rootfs (requires root)"
-	@echo "  remove-modules           Remove kernel modules from staged rootfs"
-	@echo "  remove-tools             Remove userspace tools from staged rootfs"
-	@echo "  remove-toolchain         Remove toolchain from project"
-	@echo "Others:"
-	@echo "  list                     List available drivers and tools"
-	@echo "Build Options:"
-	@echo "  DTBO=<name|all>          Build specific device tree blob overlay (default: all)"
-	@echo "  MODULE=<name|all>        Build specific module (default: all)"
-	@echo "  TOOLS=<name|all>         Build specific userspace tool (default: all)"
-	@echo "  DRIVER=<name|all>        Build specific driver using Buildroot (default: all)"
-	@echo "  DEVICE=<device>          SD card device (default: /dev/sda)"
+clean-all: output-clean clean buildroot-clean

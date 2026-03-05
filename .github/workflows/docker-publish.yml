@@ -1,0 +1,49 @@
+name: Publish Docker Image
+
+on:
+    push:
+        branches: [main]
+        paths: ["docker/Dockerfile"]
+    workflow_dispatch:
+
+env:
+    REGISTRY: ghcr.io
+    IMAGE_NAME: nhat092005/build-os-builder
+
+jobs:
+    publish:
+        name: Build & Publish Builder Image
+        runs-on: ubuntu-latest
+        timeout-minutes: 45
+        permissions:
+            contents: read
+            packages: write
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  submodules: false
+
+            - uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - uses: docker/metadata-action@v5
+              id: meta
+              with:
+                  images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+                  tags: |
+                      type=raw,value=latest
+                      type=sha,prefix=sha-
+
+            - uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: docker/Dockerfile
+                  push: true
+                  tags: ${{ steps.meta.outputs.tags }}
+                  build-args: |
+                      SDK_IMAGE=ghcr.io/nhat092005/build-os-sdk:gcc14.3-glibc
+                  cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+                  cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max

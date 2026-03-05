@@ -1,0 +1,4 @@
+# Auto-load custom GPIO input driver at boot
+# Installed to /etc/modules-load.d/gpio-inputs.conf
+# Ensures the gpio_inputs.ko module is loaded during system startup
+gpio_inputs

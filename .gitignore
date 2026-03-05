@@ -68,4 +68,3 @@ drivers/*/build/
 
 # Others
 toolchains/
-.gitignore

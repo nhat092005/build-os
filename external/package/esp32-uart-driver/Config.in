@@ -1,0 +1,8 @@
+config BR2_PACKAGE_ESP32_UART_DRIVER
+	bool "esp32-uart-driver"
+	depends on BR2_LINUX_KERNEL
+	help
+	  Userspace UART transport and protocol library for communicating
+	  with an external ESP32 running custom firmware (ESP-IDF).
+	  The driver uses a binary frame protocol over /dev/ttyAMA*
+	  and provides timeout, retry and CRC16 support.

@@ -5,55 +5,43 @@
  * This overlay configures a GPIO pin for the Rust-based GPIO driver.
  * The driver uses the legacy GPIO API (gpio_request/gpio_free) wrapped
  * in a safe Rust abstraction layer.
- *
- * GPIO Usage:
- *   - GPIO17 is reserved for gpio-chardev driver
- *   - GPIO27 is reserved for gpio-leds driver
- *	 - GPIO22 is used by default for this driver
- *
- * Supported on: Raspberry Pi 4, Pi 3, Pi Zero 2
  */
 
 /dts-v1/;
 /plugin/;
 
 / {
-	compatible = "brcm,bcm2711", "brcm,bcm2835";
+	compatible = "brcm,bcm2711", "brcm,bcm2837", "brcm,bcm2835";
 
 	/* Configure GPIO pin */
 	fragment@0 {
 		target = <&gpio>;
 		__overlay__ {
 			gpio_rust_pins: gpio_rust_pins {
-				brcm,pins = <22>;           /* GPIO 22 */
-				brcm,function = <1>;        /* Output */
-				brcm,pull = <0>;            /* No pull up/down */
+				brcm,pins = <16>;			/* GPIO 16 */
+				brcm,function = <1>;		/* Output */
+				brcm,pull = <0>;			/* No pull up/down */
 			};
 		};
 	};
 
-	/* Create GPIO Rust device node */
+	/*
+	 * Documentation node — no platform_driver binds here.
+	 * The gpio-rust driver uses the legacy integer GPIO API
+	 * (gpio_request/gpio_free) because Rust bindings for
+	 * devm_gpiod_get() are not available in kernel 6.12.
+	 * The actual GPIO number is communicated via module_param;
+	 * this node exists only to anchor the pinctrl configuration.
+	 */
 	fragment@1 {
 		target-path = "/";
 		__overlay__ {
-			gpio_rust: gpio_rust {
-				compatible = "custom,gpio-rust";
+			gpio_rust: gpio-rust {
+				compatible = "gpio-rust";
 				pinctrl-names = "default";
 				pinctrl-0 = <&gpio_rust_pins>;
-				gpios = <&gpio 22 0>;               /* GPIO22, Active High */
-				label = "rust-led";                 /* Identifier */
-				default-state = "off";              /* Start with LED off */
 				status = "okay";
 			};
 		};
-	};
-
-	/* Runtime parameters (can be overridden at boot) */
-	__overrides__ {
-		/* Change label: dtoverlay=gpio-rust,label=my-led */
-		label = <&gpio_rust>, "label=";
-
-		/* Set active-low: dtoverlay=gpio-rust,active_low */
-		active_low = <&gpio_rust>, "active-low?";
 	};
 };

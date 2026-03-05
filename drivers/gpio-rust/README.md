@@ -41,7 +41,7 @@ gpio-rust/
 > **Note**: Kernel 6.12 does not provide Rust abstractions for `miscdevice` or `FileOperations`. The C layer (`gpio_helpers.c`) handles misc device registration and userspace buffer copies as the thinnest possible shim, while ALL GPIO logic is delegated to Rust via bidirectional FFI.
 
 ### Sysfs and Hardware Config
-- Controls a single hardcoded LED pin (Default BCM hardware pin 22, offset 512 = sysfs GPIO pin 534).
+- Controls a single hardcoded LED pin (Default BCM hardware pin 16, offset 512 = sysfs GPIO pin 528).
 
 ### File Operations (`/dev/gpio-rust`)
 - **read**: Return LED state as string.
@@ -60,13 +60,4 @@ gpio-rust-ctl on                  # Turn LED on
 gpio-rust-ctl off                 # Turn LED off
 gpio-rust-ctl toggle              # Toggle LED state
 gpio-rust-ctl blink <cnt> <ms>    # Blink LED a specific number of times
-```
-
-## Build
-
-```bash
-make modules   # Build the Rust kernel module (.ko)  
-make tools     # Build the CLI application
-make dtbo      # Optional: Compile DT overaly
-make clean     # Clean all build outputs
 ```

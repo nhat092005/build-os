@@ -1,0 +1,3 @@
+# kbuild definitions for DS3231 RTC driver
+obj-m := ds3231-rtc.o
+ccflags-y := -I$(src)/../include

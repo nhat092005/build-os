@@ -1,56 +1,66 @@
-# Makefile for GPIO Character Device Kernel Driver
+# SPDX-License-Identifier: GPL-2.0
+# Makefile for GPIO Character Device Kernel Module
 
-# Target platform configuration
-ARCH            	?= arm64
+_MK_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+_FIND_ROOT := $(firstword $(foreach d,\
+    $(_MK_DIR) \
+    $(abspath $(_MK_DIR)/..) \
+    $(abspath $(_MK_DIR)/../..) \
+    $(abspath $(_MK_DIR)/../../..) \
+    $(abspath $(_MK_DIR)/../../../..) \
+  ,$(if $(wildcard $(d)/mk/docker.mk),$(d))))
 
-# Directory paths
-BUILDROOT_DIR		?= $(shell pwd)/../../../buildroot
-TOOLCHAIN_DIR		?= $(shell pwd)/../../../toolchains/aarch64-buildroot-linux-gnu_sdk-buildroot
+ifneq ($(_FIND_ROOT),)
+  include $(_FIND_ROOT)/mk/docker.mk
+endif
 
-# Buildroot toolchain (must match kernel compiler)
-CROSS_COMPILE 		?= $(TOOLCHAIN_DIR)/bin/aarch64-linux-
+IN_DOCKER := $(shell test -f /.dockerenv && echo 1)
 
-# Kernel directory (Buildroot kernel only)
-KERNEL_DIR			?= $(BUILDROOT_DIR)/output/build/linux-custom
+ifeq ($(IN_DOCKER),1)
+  CONTAINER_ROOT := $(_FIND_ROOT)
+else
+  CONTAINER_ROOT := $(DOCKER_CONTAINER_ROOT)
+endif
 
-# Build output directory (where install scripts look for .ko)
-BUILD_DIR := $(CURDIR)/../build/module
+DOCKER_MOUNT   := $(_FIND_ROOT):$(DOCKER_CONTAINER_ROOT)
+DOCKER_WORKDIR := $(DOCKER_CONTAINER_ROOT)/drivers/gpio-chardev/src
 
-# PHONY Targets
-.PHONY: all clean help
+ifeq ($(IN_DOCKER),1)
+  RUN :=
+else
+  RUN := $(DOCKER_RUN_NO_TTY)
+endif
+
+ARCH          ?= arm64
+CROSS_COMPILE ?= aarch64-linux-
+KERNEL_DIR    ?= $(CONTAINER_ROOT)/buildroot/output/build/linux-custom
+
+BUILD_DIR := ../build/module
+
+.PHONY: all clean 
 .PHONY: modules modules-clean
 
-# Main Targets
 all: modules
 
-# Build Kernel Module
 modules:
-	mkdir -p $(BUILD_DIR)
-	$(MAKE) -C $(KERNEL_DIR) \
-		M=$(CURDIR) \
+	$(RUN) mkdir -p $(BUILD_DIR)
+	$(RUN) $(MAKE) -C $(KERNEL_DIR) \
+		M=$(if $(filter 1,$(IN_DOCKER)),$(CURDIR),$(DOCKER_CONTAINER_ROOT)/drivers/gpio-chardev/src) \
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
 		modules
-	cp -f $(CURDIR)/gpio-chardev.ko $(BUILD_DIR)/gpio-chardev.ko
+	$(RUN) cp -f *.ko $(BUILD_DIR)/
 
-# Clean
 clean: modules-clean
 
-# Clean Kernel Module build artifacts
 modules-clean:
 	@if [ -d "$(KERNEL_DIR)" ]; then \
-		$(MAKE) -C $(KERNEL_DIR) M=$(CURDIR) clean 2>/dev/null || true; \
+	    $(RUN) $(MAKE) -C $(KERNEL_DIR) \
+	        M=$(if $(filter 1,$(IN_DOCKER)),$(CURDIR),$(DOCKER_CONTAINER_ROOT)/drivers/gpio-chardev/src) \
+	        clean 2>/dev/null || true; \
 	fi
 	# Remove kbuild artifacts directly from src/ (no KERNEL_DIR required)
-	rm -f  $(CURDIR)/*.ko $(CURDIR)/*.o $(CURDIR)/*.mod $(CURDIR)/*.mod.c \
-	       $(CURDIR)/modules.order $(CURDIR)/Module.symvers
-	rm -f  $(CURDIR)/.*.cmd $(CURDIR)/..*.cmd
-	rm -f  $(CURDIR)/.module-common.o
-	rm -rf $(CURDIR)/.tmp_versions
-	rm -rf $(BUILD_DIR)
-help:
-	@echo "Targets:"
-	@echo "  all             Build kernel module (default)"
-	@echo "  clean           Clean build artifacts"
-	@echo "  modules         Build kernel module"
-	@echo "  modules-clean   Clean kernel module build artifacts"
+	$(RUN) rm -f  *.ko *.o *.mod *.mod.c \
+	              modules.order Module.symvers
+	$(RUN) rm -f  .*.cmd ..*.cmd .module-common.o
+	$(RUN) rm -rf .tmp_versions $(BUILD_DIR)

@@ -1,40 +1,82 @@
 # GPIO Character Device Driver Makefile
-GPIO_CHARDEV_DRIVER_VERSION = 1.0.0
+GPIO_CHARDEV_DRIVER_VERSION = 1.1.0
 GPIO_CHARDEV_DRIVER_SITE = $(BR2_EXTERNAL_NHAT092005_PATH)/../drivers/gpio-chardev
 GPIO_CHARDEV_DRIVER_SITE_METHOD = local
 GPIO_CHARDEV_DRIVER_LICENSE = GPL-2.0
 GPIO_CHARDEV_DRIVER_LICENSE_FILES = LICENSE
 
-# Define the kernel module subdirectory containing the module source
-GPIO_CHARDEV_DRIVER_MODULE_SUBDIRS = src
+# This is a kernel module package
+$(eval $(kernel-module))
 
-# Build userspace tools after kernel module
+# Define build commands for the kernel module
 define GPIO_CHARDEV_DRIVER_BUILD_CMDS
-	$(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/userspace \
-		CC=$(TARGET_CC) \
-		CFLAGS="$(TARGET_CFLAGS)" \
-		LDFLAGS="$(TARGET_LDFLAGS)" \
-		KERNELDIR=$(LINUX_DIR) \
-		all
+	$(MAKE) -C $(LINUX_DIR) \
+		M=$(@D)/src \
+		$(LINUX_MAKE_FLAGS) \
+		ARCH=$(KERNEL_ARCH) \
+		CROSS_COMPILE=$(TARGET_CROSS) \
+		modules
+	
+	# Build userspace tools
+	if [ -d $(@D)/userspace ] && [ -f $(@D)/userspace/Makefile ]; then \
+		$(TARGET_MAKE_ENV) $(MAKE) -C $(@D)/userspace \
+			CC=$(TARGET_CC) \
+			CFLAGS="$(TARGET_CFLAGS)" \
+			LDFLAGS="$(TARGET_LDFLAGS)" \
+			KERNELDIR=$(LINUX_DIR) \
+			all; \
+	fi
 endef
 
-# Install userspace tools to /usr/bin
+# Install kernel module
 define GPIO_CHARDEV_DRIVER_INSTALL_TARGET_CMDS
+	$(MAKE) -C $(LINUX_DIR) \
+		M=$(@D)/src \
+		$(LINUX_MAKE_FLAGS) \
+		ARCH=$(KERNEL_ARCH) \
+		CROSS_COMPILE=$(TARGET_CROSS) \
+		INSTALL_MOD_PATH=$(TARGET_DIR) \
+		modules_install
+	
+	# Install module auto-load configuration
 	$(INSTALL) -D -m 0644 $(BR2_EXTERNAL_NHAT092005_PATH)/package/gpio-chardev-driver/gpio-chardev.modules-load \
 		$(TARGET_DIR)/etc/modules-load.d/gpio-chardev.conf
 	
-	# Install userspace tools
-	if [ -f $(@D)/build/tools/gpio-chardev-ctl ]; then \
-		$(INSTALL) -D -m 0755 $(@D)/build/tools/gpio-chardev-ctl \
-			$(TARGET_DIR)/usr/bin/gpio-chardev-ctl; \
+	# Install UAPI header for userspace applications
+	$(INSTALL) -D -m 0644 $(@D)/include/uapi/gpio_chardev.h \
+		$(STAGING_DIR)/usr/include/linux/gpio_chardev.h
+	
+	# Install userspace tools to /usr/bin
+	if [ -d $(@D)/build/tools ]; then \
+		for tool in $(@D)/build/tools/*; do \
+			if [ -f "$$tool" ] && [ -x "$$tool" ]; then \
+				$(INSTALL) -D -m 0755 "$$tool" $(TARGET_DIR)/usr/bin/$$(basename "$$tool"); \
+			fi; \
+		done; \
 	fi
 	
-	# Install UAPI header for userspace applications
-	$(INSTALL) -D -m 0644 $(@D)/include/uapi/gpio-chardev.h \
-		$(STAGING_DIR)/usr/include/linux/gpio-chardev.h
+	# Install Device Tree overlay to rpi-firmware directory
+	# This will be included in boot.vfat by post-image script
+	if [ -f $(@D)/build/dtbo/gpio-chardev.dtbo ]; then \
+		$(INSTALL) -D -m 0644 $(@D)/build/dtbo/gpio-chardev.dtbo \
+			$(BINARIES_DIR)/rpi-firmware/overlays/gpio-chardev.dtbo; \
+	fi	
 endef
 
-# Use kernel-module infrastructure for building
-$(eval $(kernel-module))
-$(eval $(generic-package))
+# Build Device Tree overlay
+define GPIO_CHARDEV_DRIVER_BUILD_DTS
+	if [ -f $(@D)/dts/gpio-chardev-overlay.dts ]; then \
+		$(MAKE) -C $(@D)/dts \
+			DTC=$(LINUX_DIR)/scripts/dtc/dtc \
+			KERNEL_DIR=$(LINUX_DIR) \
+			all; \
+	fi
+endef
 
+# Hook to build DTS after kernel module
+GPIO_CHARDEV_DRIVER_POST_BUILD_HOOKS += GPIO_CHARDEV_DRIVER_BUILD_DTS
+
+# Ensure kernel is built before this module
+GPIO_CHARDEV_DRIVER_DEPENDENCIES = linux
+
+$(eval $(generic-package))

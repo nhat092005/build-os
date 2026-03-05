@@ -24,13 +24,22 @@ gpio-chardev/
 
 ### GPIO Access Method
 
-The module uses a GPIO lookup table (`gpiod_lookup_table`) registered at load time to request the GPIO pin through the `gpiod` consumer API. It creates a platform device (`gpio-led-pdev`) as the GPIO consumer. This approach does not require Device Tree support.
+The module binds to a platform device node defined via a Device Tree Overlay (`dts/gpio-chardev-overlay.dts`). It requests the GPIO descriptor through the `devm_gpiod_get()` API.
 
-### Module Parameter
+### Device Tree Overlay (DTO) Configurations
 
-| Parameter  | Type | Default | Description                |
-| ---------- | ---- | ------- | -------------------------- |
-| `gpio_pin` | int  | 17      | GPIO pin number to control |
+By default, the overlay configures **GPIO 21** as output. You can load this overlay dynamically in `/boot/config.txt`.
+
+The overlay supports the `__overrides__` node, allowing you to dynamically change the GPIO pin at boot time without recompiling the DTS.
+
+**Example in `/boot/config.txt`:**
+```ini
+# Use default GPIO 21
+dtoverlay=gpio-chardev-overlay
+
+# Override to use GPIO 17 instead
+dtoverlay=gpio-chardev-overlay,gpio=17
+```
 
 ### File Operations
 
@@ -60,17 +69,17 @@ The `GPIO_CHARDEV_IOC_BLINK` command accepts a `struct gpio_chardev_blink` with 
 | `delay_on`  | `__u32` | ON duration in milliseconds           |
 | `delay_off` | `__u32` | OFF duration in milliseconds          |
 
-Blinking runs in a dedicated kernel thread (`gpio_chardev_blink`). Issuing a new blink command stops any active blink thread before starting a new one. The LED is turned off when the thread exits.
+Blinking runs in a dedicated delayed workqueue. Issuing a new blink command cancels any active blink work before starting a new one. The LED is turned off when the blink process completes or is canceled.
 
 ### Initialization and Cleanup
 
 On load, the module:
 
-1. Allocates and registers a GPIO lookup table for `pinctrl-bcm2711`.
-2. Creates a platform device and requests the GPIO descriptor.
-3. Allocates a character device region, initializes a `cdev`, creates a device class and device node.
+1. Registers a platform driver `gpio-chardev`.
+2. Upon successful probe (when the driver binds to the device tree node), it extracts the GPIO pin using `devm_gpiod_get()`.
+3. Allocates a character device region, initializes a `cdev`, creates a device class and device node at `/dev/gpio-chardev`.
 
-On unload, the module stops any running blink thread, turns off the LED, and releases all resources in reverse order.
+On unload/remove, the module stops any running blink queue, turns off the LED, and the managed (`devm_`) framework safely releases resources in reverse order.
 
 ## Userspace Tool: gpio-chardev-ctl
 
@@ -85,13 +94,4 @@ gpio-chardev-ctl toggle                              # Toggle GPIO state
 gpio-chardev-ctl get                                 # Get current state
 gpio-chardev-ctl gpio                                # Get GPIO pin number
 gpio-chardev-ctl blink <count> <on_ms> <off_ms>      # Start blinking
-```
-
-## Build
-
-```
-make all             # Build kernel module and userspace tool
-make modules         # Build kernel module only
-make tools           # Build userspace tool only
-make clean           # Clean all build artifacts
 ```

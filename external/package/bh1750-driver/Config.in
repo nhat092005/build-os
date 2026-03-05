@@ -1,0 +1,6 @@
+config BR2_PACKAGE_BH1750_DRIVER
+	bool "bh1750-driver"
+	depends on BR2_LINUX_KERNEL
+	help
+	  I2C ambient light sensor driver for the BH1750.
+	  Registers as an Industrial I/O (IIO) light sensor device.

@@ -1,0 +1,48 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Device Tree Overlay for GPIO Character Device Driver
+ *
+ * Creates a platform device node that the gpio-chardev driver binds to.
+ * The `gpios` property provides the GPIO descriptor consumed by
+ * devm_gpiod_get(&pdev->dev, NULL, GPIOD_OUT_LOW) in the driver.
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2711", "brcm,bcm2837", "brcm,bcm2835";
+
+	/* Configure GPIO pin for gpio-chardev */
+	fragment@0 {
+		target = <&gpio>;
+		__overlay__ {
+			gpio_chardev_pins: gpio_chardev_pins {
+				brcm,pins = <21>;		/* GPIO 21*/
+				brcm,function = <1>;	/* Output */
+				brcm,pull = <0>;		/* No pull/down */
+			};
+		};
+	};
+
+	/* Create platform device node for gpio-chardev driver */
+	fragment@1 {
+		target-path = "/";
+		__overlay__ {
+			gpio_chardev: gpio-chardev {
+				compatible = "gpio-chardev";
+				gpios = <&gpio 21 0>;	/* 0 = GPIO_ACTIVE_HIGH */
+				pinctrl-names = "default";
+				pinctrl-0 = <&gpio_chardev_pins>;
+				status = "okay";
+			};
+		};
+	};
+
+	/* Runtime parameters (can be overridden at boot) */
+	__overrides__ {
+		/* Change GPIO pin: dtoverlay=gpio-chardev-overlay,gpio=X */
+		gpio = <&gpio_chardev>, "gpios:4",
+		       <&gpio_chardev_pins>, "brcm,pins:0";
+	};
+};

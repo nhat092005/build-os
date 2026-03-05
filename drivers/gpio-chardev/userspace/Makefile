@@ -1,50 +1,57 @@
+# SPDX-License-Identifier: GPL-2.0
 # Makefile for GPIO Character Device Userspace Tool
 
-# Toolchain Configuration
-CROSS_COMPILE   ?=
-CC              := $(CROSS_COMPILE)gcc
-CFLAGS          := -Wall -Wextra -O2
+DRIVER_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 
-# Directory Configuration
-TOOLS_DIR       := $(shell pwd)/tools
-BUILD_DIR       := $(shell pwd)/../build/tools
-UAPI_DIR        := $(shell pwd)/../include/uapi
-INCLUDES        := -I$(UAPI_DIR)
+_MK_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+_FIND_ROOT := $(firstword $(foreach d,\
+    $(_MK_DIR) \
+    $(abspath $(_MK_DIR)/..) \
+    $(abspath $(_MK_DIR)/../..) \
+    $(abspath $(_MK_DIR)/../../..) \
+    $(abspath $(_MK_DIR)/../../../..) \
+  ,$(if $(wildcard $(d)/mk/docker.mk),$(d))))
 
-# Auto detect source files
-SRCS            := $(wildcard $(TOOLS_DIR)/*.c)
+ifneq ($(_FIND_ROOT),)
+  include $(_FIND_ROOT)/mk/docker.mk
+endif
 
-# Target Binaries
-TARGETS         := $(patsubst $(TOOLS_DIR)/%.c,%,$(SRCS))
+IN_DOCKER := $(shell test -f /.dockerenv && echo 1)
 
-# PHONY Targets
-.PHONY: all clean help
-.PHONY: tools tools-clean
+DOCKER_MOUNT   := $(DRIVER_ROOT):$(DOCKER_CONTAINER_ROOT)
+DOCKER_WORKDIR := $(DOCKER_CONTAINER_ROOT)/userspace
 
-# Main Targets
-all: tools 
+ifeq ($(IN_DOCKER),1)
+  RUN :=
+else
+  RUN := $(DOCKER_RUN_NO_TTY)
+endif
+
+CROSS_COMPILE ?= aarch64-linux-
+CC            ?= $(CROSS_COMPILE)gcc
+CFLAGS        ?= -Wall -Wextra -O2
+
+TOOLS_DIR := tools
+BUILD_DIR := ../build/tools
+UAPI_DIR  := ../include/uapi
+INCLUDES  := -I$(UAPI_DIR)
+
+SRCS    := $(wildcard $(TOOLS_DIR)/*.c)
+TARGETS := $(patsubst $(TOOLS_DIR)/%.c,%,$(SRCS))
+
+.PHONY: all clean tools tools-clean
+
+all: tools
 
 tools: $(BUILD_DIR) $(TARGETS)
 
-# Directory Creation
 $(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
+	$(RUN) mkdir -p $(BUILD_DIR)
 
-# Build Userspace Tool
 %: $(TOOLS_DIR)/%.c
-	$(CC) $(CFLAGS) $(INCLUDES) -o $(BUILD_DIR)/$@ $<
+	$(RUN) $(CC) $(CFLAGS) $(INCLUDES) -o $(BUILD_DIR)/$@ $<
 
-# Clean Targets
 clean: tools-clean
 
-# Clean Userspace Tool
 tools-clean:
-	rm -rf $(BUILD_DIR)
-
-# Help
-help:
-	@echo "Targets:"
-	@echo "  all              Build GPIO Character Device control tool (default)"
-	@echo "  tools            Build userspace tools" 
-	@echo "  clean            Remove build artifacts"
-	@echo "  tools-clean      Clean tools build artifacts"
+	$(RUN) rm -rf $(BUILD_DIR)

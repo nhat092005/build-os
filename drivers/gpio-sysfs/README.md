@@ -109,11 +109,3 @@ gpio-sysfs-ctl 22 set value 1
 gpio-sysfs-ctl 22 blink 5 500
 gpio-sysfs-ctl unexport 22
 ```
-
-## Build
-
-```
-make all             # Build userspace tool and library (default)
-make tools           # Build userspace tool only
-make clean           # Clean all build artifacts
-```

@@ -1,44 +1,54 @@
 # SPDX-License-Identifier: GPL-2.0
-# Makefile for Device Tree Overlays
+# Makefile for GPIO Rust Device Tree Overlay
 
-BUILD_DIR	:= $(shell pwd)/../build/dtbo
-DTC         ?= dtc
-DTC_FLAGS   ?= -@ -I dts -O dtb -Wno-unit_address_vs_reg -Wno-label_is_string
+DRIVER_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 
-# Source file
-DTS := gpio-rust-overlay.dts
+_MK_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+_FIND_ROOT := $(firstword $(foreach d,\
+    $(_MK_DIR) \
+    $(abspath $(_MK_DIR)/..) \
+    $(abspath $(_MK_DIR)/../..) \
+    $(abspath $(_MK_DIR)/../../..) \
+    $(abspath $(_MK_DIR)/../../../..) \
+  ,$(if $(wildcard $(d)/mk/docker.mk),$(d))))
 
-# Output file
-DTBO := gpio-rust.dtbo
+ifneq ($(_FIND_ROOT),)
+  include $(_FIND_ROOT)/mk/docker.mk
+endif
 
-.PHONY: all dtbo clean dtbo-clean help
+IN_DOCKER := $(shell test -f /.dockerenv && echo 1)
 
-# Default target
+DOCKER_MOUNT   := $(DRIVER_ROOT):$(DOCKER_CONTAINER_ROOT)
+DOCKER_WORKDIR := $(DOCKER_CONTAINER_ROOT)/dts
+
+ifeq ($(IN_DOCKER),1)
+  RUN :=
+else 
+  RUN := $(DOCKER_RUN_NO_TTY)
+endif
+
+DTC ?= dtc
+DTC_FLAGS ?= -@ -I dts -O dtb -Wno-unit_address_vs_reg -Wno-label_is_string
+
+BUILD_DIR := ../build/dtbo
+DTS       := gpio-rust-overlay.dts
+DTBO_OUT  := gpio-rust.dtbo
+
+.PHONY: all clean
+.PHONY: dtbo dtbo-clean
+
 all: dtbo
 
-# Build Device Tree overlay
-dtbo: $(BUILD_DIR) $(DTBO)
+dtbo: $(BUILD_DIR) $(DTBO_OUT)
 
-# Create build directory
 $(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
+	$(RUN) mkdir -p $(BUILD_DIR)
 
-# Compile DTS to DTBO
-$(DTBO): $(DTS)
-	@echo "Compiling Device Tree Overlay: $< -> $@"
-	$(DTC) $(DTC_FLAGS) -o $(BUILD_DIR)/$@ $<
+$(DTBO_OUT): $(DTS)
+	@echo "Device Tree Overlay: $< -> $@"
+	$(RUN) $(DTC) $(DTC_FLAGS) -o $(BUILD_DIR)/$@ $<
 
-# Clean build artifacts
 clean: dtbo-clean
 
-# Clean compiled DTS artifacts
 dtbo-clean:
-	rm -rf $(BUILD_DIR)
-
-# help
-help:
-	@echo "Targets:"
-	@echo "  all              Compile DTS to DTBO (default)"
-	@echo "  dtbo             Compile DTS to DTBO"
-	@echo "  clean            Remove compiled overlay"
-	@echo "  dtbo-clean       Remove compiled DTS artifacts"
+	$(RUN) rm -rf $(BUILD_DIR)

@@ -1,0 +1,5 @@
+config BR2_PACKAGE_GPIO_INPUTS_DRIVER
+	bool "gpio-inputs-driver"
+	depends on BR2_LINUX_KERNEL
+	help
+		GPIO input driver using the Linux input subsystem.

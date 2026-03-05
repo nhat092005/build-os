@@ -100,7 +100,8 @@ static int cmd_get_edge(gpio_sysfs_device_t *gpio);
  * @argv: Argument vector (excluding command name)
  * Return: 0 on success, non-zero on failure
  */
-static int cmd_set_active_low(gpio_sysfs_device_t *gpio, int argc, char *argv[]);
+static int cmd_set_active_low(gpio_sysfs_device_t *gpio, int argc,
+			      char *argv[]);
 
 /**
  * cmd_get_active_low - Handle 'get active_low' command
@@ -153,8 +154,7 @@ int main(int argc, char *argv[])
 	const char *sub;
 	int ret;
 
-	if (argc < 2)
-	{
+	if (argc < 2) {
 		usage(argv[0]);
 		return 1;
 	}
@@ -164,9 +164,6 @@ int main(int argc, char *argv[])
 	 * kernel 4.x.  Prefer the character-device interface (/dev/gpiochipN)
 	 * via libgpiod or the gpio-chardev driver for new development.
 	 */
-	fprintf(stderr,
-			"WARNING: /sys/class/gpio is deprecated and may be removed in a future kernel.\n"
-			"         Consider migrating to the gpiochip character device API (libgpiod).\n");
 
 	cmd = argv[1];
 
@@ -180,8 +177,7 @@ int main(int argc, char *argv[])
 		return cmd_unexport(argc - 2, argv + 2);
 
 	/* argv[1] = pin, argv[2] = sub-command */
-	if (argc < 3)
-	{
+	if (argc < 3) {
 		print_error("Expected: <pin> <command> [args]");
 		usage(argv[0]);
 		return 1;
@@ -190,27 +186,25 @@ int main(int argc, char *argv[])
 	char str_pin[16];
 	int pin_offset;
 
-	if (parse_int(cmd, &pin_offset) != 0)
-	{
-		print_error("Invalid GPIO pin offset '%s': not a valid integer", cmd);
+	if (parse_int(cmd, &pin_offset) != 0) {
+		print_error("Invalid GPIO pin offset '%s': not a valid integer",
+			    cmd);
 		return 1;
 	}
 	snprintf(str_pin, sizeof(str_pin), "%d", pin_offset + GPIO_BASE);
 
 	ret = gpio_open(&gpio, str_pin); /* str_pin = pin number string + 512 */
 
-	if (ret < 0)
-	{
-		print_error("Failed to open GPIO %s: %s", str_pin, gpio_strerror(ret));
+	if (ret < 0) {
+		print_error("Failed to open GPIO %s: %s", str_pin,
+			    gpio_strerror(ret));
 		return 1;
 	}
 
 	sub = argv[2];
 
-	if (strcmp(sub, "set") == 0)
-	{
-		if (argc < 4)
-		{
+	if (strcmp(sub, "set") == 0) {
+		if (argc < 4) {
 			print_error("Missing argument after 'set'");
 			return 1;
 		}
@@ -226,10 +220,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	if (strcmp(sub, "get") == 0)
-	{
-		if (argc < 4)
-		{
+	if (strcmp(sub, "get") == 0) {
+		if (argc < 4) {
 			print_error("Missing argument after 'get'");
 			return 1;
 		}
@@ -269,8 +261,8 @@ static void print_error(const char *fmt, ...)
 
 static void usage(const char *progname)
 {
-	printf("GPIO Sysfs Control Tool\n\n");
-	printf("Usage: %s <command> [args...]\n\n", progname);
+	printf("GPIO Sysfs Control Tool\n");
+	printf("Usage: %s <command> [args...]\n", progname);
 	printf("Commands:\n");
 	printf("  list\n");
 	printf("  export <pin>\n");
@@ -285,12 +277,6 @@ static void usage(const char *progname)
 	printf("  <pin> get active_low\n");
 	printf("  <pin> blink <count> <delay_ms>\n");
 	printf("  <pin> info\n");
-	printf("\nExamples:\n");
-	printf("  %s export 22\n", progname);
-	printf("  %s 22 set direction out\n", progname);
-	printf("  %s 22 set value 1\n", progname);
-	printf("  %s 22 blink 5 500\n", progname);
-	printf("  %s list\n", progname);
 }
 
 static int cmd_export(int argc, char *argv[])
@@ -299,15 +285,14 @@ static int cmd_export(int argc, char *argv[])
 	char str_pin[16];
 	int ret;
 
-	if (argc < 1)
-	{
+	if (argc < 1) {
 		print_error("Missing GPIO pin offset");
 		return 1;
 	}
 
-	if (parse_int(argv[0], &pin) != 0)
-	{
-		print_error("Invalid GPIO pin offset '%s': not a valid integer", argv[0]);
+	if (parse_int(argv[0], &pin) != 0) {
+		print_error("Invalid GPIO pin offset '%s': not a valid integer",
+			    argv[0]);
 		return 1;
 	}
 	gpio_num = pin + GPIO_BASE;
@@ -315,10 +300,9 @@ static int cmd_export(int argc, char *argv[])
 	snprintf(str_pin, sizeof(str_pin), "%d", gpio_num);
 
 	ret = gpio_export(str_pin);
-	if (ret < 0)
-	{
-		print_error("Failed to export GPIO %d: %s",
-					gpio_num, gpio_strerror(ret));
+	if (ret < 0) {
+		print_error("Failed to export GPIO %d: %s", gpio_num,
+			    gpio_strerror(ret));
 		return 1;
 	}
 
@@ -332,15 +316,14 @@ static int cmd_unexport(int argc, char *argv[])
 	char str_pin[16];
 	int ret;
 
-	if (argc < 1)
-	{
+	if (argc < 1) {
 		print_error("Missing GPIO pin offset");
 		return 1;
 	}
 
-	if (parse_int(argv[0], &pin) != 0)
-	{
-		print_error("Invalid GPIO pin offset '%s': not a valid integer", argv[0]);
+	if (parse_int(argv[0], &pin) != 0) {
+		print_error("Invalid GPIO pin offset '%s': not a valid integer",
+			    argv[0]);
 		return 1;
 	}
 	gpio_num = pin + GPIO_BASE;
@@ -348,15 +331,13 @@ static int cmd_unexport(int argc, char *argv[])
 	snprintf(str_pin, sizeof(str_pin), "%d", gpio_num);
 
 	ret = gpio_unexport(str_pin);
-	if (ret < 0)
-	{
-		print_error("Failed to unexport GPIO %d: %s",
-					gpio_num, gpio_strerror(ret));
+	if (ret < 0) {
+		print_error("Failed to unexport GPIO %d: %s", gpio_num,
+			    gpio_strerror(ret));
 		return 1;
 	}
 
-	printf("GPIO %d (gpio%d): Unexported successfully\n",
-		   pin, gpio_num);
+	printf("GPIO %d (gpio%d): Unexported successfully\n", pin, gpio_num);
 
 	return 0;
 }
@@ -365,19 +346,18 @@ static int cmd_set_direction(gpio_sysfs_device_t *gpio, int argc, char *argv[])
 {
 	int ret;
 
-	if (argc < 1)
-	{
+	if (argc < 1) {
 		print_error("Missing direction (in|out)");
 		return 1;
 	}
 
 	ret = gpio_set_direction(gpio, argv[0]);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to set direction: %s", gpio_strerror(ret));
 		return 1;
 	}
-	printf("GPIO %d: %s\n", gpio_pin_to_offset(gpio), strcmp(argv[0], "in") == 0 ? "INPUT" : "OUTPUT");
+	printf("GPIO %d: %s\n", gpio_pin_to_offset(gpio),
+	       strcmp(argv[0], "in") == 0 ? "INPUT" : "OUTPUT");
 	return 0;
 }
 
@@ -387,12 +367,12 @@ static int cmd_get_direction(gpio_sysfs_device_t *gpio)
 	int ret;
 
 	ret = gpio_get_direction(gpio, buffer, sizeof(buffer));
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to get direction: %s", gpio_strerror(ret));
 		return 1;
 	}
-	printf("GPIO %d: %s\n", gpio_pin_to_offset(gpio), strcmp(buffer, "in") == 0 ? "INPUT" : "OUTPUT");
+	printf("GPIO %d: %s\n", gpio_pin_to_offset(gpio),
+	       strcmp(buffer, "in") == 0 ? "INPUT" : "OUTPUT");
 	return 0;
 }
 
@@ -400,23 +380,31 @@ static int cmd_set_value(gpio_sysfs_device_t *gpio, int argc, char *argv[])
 {
 	int value, ret;
 
-	if (argc < 1)
-	{
+	if (argc < 1) {
 		print_error("Missing value (0|1)");
 		return 1;
 	}
 
-	if (parse_int(argv[0], &value) != 0 || (value != 0 && value != 1))
-	{
+	if (parse_int(argv[0], &value) != 0 || (value != 0 && value != 1)) {
 		print_error("Invalid value '%s' (must be 0 or 1)", argv[0]);
 		return 1;
 	}
 
 	ret = gpio_set_value(gpio, value);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to set value: %s", gpio_strerror(ret));
 		return 1;
+	}
+
+	gpio_sysfs_info_t info;
+	ret = gpio_get_info(gpio, &info);
+	if (ret < 0) {
+		print_error("Failed to get GPIO info: %s", gpio_strerror(ret));
+		return 1;
+	}
+
+	if (info.active_low) {
+		value = !value; /* Invert value for active_low */
 	}
 	printf("GPIO %d: %s\n", gpio_pin_to_offset(gpio), value ? "ON" : "OFF");
 	return 0;
@@ -427,12 +415,23 @@ static int cmd_get_value(gpio_sysfs_device_t *gpio)
 	int value, ret;
 
 	ret = gpio_get_value(gpio, &value);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to get value: %s", gpio_strerror(ret));
 		return 1;
 	}
-	printf("GPIO %d: value = %s\n", gpio_pin_to_offset(gpio), value ? "ON" : "OFF");
+
+	gpio_sysfs_info_t info;
+	ret = gpio_get_info(gpio, &info);
+	if (ret < 0) {
+		print_error("Failed to get GPIO info: %s", gpio_strerror(ret));
+		return 1;
+	}
+
+	if (info.active_low) {
+		value = !value; /* Invert value for active_low */
+	}
+	printf("GPIO %d: value = %s\n", gpio_pin_to_offset(gpio),
+	       value ? "ON" : "OFF");
 	return 0;
 }
 
@@ -440,37 +439,36 @@ static int cmd_blink(gpio_sysfs_device_t *gpio, int argc, char *argv[])
 {
 	int count, delay_ms, i, ret;
 
-	if (argc < 2)
-	{
+	if (argc < 2) {
 		print_error("Missing arguments: <count> <delay_ms>");
 		return 1;
 	}
 
-	if (parse_int(argv[0], &count) != 0 || count <= 0)
-	{
-		print_error("Invalid count '%s': must be a positive integer", argv[0]);
+	if (parse_int(argv[0], &count) != 0 || count <= 0) {
+		print_error("Invalid count '%s': must be a positive integer",
+			    argv[0]);
 		return 1;
 	}
-	if (parse_int(argv[1], &delay_ms) != 0 || delay_ms < 0)
-	{
-		print_error("Invalid delay_ms '%s': must be a non-negative integer", argv[1]);
+	if (parse_int(argv[1], &delay_ms) != 0 || delay_ms < 0) {
+		print_error(
+			"Invalid delay_ms '%s': must be a non-negative integer",
+			argv[1]);
 		return 1;
 	}
 
-	for (i = 0; i < count; i++)
-	{
+	for (i = 0; i < count; i++) {
 		ret = gpio_set_value(gpio, 1);
-		if (ret < 0)
-		{
-			print_error("Failed to set value: %s", gpio_strerror(ret));
+		if (ret < 0) {
+			print_error("Failed to set value: %s",
+				    gpio_strerror(ret));
 			return 1;
 		}
 		usleep((useconds_t)delay_ms * 1000);
 
 		ret = gpio_set_value(gpio, 0);
-		if (ret < 0)
-		{
-			print_error("Failed to set value: %s", gpio_strerror(ret));
+		if (ret < 0) {
+			print_error("Failed to set value: %s",
+				    gpio_strerror(ret));
 			return 1;
 		}
 		usleep((useconds_t)delay_ms * 1000);
@@ -482,22 +480,21 @@ static int cmd_set_edge(gpio_sysfs_device_t *gpio, int argc, char *argv[])
 {
 	int ret;
 
-	if (argc < 1)
-	{
+	if (argc < 1) {
 		print_error("Missing edge value (none|rising|falling|both)");
 		return 1;
 	}
 
 	ret = gpio_set_edge(gpio, argv[0]);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to set edge: %s", gpio_strerror(ret));
 		return 1;
 	}
 	printf("GPIO %d: %s\n", gpio_pin_to_offset(gpio),
-		   strcmp(argv[0], "none") == 0 ? "NONE" : strcmp(argv[0], "rising") == 0 ? "RISING"
-									: strcmp(argv[0], "falling") == 0	? "FALLING"
-															: "BOTH");
+	       strcmp(argv[0], "none") == 0    ? "NONE" :
+	       strcmp(argv[0], "rising") == 0  ? "RISING" :
+	       strcmp(argv[0], "falling") == 0 ? "FALLING" :
+						 "BOTH");
 	return 0;
 }
 
@@ -507,15 +504,15 @@ static int cmd_get_edge(gpio_sysfs_device_t *gpio)
 	int ret;
 
 	ret = gpio_get_edge(gpio, buffer, sizeof(buffer));
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to get edge: %s", gpio_strerror(ret));
 		return 1;
 	}
 	printf("GPIO %d: edge = %s\n", gpio_pin_to_offset(gpio),
-		   strcmp(buffer, "none") == 0 ? "NONE" : strcmp(buffer, "rising") == 0 ? "RISING"
-								   : strcmp(buffer, "falling") == 0  ? "FALLING"
-														  : "BOTH");
+	       strcmp(buffer, "none") == 0    ? "NONE" :
+	       strcmp(buffer, "rising") == 0  ? "RISING" :
+	       strcmp(buffer, "falling") == 0 ? "FALLING" :
+						"BOTH");
 	return 0;
 }
 
@@ -523,26 +520,24 @@ static int cmd_set_active_low(gpio_sysfs_device_t *gpio, int argc, char *argv[])
 {
 	int active_low, ret;
 
-	if (argc < 1)
-	{
+	if (argc < 1) {
 		print_error("Missing value (0|1)");
 		return 1;
 	}
 
-	if (parse_int(argv[0], &active_low) != 0 || (active_low != 0 && active_low != 1))
-	{
+	if (parse_int(argv[0], &active_low) != 0 ||
+	    (active_low != 0 && active_low != 1)) {
 		print_error("Invalid value '%s' (must be 0 or 1)", argv[0]);
 		return 1;
 	}
 
 	ret = gpio_set_active_low(gpio, active_low);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to set active_low: %s", gpio_strerror(ret));
 		return 1;
 	}
 	printf("GPIO %d: %s\n", gpio_pin_to_offset(gpio),
-		   active_low ? "ACTIVE_LOW" : "ACTIVE_HIGH");
+	       active_low ? "ACTIVE_LOW" : "ACTIVE_HIGH");
 	return 0;
 }
 
@@ -551,17 +546,17 @@ static int cmd_get_active_low(gpio_sysfs_device_t *gpio)
 	int active_low, ret;
 
 	ret = gpio_get_active_low(gpio, &active_low);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to get active_low: %s", gpio_strerror(ret));
 		return 1;
 	}
 	printf("GPIO %d: active_low = %s\n", gpio_pin_to_offset(gpio),
-		   active_low ? "ACTIVE_LOW" : "ACTIVE_HIGH");
+	       active_low ? "ACTIVE_LOW" : "ACTIVE_HIGH");
 	return 0;
 }
 
-static int list_callback(const char *name, void *user_data __attribute__((unused)))
+static int list_callback(const char *name,
+			 void *user_data __attribute__((unused)))
 {
 	printf("%s\n", name);
 	return 0;
@@ -580,8 +575,7 @@ static int cmd_list(void)
 	int ret;
 
 	ret = gpio_list(list_callback, NULL);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to list GPIOs: %s", gpio_strerror(ret));
 		return 1;
 	}
@@ -596,19 +590,21 @@ static int cmd_info(gpio_sysfs_device_t *gpio)
 	int ret;
 
 	ret = gpio_get_info(gpio, &info);
-	if (ret < 0)
-	{
+	if (ret < 0) {
 		print_error("Failed to get GPIO info: %s", gpio_strerror(ret));
 		return 1;
 	}
 
 	printf("GPIO:       %s\n", info.gpio_pin);
-	printf("Direction:  %s\n", strcmp(info.direction, "in") == 0 ? "INPUT" : "OUTPUT");
-	printf("Edge:       %s\n", strcmp(info.edge, "none") == 0		? "NONE"
-							   : strcmp(info.edge, "rising") == 0	? "RISING"
-							   : strcmp(info.edge, "falling") == 0 ? "FALLING"
-														: "BOTH");
-	printf("Value:      %s\n", info.value ? "ON" : "OFF");
-	printf("Active Low: %s\n", info.active_low ? "ACTIVE_LOW" : "ACTIVE_HIGH");
+	printf("Direction:  %s\n",
+	       strcmp(info.direction, "in") == 0 ? "INPUT" : "OUTPUT");
+	printf("Edge:       %s\n",
+	       strcmp(info.edge, "none") == 0	 ? "NONE" :
+	       strcmp(info.edge, "rising") == 0	 ? "RISING" :
+	       strcmp(info.edge, "falling") == 0 ? "FALLING" :
+						   "BOTH");
+	printf("Value:      %d\n", info.value);
+	printf("Active Low: %s\n",
+	       info.active_low ? "ACTIVE_LOW" : "ACTIVE_HIGH");
 	return 0;
 }

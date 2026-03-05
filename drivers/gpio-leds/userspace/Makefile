@@ -1,85 +1,87 @@
-# Makefile for LED Control Library and Tools
+# SPDX-License-Identifier: GPL-2.0
+# Makefile for GPIO LEDS Userspace Tool and Library
 
-# Toolchain Configuration
-CROSS_COMPILE   ?= 
-CC              := $(CROSS_COMPILE)gcc
-AR              := $(CROSS_COMPILE)ar
-CFLAGS          := -Wall -Wextra -O2 -std=gnu11 -fPIC
-LDFLAGS         :=
+DRIVER_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 
-# Directory Configuration
-USERSPACE_DIR   := $(shell pwd)
-LIB_DIR         := $(USERSPACE_DIR)/lib/libled
-TOOLS_DIR       := $(USERSPACE_DIR)/tools
-BUILD_DIR       := $(USERSPACE_DIR)/../build/tools
+_MK_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+_FIND_ROOT := $(firstword $(foreach d,\
+    $(_MK_DIR) \
+    $(abspath $(_MK_DIR)/..) \
+    $(abspath $(_MK_DIR)/../..) \
+    $(abspath $(_MK_DIR)/../../..) \
+    $(abspath $(_MK_DIR)/../../../..) \
+  ,$(if $(wildcard $(d)/mk/docker.mk),$(d))))
 
-# Library Configuration
-LIB_NAME        := libled
-LIB_STATIC      := $(BUILD_DIR)/lib$(LIB_NAME).a
-LIB_SHARED      := $(BUILD_DIR)/lib$(LIB_NAME).so
-LIB_HEADER      := $(LIB_DIR)/libled.h
-LIB_SOURCE      := $(LIB_DIR)/libled.c
-LIB_OBJECT      := $(BUILD_DIR)/libled.o
+ifneq ($(_FIND_ROOT),)
+  include $(_FIND_ROOT)/mk/docker.mk
+endif
 
-# Tool Configuration
-TOOL_NAME       := gpio-leds-ctl
-TOOL_SOURCE     := $(TOOLS_DIR)/$(TOOL_NAME).c
-TOOL_OBJECT     := $(BUILD_DIR)/$(TOOL_NAME).o
-TOOL_BINARY     := $(BUILD_DIR)/$(TOOL_NAME)
+IN_DOCKER := $(shell test -f /.dockerenv && echo 1)
 
-# PHONY Targets
-.PHONY: all clean help lib static shared tools tools-clean
+DOCKER_MOUNT   := $(DRIVER_ROOT):$(DOCKER_CONTAINER_ROOT)
+DOCKER_WORKDIR := $(DOCKER_CONTAINER_ROOT)/userspace
 
-# Default Target
+ifeq ($(IN_DOCKER),1)
+  RUN :=
+else
+  RUN := $(DOCKER_RUN_NO_TTY)
+endif
+
+CROSS_COMPILE ?= aarch64-linux-
+CC 			      ?= $(CROSS_COMPILE)gcc
+AR 			      ?= $(CROSS_COMPILE)ar
+CFLAGS 		    ?= -Wall -Wextra -O2 -std=gnu11 -fPIC
+LDFLAGS 	    ?=
+
+LIB_DIR   := lib
+TOOLS_DIR := tools
+BUILD_DIR := ../build/tools
+
+LIB_NAME   := libled
+LIB_STATIC := $(BUILD_DIR)/lib$(LIB_NAME).a
+LIB_SHARED := $(BUILD_DIR)/lib$(LIB_NAME).so
+LIB_HEADER := $(LIB_DIR)/libled.h
+LIB_SOURCE := $(LIB_DIR)/libled.c
+LIB_OBJECT := $(BUILD_DIR)/libled.o
+
+TOOL_NAME   := gpio-leds-ctl
+TOOL_SOURCE := $(TOOLS_DIR)/$(TOOL_NAME).c
+TOOL_OBJECT := $(BUILD_DIR)/$(TOOL_NAME).o
+TOOL_BINARY := $(BUILD_DIR)/$(TOOL_NAME)
+
+.PHONY: all clean 
+.PHONY: lib static shared 
+.PHONY: tools tools-clean
+
 all: static tools
 
-# Create build directory
 $(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
+	$(RUN) mkdir -p $(BUILD_DIR)
 
-# Build static library
 static: $(LIB_STATIC)
 
 $(LIB_STATIC): $(LIB_OBJECT) | $(BUILD_DIR)
-	$(AR) rcs $@ $^
+	$(RUN) $(AR) rcs $@ $^
 
-# Build shared library
 shared: $(LIB_SHARED)
 
 $(LIB_SHARED): $(LIB_OBJECT) | $(BUILD_DIR)
-	$(CC) -shared -o $@ $^ $(LDFLAGS)
+	$(RUN) $(CC) -shared -o $@ $^ $(LDFLAGS)
 
-# Compile library object
 $(LIB_OBJECT): $(LIB_SOURCE) $(LIB_HEADER) | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -I$(LIB_DIR) -c -o $@ $<
+	$(RUN) $(CC) $(CFLAGS) -I$(LIB_DIR) -c -o $@ $<
 
-# Build tools
 tools: $(TOOL_BINARY)
 
 $(TOOL_BINARY): $(TOOL_OBJECT) $(LIB_STATIC) | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -o $@ $(TOOL_OBJECT) $(LIB_STATIC) $(LDFLAGS)
+	$(RUN) $(CC) $(CFLAGS) -o $@ $(TOOL_OBJECT) $(LIB_STATIC) $(LDFLAGS)
 
-# Compile tool object
 $(TOOL_OBJECT): $(TOOL_SOURCE) $(LIB_HEADER) | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -I$(LIB_DIR) -c -o $@ $<
+	$(RUN) $(CC) $(CFLAGS) -I$(LIB_DIR) -c -o $@ $<
 
-# Alias for library
 lib: static
 
-# Clean all
 clean: tools-clean
 
-# Clean tools build artifacts
 tools-clean:
-	rm -rf $(BUILD_DIR)
-
-# Help
-help:
-	@echo "Build targets:"
-	@echo "  all           - Build static library and CLI tool (default)"
-	@echo "  static        - Build static library only"
-	@echo "  shared        - Build shared library only"
-	@echo "  lib           - Alias for 'static'"
-	@echo "  tools         - Build CLI tool with static library"
-	@echo "  clean         - Remove all build artifacts"
-	@echo "  tools-clean   - Remove build directory"
+	$(RUN) rm -rf $(BUILD_DIR)

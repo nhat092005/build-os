@@ -1,0 +1,3 @@
+# kbuild definitions for BH1750 ambient light sensor driver
+obj-m := bh1750.o
+ccflags-y := -I$(src)/../include
