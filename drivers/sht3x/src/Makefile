@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
-# Makefile for BH1750 Ambient Light Sensor Driver
+# Makefile for SHT3X Humidity and Temperature Sensor Kernel Module
 
 _MK_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 _FIND_ROOT := $(firstword $(foreach d,\
@@ -23,7 +23,7 @@ else
 endif
 
 DOCKER_MOUNT   := $(_FIND_ROOT):$(DOCKER_CONTAINER_ROOT)
-DOCKER_WORKDIR := $(DOCKER_CONTAINER_ROOT)/drivers/bh1750
+DOCKER_WORKDIR := $(DOCKER_CONTAINER_ROOT)/drivers/sht3x/src
 
 ifeq ($(IN_DOCKER),1)
   RUN :=
@@ -31,41 +31,36 @@ else
   RUN := $(DOCKER_RUN_NO_TTY)
 endif
 
-DTC       ?= dtc
-DTC_FLAGS ?= -@ -I dts -O dtb -Wno-unit_address_vs_reg -Wno-label_is_string
-
 ARCH          ?= arm64
 CROSS_COMPILE ?= aarch64-linux-
 KERNEL_DIR    ?= $(CONTAINER_ROOT)/buildroot/output/build/linux-custom
 
-.PHONY: all clean
-.PHONY: dtbo dtbo-clean
+BUILD_DIR := ../build/module
+
+.PHONY: all clean 
 .PHONY: modules modules-clean
-.PHONY: tools tools-clean
 
-all: dtbo modules tools
-
-dtbo:
-	$(RUN) $(MAKE) -C dts dtbo \
-		DTC=$(DTC) \
-		DTC_FLAGS="$(DTC_FLAGS)"
+all: modules
 
 modules:
-	$(RUN) $(MAKE) -C src modules \
+	$(RUN) mkdir -p $(BUILD_DIR)
+	$(RUN) $(MAKE) -C $(KERNEL_DIR) \
+		M=$(if $(filter 1,$(IN_DOCKER)),$(CURDIR),$(DOCKER_CONTAINER_ROOT)/drivers/sht3x/src) \
 		ARCH=$(ARCH) \
 		CROSS_COMPILE=$(CROSS_COMPILE) \
-		KERNEL_DIR=$(KERNEL_DIR)
+		modules
+	$(RUN) cp -f *.ko $(BUILD_DIR)/
 
-tools:
-	@:
-
-clean: dtbo-clean modules-clean tools-clean
-
-dtbo-clean:
-	$(RUN) $(MAKE) -C dts dtbo-clean
+clean: modules-clean
 
 modules-clean:
-	$(RUN) $(MAKE) -C src modules-clean
-
-tools-clean:
-	@:
+	@if [ -d "$(KERNEL_DIR)" ]; then \
+	    $(RUN) $(MAKE) -C $(KERNEL_DIR) \
+	        M=$(if $(filter 1,$(IN_DOCKER)),$(CURDIR),$(DOCKER_CONTAINER_ROOT)/drivers/sht3x/src) \
+	        clean 2>/dev/null || true; \
+	fi
+	# Remove kbuild artifacts directly from src/ (no KERNEL_DIR required)
+	$(RUN) rm -f  *.ko *.o *.mod *.mod.c \
+	              modules.order Module.symvers
+	$(RUN) rm -f  .*.cmd ..*.cmd .module-common.o
+	$(RUN) rm -rf .tmp_versions $(BUILD_DIR)

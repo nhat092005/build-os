@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
-# Makefile for BH1750 Ambient Light Sensor Driver
+# Makefile for SHT3X Temperature & Humidity Sensor Driver
 
 _MK_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 _FIND_ROOT := $(firstword $(foreach d,\
@@ -23,7 +23,7 @@ else
 endif
 
 DOCKER_MOUNT   := $(_FIND_ROOT):$(DOCKER_CONTAINER_ROOT)
-DOCKER_WORKDIR := $(DOCKER_CONTAINER_ROOT)/drivers/bh1750
+DOCKER_WORKDIR := $(DOCKER_CONTAINER_ROOT)/drivers/sht3x
 
 ifeq ($(IN_DOCKER),1)
   RUN :=
@@ -32,7 +32,7 @@ else
 endif
 
 DTC       ?= dtc
-DTC_FLAGS ?= -@ -I dts -O dtb -Wno-unit_address_vs_reg -Wno-label_is_string
+DTC_FLAGS ?= -@ -I dts -O dtb -Wno-unit_address_vs_reg
 
 ARCH          ?= arm64
 CROSS_COMPILE ?= aarch64-linux-

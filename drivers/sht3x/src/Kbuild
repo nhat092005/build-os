@@ -1,0 +1,3 @@
+# kbuild definitions for SHT3x sensor driver
+obj-m := sht3x.o
+ccflags-y := -I$(src)/../include

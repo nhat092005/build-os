@@ -1,0 +1,61 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Device Tree Overlay — SHT3x on Raspberry Pi I2C1
+ *
+ * Wiring (SHT3x module → Raspberry Pi 40-pin header):
+ *   VCC  → 3.3 V  (pin 1 or 17)
+ *   GND  → GND    (pin 6, 9, 14, 20, 25, 30, 34, or 39)
+ *   SDA  → GPIO2  (pin 3)  — I2C1 data
+ *   SCL  → GPIO3  (pin 5)  — I2C1 clock
+ *
+ * I2C address: 0x44 (ADDR pin LOW, default) or 0x45 (ADDR pin HIGH).
+ * The address can be changed via dtparam:
+ *   dtoverlay=sht3x,addr=0x45
+ *
+ * Installation:
+ *   1. Copy sht3x.dtbo to /boot/overlays/
+ *   2. Add to /boot/config.txt:
+ *        dtparam=i2c_arm=on
+ *        dtoverlay=sht3x
+ *   3. Reboot
+ *
+ * Compatible boards: Raspberry Pi 4B, 3B+, Zero 2 W
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2711", "brcm,bcm2837", "brcm,bcm2835";
+
+	/*
+	 * Fragment 0: Configure I2C1 bus for SHT3x
+	 *
+	 * - Enable the bus (status = "okay")
+	 * - Standard Mode 100 kHz (conservative — SHT3x supports up to 1 MHz)
+	 * - Declare a child node for the SHT3x at slave address 0x44
+	 */
+	fragment@0 {
+		target = <&i2c1>;
+		__overlay__ {
+			status = "okay";
+			clock-frequency = <100000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			sht3x: sht3x@44 {
+				compatible = "sensirion,sht3x";
+				reg = <0x44>;
+				status = "okay";
+			};
+		};
+	};
+
+	/*
+	 * Overridable parameters:
+	 *   addr — I2C address (default 0x44, alternative 0x45)
+	 */
+	__overrides__ {
+		addr = <&sht3x>, "reg:0";
+	};
+};
