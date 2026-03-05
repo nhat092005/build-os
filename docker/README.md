@@ -80,6 +80,45 @@ The entrypoint detects this mismatch on every container start and removes the af
 
 ---
 
+## CI/CD
+
+### Workflows
+
+| Trigger | Workflow | What it does |
+|---------|----------|--------------|
+| Push to `main`/`dev-*` or PR — `drivers/`, `kernel/`, `Makefile*` changed | `ci.yml` | Build all modules + DTBOs + tools + checkpatch |
+| Push to `main` — `docker/Dockerfile` changed | `docker-publish.yml` | Rebuild and push builder image to `ghcr.io` |
+| Push tag `v*` | `release.yml` | Full Buildroot OS build → GitHub Release with `sdcard.img` |
+
+All workflows pull `ghcr.io/nhat092005/build-os-builder:latest` — no `apt-get` or SDK build on the runner.
+
+### Run CI checks locally
+
+```bash
+# Full CI check (Docker required) — mirrors GitHub Actions ci.yml
+make ci-check
+
+# Rebuild the builder image
+make ci-image
+```
+
+`make ci-check` runs `kernel-prepare` + `modules` + `dtbo` + `tools` + `checkpatch.pl` in sequence, all inside the builder container.
+
+### Pull the published builder image
+
+```bash
+docker pull ghcr.io/nhat092005/build-os-builder:latest
+docker tag  ghcr.io/nhat092005/build-os-builder:latest build-os-builder
+```
+
+After tagging, all `make` targets (`make modules`, `make build-all`, etc.) work without running `make docker-build` first.
+
+### Design decisions
+
+See [`.github/CI-DESIGN.md`](../.github/CI-DESIGN.md) for the full rationale: `kernel-prepare` strategy, submodule selection per workflow, image caching, and timeout budgets.
+
+---
+
 ## Pinned Versions
 
 | Component | Version                                 |
