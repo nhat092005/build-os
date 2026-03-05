@@ -2,11 +2,13 @@ name: Release
 
 on:
   push:
-    tags: ["v*"]
+    tags:
+      - "v*"
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: nhat092005/build-os-builder
+  SDK_IMAGE: ghcr.io/nhat092005/build-os-sdk:gcc14.3-glibc
   DEFCONFIG: raspberrypi4_64_custom_defconfig
 
 jobs:
@@ -17,21 +19,18 @@ jobs:
     permissions:
       contents: write
       packages: read
+
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Pull builder image
+      - name: Build Docker image
         run: |
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          docker tag  ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest build-os-builder
+          DOCKER_BUILDKIT=1 docker build \
+            --build-arg SDK_IMAGE=${{ env.SDK_IMAGE }} \
+            -t build-os-builder \
+            -f docker/Dockerfile .
 
       - name: Cache Buildroot downloads
         uses: actions/cache@v4
@@ -46,10 +45,12 @@ jobs:
       - name: Build all drivers
         run: make build
 
-      - name: Install mtools (required for stage-output mcopy)
-        run: sudo apt-get install -y --no-install-recommends mtools
+      - name: Install tools for stage-output
+        run: |
+          sudo apt-get install -y --no-install-recommends \
+            mtools dosfstools parted e2fsprogs
 
-      - name: Stage output (requires root for mount/mcopy)
+      - name: Stage output
         run: sudo make stage-output
 
       - name: Prepare release assets
