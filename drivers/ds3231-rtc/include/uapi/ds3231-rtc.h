@@ -13,21 +13,21 @@
  *   /sys/class/rtc/rtcN/since_epoch     - RO:  seconds since Unix epoch
  *   /sys/class/rtc/rtcN/name            - RO:  driver name
  *
- * Additional custom sysfs attributes added by this driver:
- *   /sys/class/rtc/rtcN/device/temperature - RO: chip temperature in m°C
+ * Temperature monitoring via hwmon subsystem:
+ *   /sys/class/hwmon/hwmonN/temp1_input - RO: chip temperature in m°C
  */
 
 #ifndef _UAPI_DS3231_RTC_H
 #define _UAPI_DS3231_RTC_H
 
 /*
- * Custom sysfs attribute name for reading the DS3231 on-chip temperature.
+ * hwmon temperature attribute name.
  * The value is in milli-degrees Celsius (e.g. "25250" = 25.25 °C).
  *
- * Example:
- *   cat /sys/class/rtc/rtc0/device/temperature
+ * Example (hwmon path):
+ *   cat /sys/class/hwmon/hwmonN/temp1_input
  *   25250
  */
-#define DS3231_ATTR_TEMPERATURE	"temperature"
+#define DS3231_HWMON_TEMP_ATTR "temp1_input"
 
 #endif /* _UAPI_DS3231_RTC_H */

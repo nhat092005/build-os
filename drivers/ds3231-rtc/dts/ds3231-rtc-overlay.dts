@@ -2,13 +2,19 @@
 /*
  * Device Tree Overlay — DS3231 RTC on Raspberry Pi I2C1
  *
- * Wiring (DS3231 module → Raspberry Pi 40-pin header):
- *   VCC  → 3.3 V  (pin 1 or 17)
- *   GND  → GND    (pin 6, 9, 14, 20, 25, 30, 34, or 39)
- *   SDA  → GPIO2  (pin 3)  — I2C1 data
- *   SCL  → GPIO3  (pin 5)  — I2C1 clock
- *   SQW  → not connected   (alarm IRQ — Phase 2)
- *   32K  → not connected
+ * Wiring (DS3231 module -> Raspberry Pi 40-pin header):
+ *   VCC  -> 3.3 V  (pin 1 or 17)
+ *   GND  -> GND    (pin 6, 9, 14, 20, 25, 30, 34, or 39)
+ *   SDA  -> GPIO2  (pin 3)  — I2C1 data
+ *   SCL  -> GPIO3  (pin 5)  — I2C1 clock
+ *   SQW  -> GPIO4  (pin 7)  — alarm interrupt (active-low, open-drain)
+ *   32K  -> not connected
+ *
+ * If the SQW/INT pin is not wired, alarm support is automatically
+ * disabled at probe time (read_time / set_time / temperature still work).
+ *
+ * The SQW GPIO pin can be changed via dtparam:
+ *   dtoverlay=ds3231-rtc,int_pin=17
  *
  * Installation:
  *   1. Copy ds3231-rtc.dtbo to /boot/overlays/
@@ -32,6 +38,7 @@
 	 * - Enable the bus (status = "okay")
 	 * - Set Fast Mode 400 kHz (DS3231 supports up to 400 kHz)
 	 * - Declare a child node for the DS3231 at slave address 0x68
+	 * - Wire the alarm interrupt to GPIO4 (default, overridable)
 	 */
 	fragment@0 {
 		target = <&i2c1>;
@@ -44,8 +51,24 @@
 			ds3231: ds3231@68 {
 				compatible = "maxim,ds3231";
 				reg = <0x68>;
-				wakeup-source;  /* Enable alarm wakeup (Phase 2) */
+				wakeup-source;
+
+				/*
+				 * Alarm interrupt: SQW/INT pin → GPIO4
+				 * Active-low, open-drain — use falling edge.
+				 * 2 = IRQ_TYPE_EDGE_FALLING
+				 */
+				interrupt-parent = <&gpio>;
+				interrupts = <4 2>;
 			};
 		};
+	};
+
+	/*
+	 * Overridable parameters:
+	 *   int_pin — GPIO BCM number for SQW/INT (default 4)
+	 */
+	__overrides__ {
+		int_pin = <&ds3231>, "interrupts:0";
 	};
 };

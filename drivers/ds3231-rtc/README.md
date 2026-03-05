@@ -26,11 +26,15 @@ Linux I2C client driver for the Maxim DS3231 Extremely Accurate I2C-Integrated R
 
 ```bash
 # Build everything (module + overlay + tool)
-make all
+make modules DRIVER=ds3231-rtc
+make dtbo DTBO=ds3231-rtc
+make tools DRIVER=ds3231-rtc
 
-# Deploy to SD card
-sudo cp build/module/ds3231-rtc.ko   /mnt/rootfs/lib/modules/$(uname -r)/extra/
-sudo cp build/dtbo/ds3231-rtc.dtbo   /mnt/boot/overlays/
+# Stage and deploy
+make install-modules
+make install-overlays
+make install-tools
+sudo make deploy-sdcard DEVICE=/dev/sdX
 
 # Enable on Raspberry Pi (/boot/config.txt)
 dtparam=i2c_arm=on
@@ -86,7 +90,7 @@ ds3231-rtc/
 | `/sys/class/rtc/rtcN/date` | RO | Current date (YYYY-MM-DD) |
 | `/sys/class/rtc/rtcN/since_epoch` | RO | Unix timestamp |
 | `/sys/class/rtc/rtcN/name` | RO | Driver name |
-| `/sys/class/rtc/rtcN/device/temperature` | RO | Chip temp in m°C |
+| `/sys/class/hwmon/hwmonX/temp1_input` | RO | Chip temperature in milli-°C (e.g. 25000 = 25.0 °C) |
 
 ## License
 

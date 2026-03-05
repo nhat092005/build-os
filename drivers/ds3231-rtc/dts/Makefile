@@ -1,50 +1,54 @@
 # SPDX-License-Identifier: GPL-2.0
-# Makefile for Device Tree Overlays
+# Makefile for DS3231 RTC Device Tree Overlays
 
-BUILD_DIR 	:= $(shell pwd)/../build/dtbo
+DRIVER_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 
-# Prefer kernel-built dtc when KERNEL_DIR is set, fall back to system dtc
-ifndef KERNEL_DIR
-    KERNEL_DIR := $(shell pwd)/../../buildroot/output/build/linux-custom
+_MK_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+_FIND_ROOT := $(firstword $(foreach d,\
+    $(_MK_DIR) \
+    $(abspath $(_MK_DIR)/..) \
+    $(abspath $(_MK_DIR)/../..) \
+    $(abspath $(_MK_DIR)/../../..) \
+    $(abspath $(_MK_DIR)/../../../..) \
+  ,$(if $(wildcard $(d)/mk/docker.mk),$(d))))
+
+ifneq ($(_FIND_ROOT),)
+  include $(_FIND_ROOT)/mk/docker.mk
 endif
-KERNEL_DTC := $(KERNEL_DIR)/scripts/dtc/dtc
-DTC         ?= $(shell test -x "$(KERNEL_DTC)" && echo "$(KERNEL_DTC)" || echo "dtc")
-DTC_FLAGS   ?= -@ -I dts -O dtb -Wno-unit_address_vs_reg
 
-# Source file
+IN_DOCKER := $(shell test -f /.dockerenv && echo 1)
+
+DOCKER_MOUNT   := $(DRIVER_ROOT):$(DOCKER_CONTAINER_ROOT)
+DOCKER_WORKDIR := $(DOCKER_CONTAINER_ROOT)/dts
+
+ifeq ($(IN_DOCKER),1)
+  RUN :=
+else 
+  RUN := $(DOCKER_RUN_NO_TTY)
+endif
+
+DTC ?= dtc
+DTC_FLAGS ?= -@ -I dts -O dtb -Wno-unit_address_vs_reg -Wno-label_is_string
+
+BUILD_DIR := ../build/dtbo
 DTS := ds3231-rtc-overlay.dts
+DTBO_OUT := ds3231-rtc.dtbo
 
-# Output file
-DTBO := ds3231-rtc.dtbo
+.PHONY: all clean 
+.PHONY: dtbo dtbo-clean
 
-.PHONY: all dtbo clean dtbo-clean help
-
-# Default target
 all: dtbo
 
-# Build Device Tree overlay
-dtbo: $(BUILD_DIR) $(DTBO)
+dtbo: $(BUILD_DIR) $(DTBO_OUT)
 
-# Create build directory
 $(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
+	$(RUN) mkdir -p $(BUILD_DIR)
 
-# Compile DTS to DTBO
-$(DTBO): $(DTS)
+$(DTBO_OUT): $(DTS)
 	@echo "Device Tree Overlay: $< -> $@"
-	$(DTC) $(DTC_FLAGS) -o $(BUILD_DIR)/$@ $<
+	$(RUN) $(DTC) $(DTC_FLAGS) -o $(BUILD_DIR)/$@ $<
 
-# Clean build artifacts
 clean: dtbo-clean
 
-# Clean compiled DTS artifacts
 dtbo-clean:
-	rm -rf $(BUILD_DIR)
-
-# help
-help:
-	@echo "Targets:"
-	@echo "  all              Compile DTS to DTBO (default)"
-	@echo "  dtbo             Compile DTS to DTBO"
-	@echo "  clean            Remove compiled overlay"
-	@echo "  dtbo-clean       Remove compiled DTS artifacts"
+	$(RUN) rm -rf $(BUILD_DIR)

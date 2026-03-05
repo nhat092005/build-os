@@ -14,8 +14,9 @@
  *   - OSF (Oscillator Stop Flag) detection and automatic clear
  *   - read_time / set_time via 7-byte atomic I2C block transfer
  *   - BCD <-> binary via <linux/bcd.h>
- *   - Mutex-serialised I2C access
- *   - On-chip temperature sensor exposed via sysfs (milli-°C)
+ *   - Mutex-serialised I2C access (hwmon path; RTC ops use ops_lock)
+ *   - On-chip temperature sensor exposed via hwmon subsystem (milli-°C)
+ *   - Alarm 1 support with threaded IRQ (requires DT interrupt wiring)
  *   - /dev/rtcN device node compatible with hwclock
  *
  * Hardware notes:
@@ -37,23 +38,27 @@
 #include <linux/of.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
+#include <linux/hwmon.h>
+#include <linux/interrupt.h>
 
 #include "../include/ds3231-rtc.h"
 
 /* I2C retry configuration */
-#define DS3231_I2C_RETRIES     3
-#define DS3231_I2C_RETRY_DELAY 1000  /* µs */
+#define DS3231_I2C_RETRIES 3
+#define DS3231_I2C_RETRY_DELAY 1000 /* µs */
 
 /* ================================================================
  * Low-level I2C helpers
- * ================================================================ */
+ * ================================================================
+ */
 
 /**
  * ds3231_read_reg() - Read a single register
  * @data: driver private data (contains @client and @lock)
  * @reg:  register address (0x00 – 0x12)
  *
- * Caller MUST hold @data->lock.
+ * Caller MUST ensure serialization: either hold @data->lock (hwmon path)
+ * or be called from an RTC ops callback (serialized by rtc->ops_lock).
  *
  * Return: register value (>= 0) or negative errno
  */
@@ -70,8 +75,8 @@ static int ds3231_read_reg(struct ds3231_data *data, u8 reg)
 				     DS3231_I2C_RETRY_DELAY * 2);
 	}
 	dev_err(&data->client->dev,
-		"I2C read reg 0x%02x failed after %d retries: %d\n",
-		reg, DS3231_I2C_RETRIES, ret);
+		"I2C read reg 0x%02x failed after %d retries: %d\n", reg,
+		DS3231_I2C_RETRIES, ret);
 	return ret;
 }
 
@@ -81,7 +86,8 @@ static int ds3231_read_reg(struct ds3231_data *data, u8 reg)
  * @reg:   register address
  * @value: byte to write
  *
- * Caller MUST hold @data->lock.
+ * Caller MUST ensure serialization: either hold @data->lock (hwmon path)
+ * or be called from an RTC ops callback (serialized by rtc->ops_lock).
  *
  * Return: 0 on success, negative errno on failure
  */
@@ -98,8 +104,8 @@ static int ds3231_write_reg(struct ds3231_data *data, u8 reg, u8 value)
 				     DS3231_I2C_RETRY_DELAY * 2);
 	}
 	dev_err(&data->client->dev,
-		"I2C write reg 0x%02x failed after %d retries: %d\n",
-		reg, DS3231_I2C_RETRIES, ret);
+		"I2C write reg 0x%02x failed after %d retries: %d\n", reg,
+		DS3231_I2C_RETRIES, ret);
 	return ret;
 }
 
@@ -113,18 +119,19 @@ static int ds3231_write_reg(struct ds3231_data *data, u8 reg, u8 value)
  * Uses i2c_smbus_read_i2c_block_data() which reads all bytes in a single
  * I2C transaction (one START/STOP pair), preventing mid-read corruption.
  *
- * Caller MUST hold @data->lock.
+ * Caller MUST ensure serialization: either hold @data->lock (hwmon path)
+ * or be called from an RTC ops callback (serialized by rtc->ops_lock).
  *
  * Return: number of bytes read on success, negative errno on failure
  */
-static int ds3231_read_block(struct ds3231_data *data,
-			     u8 reg, u8 count, u8 *buf)
+static int ds3231_read_block(struct ds3231_data *data, u8 reg, u8 count,
+			     u8 *buf)
 {
 	int ret, i;
 
 	for (i = 0; i < DS3231_I2C_RETRIES; i++) {
-		ret = i2c_smbus_read_i2c_block_data(data->client, reg,
-						    count, buf);
+		ret = i2c_smbus_read_i2c_block_data(data->client, reg, count,
+						    buf);
 		if (ret == count)
 			return ret;
 		if (ret >= 0)
@@ -146,18 +153,19 @@ static int ds3231_read_block(struct ds3231_data *data,
  * @count:  number of bytes to write
  * @buf:    data to write
  *
- * Caller MUST hold @data->lock.
+ * Caller MUST ensure serialization: either hold @data->lock (hwmon path)
+ * or be called from an RTC ops callback (serialized by rtc->ops_lock).
  *
  * Return: 0 on success, negative errno on failure
  */
-static int ds3231_write_block(struct ds3231_data *data,
-			      u8 reg, u8 count, const u8 *buf)
+static int ds3231_write_block(struct ds3231_data *data, u8 reg, u8 count,
+			      const u8 *buf)
 {
 	int ret, i;
 
 	for (i = 0; i < DS3231_I2C_RETRIES; i++) {
-		ret = i2c_smbus_write_i2c_block_data(data->client, reg,
-						     count, buf);
+		ret = i2c_smbus_write_i2c_block_data(data->client, reg, count,
+						     buf);
 		if (ret == 0)
 			return 0;
 		if (i < DS3231_I2C_RETRIES - 1)
@@ -172,7 +180,8 @@ static int ds3231_write_block(struct ds3231_data *data,
 
 /* ================================================================
  * Chip initialisation helpers (called from probe only)
- * ================================================================ */
+ * ================================================================
+ */
 
 /**
  * ds3231_init_control_reg() - Configure the DS3231 control register
@@ -183,7 +192,8 @@ static int ds3231_write_block(struct ds3231_data *data,
  *   BBSQW = 0  no square-wave output while on battery
  *   CONV  = 0  no forced temperature conversion
  *   INTCN = 1  INT/SQW pin is alarm interrupt, not square-wave output
- *   A2IE, A1IE = 0  both alarms disabled (Phase 1 baseline)
+ *   BBSQW = 1  if IRQ is wired (alarm interrupt on battery backup)
+ *   A2IE, A1IE = 0  both alarms disabled until user sets an alarm
  *
  * Holds @data->lock as required by I2C helper contract.
  *
@@ -192,16 +202,21 @@ static int ds3231_write_block(struct ds3231_data *data,
 static int ds3231_init_control_reg(struct ds3231_data *data)
 {
 	struct device *dev = &data->client->dev;
+	u8 control = DS3231_CTRL_INTCN;
 	int ret;
 
+	if (data->irq > 0)
+		control |= DS3231_CTRL_BBSQW;
+
 	mutex_lock(&data->lock);
-	ret = ds3231_write_reg(data, DS3231_REG_CONTROL, DS3231_CTRL_INTCN);
+	ret = ds3231_write_reg(data, DS3231_REG_CONTROL, control);
 	mutex_unlock(&data->lock);
 
 	if (ret < 0)
 		dev_err(dev, "Failed to init control register: %d\n", ret);
 	else
-		dev_dbg(dev, "Control register set: INTCN=1, alarms disabled\n");
+		dev_dbg(dev, "Control register set: INTCN=1 BBSQW=%d\n",
+			!!(control & DS3231_CTRL_BBSQW));
 
 	return ret;
 }
@@ -247,10 +262,10 @@ static int ds3231_ensure_24h_mode(struct ds3231_data *data)
 	 * Convert to 24h: 12 AM = 0, 12 PM = 12, 1-11 PM = 13-23
 	 */
 	hour12 = bcd2bin(hours_reg & DS3231_HOURS_MASK_12H);
-	is_pm   = !!(hours_reg & DS3231_HOURS_PM);
+	is_pm = !!(hours_reg & DS3231_HOURS_PM);
 
 	if (hour12 == 12)
-		hour24 = is_pm ? 12 : 0;	/* 12 PM = noon, 12 AM = midnight */
+		hour24 = is_pm ? 12 : 0; /* 12 PM = noon, 12 AM = midnight */
 	else
 		hour24 = is_pm ? (hour12 + 12) : hour12;
 
@@ -266,7 +281,8 @@ static int ds3231_ensure_24h_mode(struct ds3231_data *data)
 
 /* ================================================================
  * OSF (Oscillator Stop Flag) handling
- * ================================================================ */
+ * ================================================================
+ */
 
 /**
  * ds3231_check_osf() - Detect and clear the Oscillator Stop Flag
@@ -303,15 +319,17 @@ static int ds3231_check_osf(struct ds3231_data *data)
 	}
 
 	if (status & DS3231_STAT_OSF) {
-		dev_warn(dev, "Oscillator was stopped (OSF=1). "
-			 "Stored time may be invalid — please set the clock\n");
+		dev_warn(
+			dev,
+			"Oscillator was stopped (OSF=1). Stored time may be invalid — please set the clock\n");
 		data->osf_seen = true;
 
 		/* Clear OSF (bit 7) and disable 32 kHz output (bit 3) */
 		status &= ~(DS3231_STAT_OSF | DS3231_STAT_EN32KHZ);
 		ret = ds3231_write_reg(data, DS3231_REG_STATUS, (u8)status);
 		if (ret < 0)
-			dev_warn(dev, "Failed to clear OSF in status register: %d\n",
+			dev_warn(dev,
+				 "Failed to clear OSF in status register: %d\n",
 				 ret);
 	} else {
 		data->osf_seen = false;
@@ -320,10 +338,13 @@ static int ds3231_check_osf(struct ds3231_data *data)
 		/* Disable 32 kHz output pin if not already off (saves power) */
 		if (status & DS3231_STAT_EN32KHZ) {
 			status &= ~DS3231_STAT_EN32KHZ;
-			ret = ds3231_write_reg(data, DS3231_REG_STATUS, (u8)status);
+			ret = ds3231_write_reg(data, DS3231_REG_STATUS,
+					       (u8)status);
 			if (ret < 0)
-				dev_warn(dev, "Failed to disable 32 kHz output: %d\n",
-					 ret);
+				dev_warn(
+					dev,
+					"Failed to disable 32 kHz output: %d\n",
+					ret);
 		}
 	}
 
@@ -333,7 +354,8 @@ static int ds3231_check_osf(struct ds3231_data *data)
 
 /* ================================================================
  * RTC class operations — read_time / set_time
- * ================================================================ */
+ * ================================================================
+ */
 
 /**
  * ds3231_read_time() - Read the current time from the DS3231 chip
@@ -355,24 +377,18 @@ static int ds3231_read_time(struct device *dev, struct rtc_time *tm)
 	int ret;
 
 	/*
-	 * Acquire lock before checking osf_seen to avoid a race where
-	 * set_time() completes on another CPU between the flag read and
-	 * the actual I2C transaction.
+	 * The RTC core holds rtc->ops_lock around all ops callbacks,
+	 * so read_time() and set_time() are mutually exclusive.  No
+	 * private mutex needed for osf_seen or I2C access here.
 	 */
-	if (mutex_lock_interruptible(&data->lock))
-		return -ERESTARTSYS;
-
 	if (data->osf_seen) {
-		mutex_unlock(&data->lock);
-		dev_dbg(dev, "Time not reliable (OSF was set). "
-			"Set the time first with hwclock -w\n");
+		dev_dbg(dev,
+			"Time not reliable (OSF was set). Set the time first with hwclock -w\n");
 		return -ENODATA;
 	}
 
-	ret = ds3231_read_block(data, DS3231_REG_SECONDS,
-				DS3231_TIME_REG_COUNT, regs);
-
-	mutex_unlock(&data->lock);
+	ret = ds3231_read_block(data, DS3231_REG_SECONDS, DS3231_TIME_REG_COUNT,
+				regs);
 
 	if (ret < 0) {
 		dev_err(dev, "I2C block read failed: %d\n", ret);
@@ -399,14 +415,14 @@ static int ds3231_read_time(struct device *dev, struct rtc_time *tm)
 	 *   tm_mon   0-11 (0 = January)
 	 *   tm_year  years since 1900
 	 */
-	tm->tm_sec  = bcd2bin(regs[0] & 0x7F);
-	tm->tm_min  = bcd2bin(regs[1] & 0x7F);
+	tm->tm_sec = bcd2bin(regs[0] & 0x7F);
+	tm->tm_min = bcd2bin(regs[1] & 0x7F);
 	tm->tm_hour = bcd2bin(regs[2] & DS3231_HOURS_MASK_24H);
 	tm->tm_wday = bcd2bin(regs[3] & 0x07) - 1; /* chip 1-7 → POSIX 0-6 */
 	if (tm->tm_wday < 0 || tm->tm_wday > 6)
 		tm->tm_wday = 0; /* defensive: treat invalid as Sunday */
 	tm->tm_mday = bcd2bin(regs[4] & 0x3F);
-	tm->tm_mon  = bcd2bin(regs[5] & DS3231_MONTH_MASK) - 1;
+	tm->tm_mon = bcd2bin(regs[5] & DS3231_MONTH_MASK) - 1;
 
 	/*
 	 * Year calculation:
@@ -451,10 +467,10 @@ static int ds3231_set_time(struct device *dev, struct rtc_time *tm)
 	/* Binary → BCD, respecting DS3231 register layout */
 	regs[0] = bin2bcd(tm->tm_sec);
 	regs[1] = bin2bcd(tm->tm_min);
-	regs[2] = bin2bcd(tm->tm_hour);           /* bit 6 = 0 → 24h mode */
+	regs[2] = bin2bcd(tm->tm_hour); /* bit 6 = 0 → 24h mode */
 	regs[3] = bin2bcd((tm->tm_wday % 7) + 1); /* POSIX 0-6 → chip 1-7 */
 	regs[4] = bin2bcd(tm->tm_mday);
-	regs[5] = bin2bcd(tm->tm_mon + 1);        /* POSIX 0-11 → chip 1-12 */
+	regs[5] = bin2bcd(tm->tm_mon + 1); /* POSIX 0-11 → chip 1-12 */
 
 	/*
 	 * Century handling:
@@ -468,20 +484,19 @@ static int ds3231_set_time(struct device *dev, struct rtc_time *tm)
 		regs[6] = bin2bcd(tm->tm_year - 100);
 	}
 
-	if (mutex_lock_interruptible(&data->lock))
-		return -ERESTARTSYS;
-
+	/*
+	 * No private mutex needed — RTC core holds rtc->ops_lock.
+	 * I2C bus serialization is provided by the adapter.
+	 */
 	ret = ds3231_write_block(data, DS3231_REG_SECONDS,
 				 DS3231_TIME_REG_COUNT, regs);
 
 	/*
-	 * Clear osf_seen inside the lock so that a concurrent read_time()
-	 * cannot slip in and see osf_seen=true after we have set the time.
+	 * Clear osf_seen so that subsequent read_time() succeeds.
+	 * ops_lock prevents concurrent read_time() from racing here.
 	 */
 	if (ret == 0)
 		data->osf_seen = false;
-
-	mutex_unlock(&data->lock);
 
 	if (ret < 0) {
 		dev_err(dev, "I2C block write failed: %d\n", ret);
@@ -489,47 +504,202 @@ static int ds3231_set_time(struct device *dev, struct rtc_time *tm)
 	}
 
 	dev_dbg(dev, "Time set to %04d-%02d-%02d %02d:%02d:%02d\n",
-		 tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
-		 tm->tm_hour, tm->tm_min, tm->tm_sec);
+		tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour,
+		tm->tm_min, tm->tm_sec);
 
 	return 0;
+}
+
+/* ================================================================
+ * Alarm 1 support
+ * ================================================================
+ */
+
+/**
+ * ds3231_read_alarm() - Read Alarm 1 settings from DS3231
+ * @dev:   device pointer (from RTC core callback, under ops_lock)
+ * @alarm: output — alarm time + enabled/pending flags
+ *
+ * Reads 4 alarm registers (0x07-0x0A) + control + status in a single
+ * block read (0x07-0x0F = 9 bytes).  Extracts time, enabled (A1IE),
+ * and pending (A1F) flags.
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+static int ds3231_read_alarm(struct device *dev, struct rtc_wkalrm *alarm)
+{
+	struct ds3231_data *data = dev_get_drvdata(dev);
+	u8 regs[9]; /* alarm1(4) + alarm2(3) + control(1) + status(1) */
+	int ret;
+
+	ret = ds3231_read_block(data, DS3231_REG_ALARM1_SEC, 9, regs);
+	if (ret < 0)
+		return ret;
+
+	/* Alarm 1 registers are regs[0]-regs[3], control=regs[7], status=regs[8] */
+	alarm->time.tm_sec = bcd2bin(regs[0] & 0x7F);
+	alarm->time.tm_min = bcd2bin(regs[1] & 0x7F);
+	alarm->time.tm_hour = bcd2bin(regs[2] & DS3231_HOURS_MASK_24H);
+	alarm->time.tm_mday = bcd2bin(regs[3] & 0x3F);
+
+	alarm->enabled = !!(regs[7] & DS3231_CTRL_A1IE);
+	alarm->pending = !!(regs[8] & DS3231_STAT_A1F);
+
+	return 0;
+}
+
+/**
+ * ds3231_set_alarm() - Program Alarm 1 on the DS3231
+ * @dev:   device pointer (from RTC core callback, under ops_lock)
+ * @alarm: alarm time + enabled flag
+ *
+ * Writes 4 alarm 1 registers (exact match: all AxM bits = 0, DY/DT = 0
+ * for date-of-month matching).  Then clears A1F and A2F status flags.
+ * If alarm->enabled, enables A1IE in the control register.
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+static int ds3231_set_alarm(struct device *dev, struct rtc_wkalrm *alarm)
+{
+	struct ds3231_data *data = dev_get_drvdata(dev);
+	u8 regs[9]; /* alarm1(4) + alarm2(3) + control(1) + status(1) */
+	u8 control;
+	int ret;
+
+	/*
+	 * Read existing alarm2 + control + status so we can write all 9
+	 * bytes atomically without clobbering alarm2 settings.
+	 */
+	ret = ds3231_read_block(data, DS3231_REG_ALARM1_SEC, 9, regs);
+	if (ret < 0)
+		return ret;
+
+	/* Alarm 1 registers: all AxMx=0 (exact match), DY/DT=0 (date mode) */
+	regs[0] = bin2bcd(alarm->time.tm_sec); /* A1M1=0 */
+	regs[1] = bin2bcd(alarm->time.tm_min); /* A1M2=0 */
+	regs[2] = bin2bcd(alarm->time.tm_hour); /* A1M3=0, 24h mode */
+	regs[3] = bin2bcd(alarm->time.tm_mday); /* A1M4=0, DY/DT=0 */
+
+	/* Control: set/clear A1IE based on alarm->enabled */
+	control = regs[7];
+	if (alarm->enabled)
+		control |= DS3231_CTRL_A1IE;
+	else
+		control &= ~DS3231_CTRL_A1IE;
+	regs[7] = control;
+
+	/* Status: clear both alarm flags (write 0 to A1F and A2F) */
+	regs[8] &= ~(DS3231_STAT_A1F | DS3231_STAT_A2F);
+
+	ret = ds3231_write_block(data, DS3231_REG_ALARM1_SEC, 9, regs);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+/**
+ * ds3231_alarm_irq_enable() - Enable or disable Alarm 1 interrupt
+ * @dev:     device pointer (from RTC core callback, under ops_lock)
+ * @enabled: 1 = enable, 0 = disable
+ *
+ * Modifies only the A1IE bit in the control register via read-modify-write.
+ *
+ * Return: 0 on success, negative errno on failure
+ */
+static int ds3231_alarm_irq_enable(struct device *dev, unsigned int enabled)
+{
+	struct ds3231_data *data = dev_get_drvdata(dev);
+	int ret;
+	u8 control;
+
+	ret = ds3231_read_reg(data, DS3231_REG_CONTROL);
+	if (ret < 0)
+		return ret;
+
+	control = (u8)ret;
+	if (enabled)
+		control |= DS3231_CTRL_A1IE;
+	else
+		control &= ~DS3231_CTRL_A1IE;
+
+	return ds3231_write_reg(data, DS3231_REG_CONTROL, control);
+}
+
+/**
+ * ds3231_irq() - Threaded IRQ handler for DS3231 alarm
+ * @irq:  IRQ number
+ * @dev_id: pointer to ds3231_data
+ *
+ * Called when the DS3231 INT/SQW pin asserts (active low).
+ * Reads the status register to check A1F, clears the flag, disables
+ * the alarm interrupt to prevent re-triggering, then notifies the
+ * RTC subsystem.
+ *
+ * Return: IRQ_HANDLED if alarm flag was set, IRQ_NONE otherwise
+ */
+static irqreturn_t ds3231_irq(int irq, void *dev_id)
+{
+	struct ds3231_data *data = dev_id;
+	struct mutex *lock = &data->rtc->ops_lock;
+	int status;
+
+	mutex_lock(lock);
+
+	status = ds3231_read_reg(data, DS3231_REG_STATUS);
+	if (status < 0 || !(status & DS3231_STAT_A1F)) {
+		mutex_unlock(lock);
+		return IRQ_NONE;
+	}
+
+	/* Clear alarm 1 flag */
+	status &= ~DS3231_STAT_A1F;
+	ds3231_write_reg(data, DS3231_REG_STATUS, (u8)status);
+
+	/* Disable alarm 1 interrupt — user must re-arm */
+	status = ds3231_read_reg(data, DS3231_REG_CONTROL);
+	if (status >= 0) {
+		status &= ~DS3231_CTRL_A1IE;
+		ds3231_write_reg(data, DS3231_REG_CONTROL, (u8)status);
+	}
+
+	mutex_unlock(lock);
+
+	rtc_update_irq(data->rtc, 1, RTC_AF | RTC_IRQF);
+
+	return IRQ_HANDLED;
 }
 
 /* RTC subsystem operations table */
 static const struct rtc_class_ops ds3231_rtc_ops = {
 	.read_time = ds3231_read_time,
-	.set_time  = ds3231_set_time,
+	.set_time = ds3231_set_time,
+	.read_alarm = ds3231_read_alarm,
+	.set_alarm = ds3231_set_alarm,
+	.alarm_irq_enable = ds3231_alarm_irq_enable,
 };
 
 /* ================================================================
- * Temperature sensor — sysfs attribute
- * ================================================================ */
+ * Hardware Monitoring — Temperature
+ * ================================================================
+ */
 
 /**
- * temperature_show() - Read on-chip temperature via sysfs
- * @dev:  device pointer (i2c_client->dev)
- * @attr: device attribute (unused)
- * @buf:  output buffer
+ * ds3231_read_temp() - Read DS3231 on-chip temperature sensor
+ * @data: driver private data (caller must NOT hold data->lock)
+ * @val:  output in milli-degrees Celsius (e.g. 25250 for 25.25 °C)
  *
- * DS3231 contains an on-die temperature sensor whose reading is used
- * internally for crystal compensation.  We expose it as a convenience.
+ * Waits for any in-progress TCXO conversion (BSY bit) before reading.
+ * The BSY polling releases and reacquires the mutex around each sleep.
  *
- * Register 0x11: signed integer degrees Celsius
- * Register 0x12: bits 7:6 = fractional part in 0.25 °C increments
- *
- * Output format: milli-degrees Celsius (e.g. "25250\n" for 25.25 °C).
- *
- * Return: number of bytes written to @buf, or negative errno
+ * Return: 0 on success, negative errno on failure
  */
-static ssize_t temperature_show(struct device *dev,
-				struct device_attribute *attr, char *buf)
+static int ds3231_read_temp(struct ds3231_data *data, long *val)
 {
-	struct ds3231_data *data = dev_get_drvdata(dev);
 	u8 temp_buf[2];
 	int ret, i;
 	s16 integer_part;
 	u8 frac_part;
-	long millideg;
 
 	if (mutex_lock_interruptible(&data->lock))
 		return -ERESTARTSYS;
@@ -551,6 +721,14 @@ static ssize_t temperature_show(struct device *dev,
 			return -ERESTARTSYS;
 	}
 
+	if (i == 10) {
+		dev_warn_ratelimited(
+			&data->client->dev,
+			"Temperature conversion busy after 200 ms\n");
+		ret = -ETIMEDOUT;
+		goto unlock;
+	}
+
 	ret = ds3231_read_block(data, DS3231_REG_TEMP_MSB, 2, temp_buf);
 
 unlock:
@@ -565,30 +743,72 @@ unlock:
 	 */
 	integer_part = (s8)temp_buf[0];
 	frac_part = (temp_buf[1] >> 6) & 0x03;
-	millideg = (long)integer_part * 1000 + (long)frac_part * 250;
+	*val = (long)integer_part * 1000 + (long)frac_part * 250;
 
-	return sysfs_emit(buf, "%ld\n", millideg);
+	return 0;
 }
-static DEVICE_ATTR_RO(temperature);
 
-/* Sysfs attribute group for the I2C device node */
-static struct attribute *ds3231_attrs[] = {
-	&dev_attr_temperature.attr,
+#if IS_REACHABLE(CONFIG_HWMON)
+
+static umode_t ds3231_hwmon_is_visible(const void *data,
+				       enum hwmon_sensor_types type, u32 attr,
+				       int channel)
+{
+	if (type == hwmon_temp && attr == hwmon_temp_input)
+		return 0444;
+	return 0;
+}
+
+static int ds3231_hwmon_read(struct device *dev, enum hwmon_sensor_types type,
+			     u32 attr, int channel, long *val)
+{
+	struct ds3231_data *data = dev_get_drvdata(dev);
+
+	if (type != hwmon_temp || attr != hwmon_temp_input)
+		return -EOPNOTSUPP;
+
+	return ds3231_read_temp(data, val);
+}
+
+static const struct hwmon_channel_info *const ds3231_hwmon_info[] = {
+	HWMON_CHANNEL_INFO(temp, HWMON_T_INPUT),
 	NULL,
 };
 
-static const struct attribute_group ds3231_attr_group = {
-	.attrs = ds3231_attrs,
+static const struct hwmon_ops ds3231_hwmon_ops = {
+	.is_visible = ds3231_hwmon_is_visible,
+	.read = ds3231_hwmon_read,
 };
 
-static const struct attribute_group *ds3231_dev_groups[] = {
-	&ds3231_attr_group,
-	NULL,
+static const struct hwmon_chip_info ds3231_hwmon_chip_info = {
+	.ops = &ds3231_hwmon_ops,
+	.info = ds3231_hwmon_info,
 };
+
+static void ds3231_hwmon_register(struct ds3231_data *data)
+{
+	struct device *dev = &data->client->dev;
+	struct device *hwmon;
+
+	hwmon = devm_hwmon_device_register_with_info(
+		dev, DRIVER_NAME, data, &ds3231_hwmon_chip_info, NULL);
+	if (IS_ERR(hwmon))
+		dev_warn(dev, "Failed to register hwmon device: %ld\n",
+			 PTR_ERR(hwmon));
+}
+
+#else /* !IS_REACHABLE(CONFIG_HWMON) */
+
+static void ds3231_hwmon_register(struct ds3231_data *data)
+{
+}
+
+#endif /* IS_REACHABLE(CONFIG_HWMON) */
 
 /* ================================================================
  * I2C probe / remove
- * ================================================================ */
+ * ================================================================
+ */
 
 /**
  * ds3231_probe() - Called by I2C core when a matching Device Tree node is found
@@ -601,7 +821,8 @@ static const struct attribute_group *ds3231_dev_groups[] = {
  *   4. Ensure 24-hour mode (convert stored time if chip was in 12h mode)
  *   5. Check and clear OSF; disable unused 32 kHz output pin
  *   6. Allocate RTC device, set valid range, register with RTC core
- *   7. Register custom sysfs attribute (temperature)
+ *   7. Request alarm IRQ (if wired via DT)
+ *   8. Register temperature sensor via hwmon subsystem
  *
  * Return: 0 on success, negative errno on failure
  */
@@ -611,8 +832,7 @@ static int ds3231_probe(struct i2c_client *client)
 	struct ds3231_data *data;
 	int ret;
 
-	dev_dbg(dev, "Probing DS3231 RTC v%s at 0x%02x\n",
-		 DRIVER_VERSION, client->addr);
+	dev_dbg(dev, "Probing DS3231 RTC at 0x%02x\n", client->addr);
 
 	/* ---- Step 1: allocate private data ---- */
 	data = devm_kzalloc(dev, sizeof(*data), GFP_KERNEL);
@@ -620,7 +840,10 @@ static int ds3231_probe(struct i2c_client *client)
 		return -ENOMEM;
 
 	data->client = client;
-	mutex_init(&data->lock);
+	data->irq = client->irq;
+	ret = devm_mutex_init(dev, &data->lock);
+	if (ret)
+		return ret;
 	i2c_set_clientdata(client, data);
 
 	/* ---- Step 2: verify chip is present (use retry for robustness) ---- */
@@ -628,8 +851,8 @@ static int ds3231_probe(struct i2c_client *client)
 	ret = ds3231_read_reg(data, DS3231_REG_STATUS);
 	mutex_unlock(&data->lock);
 	if (ret < 0) {
-		dev_err(dev, "DS3231 not responding — check wiring "
-			"(SDA=GPIO2, SCL=GPIO3) and power supply\n");
+		dev_err(dev,
+			"DS3231 not responding — check wiring (SDA=GPIO2, SCL=GPIO3) and power supply\n");
 		return -ENODEV;
 	}
 
@@ -655,8 +878,8 @@ static int ds3231_probe(struct i2c_client *client)
 		return PTR_ERR(data->rtc);
 	}
 
-	data->rtc->ops       = &ds3231_rtc_ops;
-	data->rtc->range_min = RTC_TIMESTAMP_BEGIN_2000;  /* 2000-01-01 */
+	data->rtc->ops = &ds3231_rtc_ops;
+	data->rtc->range_min = RTC_TIMESTAMP_BEGIN_2000; /* 2000-01-01 */
 	data->rtc->range_max = mktime64(2199, 12, 31, 23, 59, 59);
 
 	ret = devm_rtc_register_device(data->rtc);
@@ -665,12 +888,33 @@ static int ds3231_probe(struct i2c_client *client)
 		return ret;
 	}
 
-	/* ---- Step 7: temperature sysfs attribute ---- */
-	/* Sysfs group registered via .dev_groups in i2c_driver struct */
+	/* ---- Step 7: alarm IRQ setup ---- */
+	if (data->irq > 0) {
+		ret = devm_request_threaded_irq(dev, data->irq, NULL,
+						ds3231_irq,
+						IRQF_SHARED | IRQF_ONESHOT,
+						DRIVER_NAME, data);
+		if (ret) {
+			dev_warn(
+				dev,
+				"Failed to request IRQ %d: %d (alarm disabled)\n",
+				data->irq, ret);
+			data->irq = 0;
+			clear_bit(RTC_FEATURE_ALARM, data->rtc->features);
+		} else {
+			dev_dbg(dev, "Alarm IRQ %d registered\n", data->irq);
+		}
+	} else {
+		clear_bit(RTC_FEATURE_ALARM, data->rtc->features);
+	}
 
-	dev_info(dev, "DS3231 registered as %s (OSF=%s)\n",
+	/* ---- Step 8: register temperature sensor via hwmon ---- */
+	ds3231_hwmon_register(data);
+
+	dev_info(dev, "DS3231 registered as %s (OSF=%s, alarm=%s)\n",
 		 dev_name(&data->rtc->dev),
-		 data->osf_seen ? "was-set" : "clear");
+		 data->osf_seen ? "was-set" : "clear",
+		 data->irq > 0 ? "irq" : "disabled");
 
 	return 0;
 }
@@ -684,15 +928,13 @@ static int ds3231_probe(struct i2c_client *client)
  */
 static void ds3231_remove(struct i2c_client *client)
 {
-	struct ds3231_data *data = i2c_get_clientdata(client);
-
-	mutex_destroy(&data->lock);
 	dev_info(&client->dev, "DS3231 driver removed\n");
 }
 
 /* ================================================================
  * Device Tree / I2C match tables
- * ================================================================ */
+ * ================================================================
+ */
 
 static const struct of_device_id ds3231_of_match[] = {
 	{ .compatible = "maxim,ds3231" },
@@ -700,17 +942,14 @@ static const struct of_device_id ds3231_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, ds3231_of_match);
 
-static const struct i2c_device_id ds3231_id_table[] = {
-	{ "ds3231", 0 },
-	{ /* sentinel */ }
-};
+static const struct i2c_device_id ds3231_id_table[] = { { "ds3231", 0 },
+							{ /* sentinel */ } };
 MODULE_DEVICE_TABLE(i2c, ds3231_id_table);
 
 static struct i2c_driver ds3231_driver = {
 	.driver = {
 		.name           = DRIVER_NAME,
 		.of_match_table = ds3231_of_match,
-		.dev_groups     = ds3231_dev_groups,
 	},
 	.probe    = ds3231_probe,
 	.remove   = ds3231_remove,
@@ -722,5 +961,4 @@ module_i2c_driver(ds3231_driver);
 MODULE_AUTHOR("nhat092005");
 MODULE_DESCRIPTION("DS3231 I2C RTC Driver — Linux RTC Subsystem Integration");
 MODULE_LICENSE("GPL");
-MODULE_VERSION(DRIVER_VERSION);
 MODULE_ALIAS("i2c:ds3231");

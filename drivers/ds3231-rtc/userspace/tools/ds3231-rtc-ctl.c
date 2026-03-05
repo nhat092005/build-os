@@ -31,7 +31,7 @@
 /* --------------------------------------------------------------- */
 #define DEFAULT_RTC_DEV     "/dev/rtc0"
 #define SYSFS_RTC_BASE      "/sys/class/rtc"
-#define TEMP_ATTR_NAME      "temperature"
+#define HWMON_TEMP_ATTR     "temp1_input"
 
 /* --------------------------------------------------------------- */
 /* Helpers                                                          */
@@ -79,8 +79,7 @@ static int resolve_rtc_node(char *rtc_name, size_t buflen)
 			if (strcmp(name, "ds3231-rtc") == 0) {
 				fclose(fp);
 				closedir(dir);
-				strncpy(rtc_name, ent->d_name, buflen - 1);
-				rtc_name[buflen - 1] = '\0';
+				snprintf(rtc_name, buflen, "%s", ent->d_name);
 				return 0;
 			}
 		}
@@ -120,25 +119,45 @@ static int open_rtc(void)
 }
 
 /**
- * resolve_temp_sysfs() - Build path to the temperature sysfs attribute
+ * resolve_temp_sysfs() - Build path to the hwmon temperature attribute
  * @buf:    output buffer
  * @buflen: size of @buf
  *
- * Re-uses resolve_rtc_node() to find the correct rtcN entry, then builds
- * the i2c device's temperature attribute path.
+ * Finds the rtcN node, then scans the hwmon subdirectory under the
+ * parent I2C device to locate temp1_input.
  *
  * Return: 0 on success, -1 if not found
  */
 static int resolve_temp_sysfs(char *buf, size_t buflen)
 {
 	char rtc_node[32];
+	/* /sys/class/rtc/ + rtcN + /device/hwmon/ + NUL */
+	char hwmon_dir[sizeof(SYSFS_RTC_BASE) + NAME_MAX +
+		       sizeof("/device/hwmon/")];
+	DIR *dir;
+	struct dirent *ent;
 
 	if (resolve_rtc_node(rtc_node, sizeof(rtc_node)) != 0)
 		return -1;
 
-	snprintf(buf, buflen, "%s/%s/device/%s",
-		 SYSFS_RTC_BASE, rtc_node, TEMP_ATTR_NAME);
-	return 0;
+	snprintf(hwmon_dir, sizeof(hwmon_dir), "%s/%s/device/hwmon",
+		 SYSFS_RTC_BASE, rtc_node);
+
+	dir = opendir(hwmon_dir);
+	if (!dir)
+		return -1;
+
+	while ((ent = readdir(dir)) != NULL) {
+		if (strncmp(ent->d_name, "hwmon", 5) != 0)
+			continue;
+		closedir(dir);
+		snprintf(buf, buflen, "%s/%s/%s",
+			 hwmon_dir, ent->d_name, HWMON_TEMP_ATTR);
+		return 0;
+	}
+
+	closedir(dir);
+	return -1;
 }
 
 /* --------------------------------------------------------------- */
@@ -217,8 +236,8 @@ static int cmd_set(const char *date_str, const char *time_str)
 	}
 
 	/* Full range validation */
-	if (year < 2000 || year > 2099) {
-		fprintf(stderr, "Error: year must be 2000–2099\n");
+	if (year < 2000 || year > 2199) {
+		fprintf(stderr, "Error: year must be 2000–2199\n");
 		return EXIT_FAILURE;
 	}
 	if (mon < 1 || mon > 12) {
@@ -272,13 +291,15 @@ static int cmd_set(const char *date_str, const char *time_str)
  */
 static int cmd_temp(void)
 {
-	char sysfs_path[256];
+	char sysfs_path[sizeof(SYSFS_RTC_BASE) + NAME_MAX +
+			sizeof("/device/hwmon/") + NAME_MAX +
+			sizeof("/") + sizeof(HWMON_TEMP_ATTR)];
 	FILE *fp;
 	long millideg;
 
 	if (resolve_temp_sysfs(sysfs_path, sizeof(sysfs_path)) < 0) {
 		fprintf(stderr,
-			"Error: cannot locate DS3231 temperature sysfs\n");
+			"Error: cannot locate DS3231 hwmon temperature\n");
 		return EXIT_FAILURE;
 	}
 
@@ -309,9 +330,10 @@ static int cmd_info(void)
 	printf("  Device:        %s\n", DEFAULT_RTC_DEV);
 	printf("  Driver:        ds3231-rtc (maxim,ds3231)\n");
 	printf("  Bus:           I2C1 @ address 0x68\n");
-	printf("  Year range:    2000-01-01 … 2099-12-31\n");
+	printf("  Year range:    2000-01-01 … 2199-12-31\n");
 	printf("  I2C speed:     up to 400 kHz (Fast Mode)\n");
 	printf("  Temperature:   on-chip TCXO sensor, 0.25 °C resolution\n");
+	printf("  Alarm:         Alarm 1, second-precision (requires SQW wiring)\n");
 	printf("  Battery:       CR2032 coin cell (timekeeping on VBAT)\n");
 	printf("\n");
 	printf("Standard tools:\n");
@@ -324,6 +346,126 @@ static int cmd_info(void)
 	printf("  ds3231-rtc-ctl read                     Read time\n");
 	printf("  ds3231-rtc-ctl set YYYY-MM-DD HH:MM:SS  Set time\n");
 	printf("  ds3231-rtc-ctl temp                     Read temperature\n");
+	printf("  ds3231-rtc-ctl alarm-read               Read alarm setting\n");
+	printf("  ds3231-rtc-ctl alarm-set DD HH:MM:SS    Set alarm 1\n");
+	printf("  ds3231-rtc-ctl alarm-on                 Enable alarm IRQ\n");
+	printf("  ds3231-rtc-ctl alarm-off                Disable alarm IRQ\n");
+	return EXIT_SUCCESS;
+}
+
+/* --------------------------------------------------------------- */
+/* Alarm Commands                                                   */
+/* --------------------------------------------------------------- */
+
+/**
+ * cmd_alarm_read() - Read and display the current Alarm 1 setting
+ */
+static int cmd_alarm_read(void)
+{
+	struct rtc_wkalrm alarm;
+	int fd = open_rtc();
+
+	memset(&alarm, 0, sizeof(alarm));
+	if (ioctl(fd, RTC_WKALM_RD, &alarm) < 0) {
+		fprintf(stderr, "Error: RTC_WKALM_RD: %s\n", strerror(errno));
+		close(fd);
+		return EXIT_FAILURE;
+	}
+	close(fd);
+
+	printf("Alarm 1: day=%02d %02d:%02d:%02d  enabled=%s  pending=%s\n",
+	       alarm.time.tm_mday,
+	       alarm.time.tm_hour,
+	       alarm.time.tm_min,
+	       alarm.time.tm_sec,
+	       alarm.enabled ? "yes" : "no",
+	       alarm.pending ? "yes" : "no");
+
+	return EXIT_SUCCESS;
+}
+
+/**
+ * cmd_alarm_set() - Set Alarm 1 from "DD HH:MM:SS" arguments
+ *
+ * Sets the alarm and enables the interrupt in one operation.
+ */
+static int cmd_alarm_set(const char *day_str, const char *time_str)
+{
+	struct rtc_wkalrm alarm;
+	int mday, hour, min, sec;
+	char *endptr;
+	int fd;
+
+	errno = 0;
+	mday = (int)strtol(day_str, &endptr, 10);
+	if (errno || *endptr != '\0' || mday < 1 || mday > 31) {
+		fprintf(stderr, "Error: day must be 01–31\n");
+		return EXIT_FAILURE;
+	}
+
+	if (sscanf(time_str, "%d:%d:%d", &hour, &min, &sec) != 3) {
+		fprintf(stderr, "Error: bad time format (use HH:MM:SS)\n");
+		return EXIT_FAILURE;
+	}
+	if (hour < 0 || hour > 23 || min < 0 || min > 59 ||
+	    sec < 0 || sec > 59) {
+		fprintf(stderr, "Error: invalid time values\n");
+		return EXIT_FAILURE;
+	}
+
+	memset(&alarm, 0, sizeof(alarm));
+	alarm.enabled      = 1;
+	alarm.time.tm_mday = mday;
+	alarm.time.tm_hour = hour;
+	alarm.time.tm_min  = min;
+	alarm.time.tm_sec  = sec;
+
+	fd = open_rtc();
+	if (ioctl(fd, RTC_WKALM_SET, &alarm) < 0) {
+		fprintf(stderr, "Error: RTC_WKALM_SET: %s\n", strerror(errno));
+		close(fd);
+		return EXIT_FAILURE;
+	}
+	close(fd);
+
+	printf("Alarm 1 set: day=%02d %02d:%02d:%02d (enabled)\n",
+	       mday, hour, min, sec);
+	return EXIT_SUCCESS;
+}
+
+/**
+ * cmd_alarm_enable() - Enable Alarm 1 interrupt
+ */
+static int cmd_alarm_enable(void)
+{
+	int fd = open_rtc();
+
+	if (ioctl(fd, RTC_AIE_ON, 0) < 0) {
+		fprintf(stderr, "Error: RTC_AIE_ON: %s\n", strerror(errno));
+		close(fd);
+		return EXIT_FAILURE;
+	}
+	close(fd);
+
+	printf("Alarm 1 interrupt enabled\n");
+	return EXIT_SUCCESS;
+}
+
+/**
+ * cmd_alarm_disable() - Disable Alarm 1 interrupt
+ */
+static int cmd_alarm_disable(void)
+{
+	int fd = open_rtc();
+
+	if (ioctl(fd, RTC_AIE_OFF, 0) < 0) {
+		fprintf(stderr, "Error: RTC_AIE_OFF: %s\n", strerror(errno));
+		close(fd);
+		return EXIT_FAILURE;
+	}
+	close(fd);
+
+	printf("Alarm 1 interrupt disabled\n");
 	return EXIT_SUCCESS;
 }
 
@@ -337,8 +479,12 @@ static void usage(const char *prog)
 		"  %s read\n"
 		"  %s set YYYY-MM-DD HH:MM:SS\n"
 		"  %s temp\n"
+		"  %s alarm-read\n"
+		"  %s alarm-set DD HH:MM:SS\n"
+		"  %s alarm-on\n"
+		"  %s alarm-off\n"
 		"  %s info\n",
-		prog, prog, prog, prog);
+		prog, prog, prog, prog, prog, prog, prog, prog);
 }
 
 int main(int argc, char *argv[])
@@ -361,6 +507,23 @@ int main(int argc, char *argv[])
 
 	if (strcmp(argv[1], "temp") == 0)
 		return cmd_temp();
+
+	if (strcmp(argv[1], "alarm-read") == 0)
+		return cmd_alarm_read();
+
+	if (strcmp(argv[1], "alarm-set") == 0) {
+		if (argc < 4) {
+			fprintf(stderr, "Error: 'alarm-set' requires DD HH:MM:SS\n");
+			return EXIT_FAILURE;
+		}
+		return cmd_alarm_set(argv[2], argv[3]);
+	}
+
+	if (strcmp(argv[1], "alarm-on") == 0)
+		return cmd_alarm_enable();
+
+	if (strcmp(argv[1], "alarm-off") == 0)
+		return cmd_alarm_disable();
 
 	if (strcmp(argv[1], "info") == 0)
 		return cmd_info();

@@ -1,53 +1,62 @@
+# SPDX-License-Identifier: GPL-2.0
 # Makefile for DS3231 RTC Userspace Tool
 
-# Toolchain Configuration
-CROSS_COMPILE   ?=
-CC              := $(CROSS_COMPILE)gcc
-CFLAGS          := -Wall -Wextra -Wshadow -Wformat-security -O2 -std=gnu11
-LDFLAGS         :=
+DRIVER_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 
-# Directory Configuration
-USERSPACE_DIR   := $(shell pwd)
-TOOLS_DIR       := $(USERSPACE_DIR)/tools
-BUILD_DIR       := $(USERSPACE_DIR)/../build/tools
+_MK_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+_FIND_ROOT := $(firstword $(foreach d,\
+    $(_MK_DIR) \
+    $(abspath $(_MK_DIR)/..) \
+    $(abspath $(_MK_DIR)/../..) \
+    $(abspath $(_MK_DIR)/../../..) \
+    $(abspath $(_MK_DIR)/../../../..) \
+  ,$(if $(wildcard $(d)/mk/docker.mk),$(d))))
 
-# Tool Configuration
-TOOL_NAME       := ds3231-rtc-ctl
-TOOL_SOURCE     := $(TOOLS_DIR)/$(TOOL_NAME).c
-TOOL_OBJECT     := $(BUILD_DIR)/$(TOOL_NAME).o
-TOOL_BINARY     := $(BUILD_DIR)/$(TOOL_NAME)
+ifneq ($(_FIND_ROOT),)
+  include $(_FIND_ROOT)/mk/docker.mk
+endif
 
-# PHONY Targets
-.PHONY: all clean help tools tools-clean
+IN_DOCKER := $(shell test -f /.dockerenv && echo 1)
 
-# Default Target
+DOCKER_MOUNT   := $(DRIVER_ROOT):$(DOCKER_CONTAINER_ROOT)
+DOCKER_WORKDIR := $(DOCKER_CONTAINER_ROOT)/userspace
+
+ifeq ($(IN_DOCKER),1)
+  RUN :=
+else
+  RUN := $(DOCKER_RUN_NO_TTY)
+endif
+
+CROSS_COMPILE ?= aarch64-linux-
+CC            ?= $(CROSS_COMPILE)gcc
+CFLAGS        ?= -Wall -Wextra -Wshadow -Wformat-security -O2 -std=gnu11
+LDFLAGS       ?=
+
+TOOLS_DIR := tools
+BUILD_DIR := ../build/tools
+
+TOOL_NAME   := ds3231-rtc-ctl
+TOOL_SOURCE := $(TOOLS_DIR)/$(TOOL_NAME).c
+TOOL_OBJECT := $(BUILD_DIR)/$(TOOL_NAME).o
+TOOL_BINARY := $(BUILD_DIR)/$(TOOL_NAME)
+
+.PHONY: all clean
+.PHONY: tools tools-clean
+
 all: tools
 
-# Create build directory
 $(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
+	$(RUN) mkdir -p $(BUILD_DIR)
 
-# Build tools
 tools: $(TOOL_BINARY)
 
 $(TOOL_BINARY): $(TOOL_OBJECT) | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -o $@ $(TOOL_OBJECT) $(LDFLAGS)
+	$(RUN) $(CC) $(CFLAGS) -o $@ $(TOOL_OBJECT) $(LDFLAGS)
 
-# Compile tool object
 $(TOOL_OBJECT): $(TOOL_SOURCE) | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(RUN) $(CC) $(CFLAGS) -c -o $@ $<
 
-# Clean all
 clean: tools-clean
 
-# Clean tools build artifacts
 tools-clean:
-	rm -rf $(BUILD_DIR)
-
-# Help
-help:
-	@echo "Build targets:"
-	@echo "  all           - Build CLI tool (default)"
-	@echo "  tools         - Build CLI tool"
-	@echo "  clean         - Remove build artifacts"
-	@echo "  tools-clean   - Remove build artifacts"
+	$(RUN) rm -rf $(BUILD_DIR)
