@@ -11,13 +11,9 @@ include $(PROJ_ROOT)/mk/docker.mk
 IN_DOCKER := $(shell test -f /.dockerenv && echo 1)
 
 ifeq ($(IN_DOCKER),1)
-	RUSTC 	?= /usr/local/cargo/bin/rustc
-	BINDGEN ?= /usr/local/cargo/bin/bindgen
 	RUN 	:=
 	RUN_TTY :=
 else
-	RUSTC 	?= $(HOME)/.cargo/bin/rustc
-	BINDGEN ?= $(HOME)/.cargo/bin/bindgen
 	RUN 	:= $(DOCKER_RUN_NO_TTY)
 	RUN_TTY := $(DOCKER_RUN_TTY)
 endif
@@ -47,6 +43,9 @@ CC 		:= $(CROSS_COMPILE)gcc
 AR 		:= $(CROSS_COMPILE)ar
 CFLAGS 	:= -Wall -Wextra -Werror -Wshadow -Wformat-security -O2 -std=gnu11
 LDFLAGS := 
+
+RUSTC 	:= /usr/local/cargo/bin/rustc
+BINDGEN := /usr/local/cargo/bin/bindgen
 
 DTC 	  := dtc
 DTC_FLAGS := -@ -I dts -O dtb -Wno-unit_address_vs_reg
