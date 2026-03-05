@@ -79,13 +79,22 @@ jobs:
               -print0 | \
               xargs -0 kernel/scripts/checkpatch.pl --strict --no-tree -f'
 
+      - name: Collect build outputs
+        run: |
+          find drivers \( \
+            -name "*.ko" -o \
+            -name "*.dtbo" -o \
+            -path "*/build/tools/*" -type f \
+          \) | while read f; do
+            mkdir -p /tmp/artifacts/$(dirname $f)
+            cp $f /tmp/artifacts/$f
+          done
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         if: success()
         with:
           name: build-output-${{ github.sha }}
-          path: |
-            drivers/**/build/module/*.ko
-            drivers/**/build/dtbo/*.dtbo
+          path: /tmp/artifacts/
           retention-days: 7
           if-no-files-found: warn
