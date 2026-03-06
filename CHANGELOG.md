@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.1.0] - 2026-03-05
 
 ### Features
 
@@ -57,6 +57,34 @@ All notable changes to this project will be documented in this file.
 - Update GPIO character device driver Makefile and module loading configuration
 - Add clang-format configuration file for consistent code styling
 - Enhance GPIO character device driver with improved structure and initialization
+- Add git-cliff configuration for changelog generation
+- Add Dockerfile, entrypoint script, and .dockerignore for SDK and builder images
+- Implement GPIO inputs driver with Device Tree support and userspace tool
+- Add BH1750 ambient light sensor driver with Device Tree support
+- Restructure Makefile for Docker integration and remove obsolete driver Makefile
+- Enhance Makefiles for Docker integration and improve build process for GPIO drivers
+- Enhance Makefiles for Docker (gpio-inputs)
+- Enhance Makefiles for Docker (gpio-inputs)
+- Enhance Makefiles for Docker integration and improve build process for GPIO sysfs driver and userspace tools
+- Update Dockerfile and entrypoint.sh for improved build environment and directory structure
+- Enhance Makefiles for Docker integration across GPIO Rust driver components
+- Add UART transport layer implementation with CRC support and public API
+- Implement ESP32 UART driver and userspace tool with command support
+- Add STM32 UART driver and userspace tool with command support
+- Add README for common UART library with framing protocol details
+- Add ESP32 and STM32 UART driver configurations and Makefiles
+- Add GPIO input driver package with Makefile and auto-load configuration
+- Add DS3231 driver
+- Add SHT3X driver
+- Add support for BH1750 and SHT3x drivers, update DS3231 configuration, and enhance Raspberry Pi setup
+- Implement CI/CD workflows for building, publishing, and releasing Docker images and artifacts
+- Add Docker Buildx setup step and update kernel configuration for Rust support
+- Enhance checkpatch step to report individual file errors
+- Optimize checkpatch step to exclude specific files and directories
+- Add step to collect build outputs and update artifact upload path
+- Update CI and Docker publish workflows to include paths for workflow files
+- Update CI and release workflows to improve artifact collection and build process
+- Update .gitignore to include additional generated and temporary files
 
 ### Bug Fixes
 
@@ -69,6 +97,10 @@ All notable changes to this project will be documented in this file.
 - Add no-op targets for compatibility with top-level drivers/Makefile
 - Correct naming conventions in GPIO LEDs driver installation scripts
 - Correct GPIO Rust module name in auto-load configuration
+- Update Rust compiler and bindgen paths for Docker and local environments
+- Release workflow trigger and docker build
+- Configure buildroot before build
+- Rename Makefiles for ESP32 and STM32 UART drivers and fix path COMMON_DIR
 
 ### Refactor
 
@@ -90,8 +122,13 @@ All notable changes to this project will be documented in this file.
 - Update Makefile headers for consistency in GPIO LEDS module and userspace tool
 - Enhance GPIO Rust driver with new callback functions and improve Makefile structure
 - Streamline Makefile and remove redundant comments from README
+- Clean up Makefiles and improve formatting in GPIO drivers and tools
+- Move libled to include
+- Mov libio to include
+- Enhance Makefiles for BH1750 driver with Docker support and improved structure
+- Streamline CI workflow by removing unnecessary Docker login and pull steps
 
-### Docs
+### Documentation
 
 - Update README to include descriptions for gpio-sysfs and gpio-rust drivers
 - Update header comment for GPIO LED control utility
@@ -100,6 +137,8 @@ All notable changes to this project will be documented in this file.
 - Refine comments in GPIO Rust driver library and control tool for clarity
 - Enhance README for clarity on GPIO Rust architecture and functionality
 - Update post-build, post-fakeroot, and post-image scripts for clarity and consistency
+- Update README.md for this current project
+- Update links in README for external drivers documentation
 
 ## [1.0.0] - 2026-02-18
 
@@ -213,6 +252,11 @@ All notable changes to this project will be documented in this file.
 - Update toolchain installation process in CI and release workflows
 - Remove caching of Buildroot host tools in CI and release workflows
 
+### Other
+
+- Init my os for raspberry
+- Remove toolchains from repo
+
 ### Refactor
 
 - Remove deprecated gpio_control.sh script
@@ -238,21 +282,13 @@ All notable changes to this project will be documented in this file.
 - Streamline rootfs extraction process by copying directly from buildroot target
 - Wpa_supplicant configuration for Wi-Fi network setup
 
-### Chore
-
-- Update external.desc with personal information
-
-### Docs
+### Documentation
 
 - Improve formatting of help messages in Makefile
 - Update README.md to enhance project description, requirements, and features
 
-### Init
+### Miscellaneous
 
-- Init my os for raspberry
-
-### Remove
-
-- Remove toolchains from repo
+- Update external.desc with personal information
 
 <!-- generated by git-cliff -->
