@@ -80,6 +80,7 @@ sudo make deploy-sdcard DEVICE=/dev/sdX
 - [Drivers Documentation](./drivers/README.md) - Out-of-tree kernel drivers
 - [External Documentation](./external/README.md) - External drivers
 - [Scripts Documentation](./scripts/README.md) - Build scripts
+- [Documentation](./docs/README.md) - Documentation
 
 ## License
 
