@@ -59,10 +59,9 @@ dmesg*.txt
 
 # Keep README and documentation
 !README.md
-!*.md
 
 # Documents
-docs/**
+docs/others/
 
 # Driver build directories
 drivers/*/build/
@@ -70,7 +69,5 @@ drivers/*/build/
 # Others
 toolchains/
 .bash_history
-prompt/
 task/
-GEMINI.md
-CLAUDE.md
+
